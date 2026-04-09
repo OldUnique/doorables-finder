@@ -1,0 +1,5 @@
+Put your Doorable pictures in this folder.
+Examples:
+- mickey-mouse.jpg
+- stitch.jpg
+- ariel.jpg

@@ -14,9 +14,12 @@
     "react-dom": "^18.3.1",
     "stripe": "^22.0.1"
   },
-  "devDependencies": {
+  "dev": {
     "@types/node": "^25.5.2",
     "@types/react": "^19.2.14",
     "typescript": "^6.0.2"
+  },
+  "devDependencies": {
+    "eslint": "^10.2.0"
   }
 }

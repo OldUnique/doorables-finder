@@ -130,7 +130,9 @@ export default function Page() {
       });
 
 
-      setIsSubscribed(profile?.is_subscribed === true);
+const ownerEmail = (user.email || "").toLowerCase().trim();
+const isOwner = ownerEmail === "riffeljosh80@gmail.com";
+setIsSubscribed(isOwner || profile?.is_subscribed === true);
 
 const { data: ownedRows, error: ownedError } = await supabase
   .from("user_doorables")

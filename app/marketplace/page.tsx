@@ -16,6 +16,8 @@ type Listing = {
 };
 
 export default function MarketplacePage() {
+const supabase = getSupabase();
+
   const router = useRouter();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);

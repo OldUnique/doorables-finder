@@ -6,11 +6,11 @@ import Nav from "../components/Nav";
 import { getSupabase } from "../lib/supabase";
 
 export default function HomePage() {
- const supabase = getSupabase();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     const checkUser = async () => {
+      const supabase = getSupabase(); // moved INSIDE effect (safer)
       const { data } = await supabase.auth.getUser();
       setIsLoggedIn(!!data?.user);
     };

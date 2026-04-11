@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "../../lib/supabase";
+import { getSupabase } from "../../lib/supabase";
 import Nav from "../../components/Nav";
 
 async function ensureUserExists(user: { id: string; email?: string | null }) {

@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Nav from "../components/Nav";
-import { supabase } from "../lib/supabase";
+import { getSupabase } from "../lib/supabase";
 
 export default function HomePage() {
+const supabase = getSupabase ();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {

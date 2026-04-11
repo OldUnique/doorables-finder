@@ -120,3 +120,4 @@ const supabase = getSupabase();
     </main>
   );
 }
+

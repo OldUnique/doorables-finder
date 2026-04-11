@@ -192,3 +192,4 @@ const inputStyle = {
   fontSize: 16,
   boxSizing: "border-box" as const,
 };
+

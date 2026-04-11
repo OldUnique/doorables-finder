@@ -299,3 +299,4 @@ const supabase = getSupabase();
     </div>
   );
 }
+

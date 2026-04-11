@@ -6,6 +6,7 @@ import Nav from "../components/Nav";
 import { getSupabase } from "../lib/supabase";
 
 export default function HomePage() {
+ const supabase = getSupabase();
 const supabase = getSupabase ();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -67,3 +68,4 @@ const supabase = getSupabase ();
     </main>
   );
 }
+

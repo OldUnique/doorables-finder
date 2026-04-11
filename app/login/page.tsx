@@ -5,6 +5,7 @@ import { getSupabase } from "../../lib/supabase";
 import Nav from "../../components/Nav";
 
 async function ensureUserExists(user: { id: string; email?: string | null }) {
+const supabase = getSupabase();
   const { data: existing } = await supabase
     .from("users")
     .select("id")
@@ -21,6 +22,7 @@ async function ensureUserExists(user: { id: string; email?: string | null }) {
 }
 
 export default function LoginPage() {
+const supabase = getSupabase();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
 

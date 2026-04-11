@@ -5,6 +5,7 @@ import { getSupabase } from "../../lib/supabase";
 import Nav from "../../components/Nav";
 
 export default function AccountPage() {
+const supabase = getSupabase();
   const [email, setEmail] = useState("");
 
   useEffect(() => {

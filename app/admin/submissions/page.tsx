@@ -12,6 +12,7 @@ type Submission = {
 };
 
 export default function AdminSubmissionsPage() {
+const supabase = getSupabase();
   const [subs, setSubs] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
 

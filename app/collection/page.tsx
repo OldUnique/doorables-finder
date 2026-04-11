@@ -15,6 +15,7 @@ type Doorable = {
 };
 
 async function ensureUserExists(user: { id: string; email?: string | null }) {
+const supabase = getSupabase();
   const { data: existing, error } = await supabase
     .from("users")
     .select("id, is_subscribed")

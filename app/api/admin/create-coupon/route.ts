@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../../lib/supabase";
+import { getSupabaseAdmin } from "../../../../lib/supabase";
 
 export async function POST(req: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const { code, durationCount } = await req.json();
 
     if (!code || String(code).trim() === "") {
-      return NextResponse.json({ error: "Coupon code is required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Coupon code is required." },
+        { status: 400 }
+      );
     }
 
     const { error } = await supabaseAdmin.from("promo_codes").insert({
@@ -23,6 +27,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Unknown error." }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Unknown error." },
+      { status: 500 }
+    );
   }
 }

@@ -1,145 +1,101 @@
 "use client";
 
+import { useState } from "react";
+
+type PlanKey = "monthly" | "yearly";
+
 export default function PricingPage() {
-  async function goToCheckout(plan: "monthly" | "yearly") {
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ plan }),
-    });
+  const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
+  const [error, setError] = useState("");
 
-    const data = await res.json();
+  const handleCheckout = async (priceLookupKey: PlanKey) => {
+    try {
+console.log("checkout clicked",priceLookupKey);
+      setError("");
+      setLoadingPlan(priceLookupKey);
 
-    if (!res.ok) {
-      alert(data.error || "Checkout failed");
-      return;
+      const res = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ plan:priceLookupKey }),
+      });
+console.log("checkout response status", res.status);
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Unable to start checkout.");
+      }
+
+      if (!data?.url) {
+        throw new Error("Stripe checkout URL was not returned.");
+      }
+
+      window.location.href = data.url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setLoadingPlan(null);
     }
-
-    window.location.href = data.url;
-  }
+  };
 
   return (
-    <main style={{ padding: 40, maxWidth: 1150, margin: "0 auto" }}>
-      <div style={{ textAlign: "center", marginBottom: 34 }}>
-        <div
-          style={{
-            display: "inline-block",
-            padding: "8px 14px",
-            borderRadius: 999,
-            background: "rgba(255,255,255,0.08)",
-            color: "white",
-            fontWeight: 800,
-            marginBottom: 14,
-            border: "1px solid rgba(255,255,255,0.08)",
-          }}
-        >
-          ✨ Collector Plans ✨
+    <main className="min-h-screen bg-slate-950 text-white px-6 py-16">
+      <div className="mx-auto max-w-5xl">
+        <div className="text-center mb-10">
+          <p className="inline-block rounded-full bg-slate-800 px-4 py-1 text-sm">
+            ✨ Collector Plans ✨
+          </p>
+          <h1 className="mt-4 text-4xl font-bold sm:text-5xl">
+            Pick your Doorables vibe
+          </h1>
+          <p className="mt-3 text-slate-300">
+            Use code <span className="font-semibold">FIRSTMONTHFREE</span> at checkout for your monthly plan.
+          </p>
         </div>
 
-        <h1
-          style={{
-            fontSize: 42,
-            margin: "0 0 10px 0",
-            color: "white",
-            fontWeight: 900,
-          }}
-        >
-          Pick your Doorables vibe
-        </h1>
+        {error ? (
+          <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+            {error}
+          </div>
+        ) : null}
 
-        <p
-          style={{
-            color: "rgba(255,255,255,0.78)",
-            fontSize: 18,
-            margin: 0,
-          }}
-        >
-          Use code <strong>FIRSTMONTHFREE</strong> at checkout for your monthly plan.
-        </p>
-      </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <section className="rounded-3xl bg-white p-8 text-slate-900 shadow-xl">
+            <div className="mb-4 text-2xl font-bold">Monthly 💎</div>
+            <div className="mb-2 text-5xl font-black">$3<span className="text-2xl font-semibold">/month</span></div>
+            <p className="mb-8 text-sm text-slate-600">
+              First month FREE with code FIRSTMONTHFREE
+            </p>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 28,
-        }}
-      >
-        {/* MONTHLY */}
-        <section
-          style={{
-            background: "linear-gradient(180deg,#ffffff,#f8fbff)",
-            borderRadius: 28,
-            padding: 34,
-            boxShadow: "0 20px 50px rgba(0,0,0,0.18)",
-            border: "1px solid #dbeafe",
-          }}
-        >
-          <h2 style={{ fontSize: 32, marginBottom: 10 }}>Monthly 💎</h2>
-          <div style={{ fontSize: 48, fontWeight: 900 }}>$3/month</div>
-          <p style={{ marginBottom: 20 }}>
-            First month FREE with code FIRSTMONTHFREE 🎉
-          </p>
+            <button
+              type="button"
+              onClick={() => handleCheckout("monthly")}
+              disabled={loadingPlan !== null}
+              className="w-full rounded-full bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {loadingPlan === "monthly" ? "Loading..." : "Start Monthly ✨"}
+            </button>
+          </section>
 
-          <button
-            onClick={() => goToCheckout("monthly")}
-            style={{
-              width: "100%",
-              padding: "14px",
-              borderRadius: 12,
-              background: "#2563eb",
-              color: "white",
-              fontWeight: 700,
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            Start Monthly ✨
-          </button>
-        </section>
+          <section className="rounded-3xl bg-white p-8 text-slate-900 shadow-xl">
+            <div className="mb-4 text-2xl font-bold">Yearly 🔥</div>
+            <div className="mb-2 text-5xl font-black">$15<span className="text-2xl font-semibold">/year</span></div>
+            <p className="mb-8 text-sm text-slate-600">
+              Best value — save money yearly!
+            </p>
 
-        {/* YEARLY */}
-        <section
-          style={{
-            background: "#fff",
-            borderRadius: 28,
-            padding: 34,
-            border: "2px solid #facc15",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.18)",
-          }}
-        >
-          <h2 style={{ fontSize: 32, marginBottom: 10 }}>Yearly 🔥</h2>
-          <div style={{ fontSize: 48, fontWeight: 900 }}>$15/year</div>
-
-          <p
-            style={{
-              marginTop: 6,
-              marginBottom: 20,
-              fontWeight: 600,
-              color: "#f59e0b",
-            }}
-          >
-            ⭐ Best value — save money yearly!
-          </p>
-
-          <button
-            onClick={() => goToCheckout("yearly")}
-            style={{
-              width: "100%",
-              padding: "14px",
-              borderRadius: 12,
-              background: "#f59e0b",
-              color: "white",
-              fontWeight: 700,
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            Get Best Deal 🚀
-          </button>
-        </section>
+            <button
+              type="button"
+              onClick={() => handleCheckout("yearly")}
+              disabled={loadingPlan !== null}
+              className="w-full rounded-full bg-amber-500 px-5 py-3 font-semibold text-white transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {loadingPlan === "yearly" ? "Loading..." : "Get Best Deal 🚀"}
+            </button>
+          </section>
+        </div>
       </div>
     </main>
   );

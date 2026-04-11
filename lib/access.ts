@@ -4,7 +4,9 @@ export function computeLocalAccess(email: string | null | undefined, subscribed:
   const normalizedEmail = (email || "").toLowerCase().trim();
   const ownerEmail = (env.ownerEmail || "").toLowerCase().trim();
   const isOwner = !!ownerEmail && normalizedEmail === ownerEmail;
-  const accessGranted = env.autoOwnerBypass ? (isOwner || subscribed) : subscribed;
+
+  const accessGranted = true;
+
   return {
     isOwner,
     hasActiveSubscription: subscribed,

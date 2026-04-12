@@ -11,6 +11,12 @@ export async function POST(req: Request) {
     const monthlyPriceId = process.env.STRIPE_MONTHLY_PRICE_ID;
     const yearlyPriceId = process.env.STRIPE_YEARLY_PRICE_ID;
 
+console.log("Stripe key prefix:", process.env.STRIPE_SECRET_KEY?.slice(0, 8));
+console.log("Monthly env price:", process.env.STRIPE_MONTHLY_PRICE_ID);
+console.log("Yearly env price:", process.env.STRIPE_YEARLY_PRICE_ID);
+console.log("Plan received:", plan);
+console.log("Using priceId:", priceId);
+
     console.log("Checkout request plan:", plan);
     console.log("APP URL exists:", !!appUrl);
     console.log("Monthly price exists:", !!monthlyPriceId);

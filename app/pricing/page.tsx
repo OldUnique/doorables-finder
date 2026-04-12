@@ -39,131 +39,266 @@ export default function PricingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-6 py-16 text-white">
-<div className="mb-6 rounded-2xl bg-red-500 p-6 text-3xl font-black text-white">
-  TEST PRICING PAGE
-</div>
-
-      <div className="mx-auto max-w-6xl">
-        <section className="mb-12 overflow-hidden rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur sm:p-12">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="inline-flex items-center rounded-full border border-fuchsia-400/20 bg-fuchsia-400/10 px-4 py-1.5 text-sm font-medium text-fuchsia-200">
-              ✨ Collector Plans ✨
-            </div>
-
-            <h1 className="mt-6 text-4xl font-black tracking-tight text-white sm:text-5xl md:text-6xl">
-              Pick your Doorables vibe
-            </h1>
-
-            <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-              Unlock the full collector experience. Use code{" "}
-              <span className="font-bold text-white">FIRSTMONTHFREE</span> at
-              checkout for your monthly plan.
-            </p>
+    <main
+      style={{
+        minHeight: "100vh",
+        padding: "48px 20px 64px",
+        color: "white",
+      }}
+    >
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <div
+            style={{
+              display: "inline-block",
+              background: "rgba(255,255,255,0.12)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              color: "white",
+              borderRadius: 999,
+              padding: "8px 14px",
+              fontSize: 14,
+              fontWeight: 700,
+              marginBottom: 18,
+            }}
+          >
+            ✨ Collector Plans ✨
           </div>
-        </section>
+
+          <h1
+            style={{
+              fontSize: 48,
+              fontWeight: 900,
+              margin: 0,
+              lineHeight: 1.05,
+            }}
+          >
+            Pick your Doorables vibe
+          </h1>
+
+          <p
+            style={{
+              marginTop: 16,
+              fontSize: 18,
+              color: "rgba(255,255,255,0.85)",
+              maxWidth: 700,
+              marginLeft: "auto",
+              marginRight: "auto",
+            }}
+          >
+            Unlock the full collector experience. Use code{" "}
+            <strong style={{ color: "white" }}>FIRSTMONTHFREE</strong> at
+            checkout for your monthly plan.
+          </p>
+        </div>
 
         {error ? (
-          <div className="mb-8 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">
+          <div
+            style={{
+              marginBottom: 24,
+              background: "rgba(239,68,68,0.14)",
+              border: "1px solid rgba(239,68,68,0.35)",
+              color: "#fecaca",
+              borderRadius: 16,
+              padding: 16,
+              fontSize: 14,
+            }}
+          >
             {error}
           </div>
         ) : null}
 
-        <section className="grid gap-8 md:grid-cols-2">
-          <div className="rounded-[28px] border border-blue-300/20 bg-white p-8 text-slate-900 shadow-2xl">
-            <div className="mb-4 inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-700">
-              Flexible
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gap: 24,
+            alignItems: "stretch",
+          }}
+        >
+          <section
+            style={{
+              background: "white",
+              color: "#0f172a",
+              borderRadius: 28,
+              padding: 32,
+              boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
+            }}
+          >
+            <div
+              style={{
+                display: "inline-block",
+                background: "#dbeafe",
+                color: "#1d4ed8",
+                borderRadius: 999,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: 0.5,
+                marginBottom: 18,
+              }}
+            >
+              FLEXIBLE
             </div>
 
-            <h2 className="text-3xl font-black">Monthly 💎</h2>
+            <h2 style={{ margin: 0, fontSize: 34, fontWeight: 900 }}>
+              Monthly 💎
+            </h2>
 
-            <div className="mt-5 flex items-end gap-1">
-              <span className="text-5xl font-black">$3</span>
-              <span className="pb-1 text-xl font-semibold text-slate-500">
+            <div style={{ marginTop: 18, marginBottom: 10 }}>
+              <span style={{ fontSize: 52, fontWeight: 900 }}>$3</span>
+              <span
+                style={{
+                  fontSize: 24,
+                  fontWeight: 700,
+                  color: "#64748b",
+                  marginLeft: 4,
+                }}
+              >
                 /month
               </span>
             </div>
 
-            <p className="mt-4 text-sm text-slate-600">
+            <p style={{ marginTop: 0, color: "#475569", fontSize: 15 }}>
               First month FREE with code FIRSTMONTHFREE
             </p>
 
-            <div className="my-8 h-px bg-slate-200" />
-
-            <ul className="space-y-4 text-sm text-slate-700">
-              <li className="flex items-start gap-3">
-                <span>✨</span>
-                <span>Easy way to start</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span>💜</span>
-                <span>Full collector access</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span>📦</span>
-                <span>Browse, collect, and sell</span>
-              </li>
+            <ul
+              style={{
+                marginTop: 24,
+                marginBottom: 0,
+                paddingLeft: 20,
+                color: "#334155",
+                lineHeight: 1.9,
+                fontSize: 16,
+              }}
+            >
+              <li>✨ Easy way to start</li>
+              <li>💜 Full collector access</li>
+              <li>📦 Browse, collect, and sell</li>
             </ul>
 
             <button
               type="button"
               onClick={() => handleCheckout("monthly")}
               disabled={loadingPlan === "monthly"}
-              className="mt-10 w-full rounded-2xl bg-blue-600 px-5 py-4 text-base font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
+              style={{
+                marginTop: 28,
+                width: "100%",
+                border: "none",
+                borderRadius: 16,
+                padding: "14px 18px",
+                fontSize: 16,
+                fontWeight: 800,
+                background: loadingPlan === "monthly" ? "#93c5fd" : "#2563eb",
+                color: "white",
+                cursor: loadingPlan === "monthly" ? "not-allowed" : "pointer",
+              }}
             >
               {loadingPlan === "monthly" ? "Loading..." : "Start Monthly ✨"}
             </button>
-          </div>
+          </section>
 
-          <div className="relative rounded-[28px] border-2 border-amber-400 bg-white p-8 text-slate-900 shadow-2xl">
-            <div className="absolute -top-4 right-6 rounded-full bg-amber-400 px-4 py-1 text-xs font-black uppercase tracking-wide text-slate-950 shadow-lg">
-              Most Popular
+          <section
+            style={{
+              background: "white",
+              color: "#0f172a",
+              borderRadius: 28,
+              padding: 32,
+              boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
+              border: "3px solid #f59e0b",
+              position: "relative",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                top: -14,
+                right: 20,
+                background: "#f59e0b",
+                color: "#111827",
+                borderRadius: 999,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 900,
+              }}
+            >
+              MOST POPULAR
             </div>
 
-            <div className="mb-4 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-700">
-              Best Value
+            <div
+              style={{
+                display: "inline-block",
+                background: "#fef3c7",
+                color: "#b45309",
+                borderRadius: 999,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: 0.5,
+                marginBottom: 18,
+              }}
+            >
+              BEST VALUE
             </div>
 
-            <h2 className="text-3xl font-black">Yearly 🔥</h2>
+            <h2 style={{ margin: 0, fontSize: 34, fontWeight: 900 }}>
+              Yearly 🔥
+            </h2>
 
-            <div className="mt-5 flex items-end gap-1">
-              <span className="text-5xl font-black">$15</span>
-              <span className="pb-1 text-xl font-semibold text-slate-500">
+            <div style={{ marginTop: 18, marginBottom: 10 }}>
+              <span style={{ fontSize: 52, fontWeight: 900 }}>$15</span>
+              <span
+                style={{
+                  fontSize: 24,
+                  fontWeight: 700,
+                  color: "#64748b",
+                  marginLeft: 4,
+                }}
+              >
                 /year
               </span>
             </div>
 
-            <p className="mt-4 text-sm text-slate-600">
+            <p style={{ marginTop: 0, color: "#475569", fontSize: 15 }}>
               Save money and keep everything unlocked all year.
             </p>
 
-            <div className="my-8 h-px bg-slate-200" />
-
-            <ul className="space-y-4 text-sm text-slate-700">
-              <li className="flex items-start gap-3">
-                <span>🚀</span>
-                <span>Lowest overall cost</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span>🎉</span>
-                <span>Perfect for active collectors</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span>⭐</span>
-                <span>Best deal for long-term use</span>
-              </li>
+            <ul
+              style={{
+                marginTop: 24,
+                marginBottom: 0,
+                paddingLeft: 20,
+                color: "#334155",
+                lineHeight: 1.9,
+                fontSize: 16,
+              }}
+            >
+              <li>🚀 Lowest overall cost</li>
+              <li>🎉 Perfect for active collectors</li>
+              <li>⭐ Best deal for long-term use</li>
             </ul>
 
             <button
               type="button"
               onClick={() => handleCheckout("yearly")}
               disabled={loadingPlan === "yearly"}
-              className="mt-10 w-full rounded-2xl bg-amber-500 px-5 py-4 text-base font-bold text-white transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-70"
+              style={{
+                marginTop: 28,
+                width: "100%",
+                border: "none",
+                borderRadius: 16,
+                padding: "14px 18px",
+                fontSize: 16,
+                fontWeight: 800,
+                background: loadingPlan === "yearly" ? "#fcd34d" : "#f59e0b",
+                color: "white",
+                cursor: loadingPlan === "yearly" ? "not-allowed" : "pointer",
+              }}
             >
               {loadingPlan === "yearly" ? "Loading..." : "Get Best Deal 🚀"}
             </button>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
     </main>
   );

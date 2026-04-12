@@ -8,23 +8,23 @@ export default function PricingPage() {
   const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
   const [error, setError] = useState("");
 
-  const handleCheckout = async (priceLookupKey: PlanKey) => {
+  const handleCheckout = async (plan: PlanKey) => {
     try {
       setError("");
-      setLoadingPlan(priceLookupKey);
+      setLoadingPlan(plan);
 
       const res = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ plan: priceLookupKey }),
+        body: JSON.stringify({ plan }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Unable to start checkout.");
+        throw new Error(data?.error || "Unable to start checkout.");
       }
 
       if (!data?.url) {
@@ -39,32 +39,32 @@ export default function PricingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white px-6 py-16">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-12 text-center">
-          <div className="inline-block rounded-full border border-slate-700 bg-slate-900 px-4 py-1 text-sm text-slate-200">
+    <main className="min-h-screen bg-slate-100 px-6 py-14 text-slate-900">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-10 text-center">
+          <div className="inline-block rounded-full bg-slate-900 px-4 py-1 text-sm font-medium text-white">
             ✨ Collector Plans ✨
           </div>
 
-          <h1 className="mt-5 text-4xl font-black text-white sm:text-5xl">
+          <h1 className="mt-5 text-4xl font-black sm:text-5xl">
             Pick your Doorables vibe
           </h1>
 
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-300">
+          <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600 sm:text-lg">
             Unlock the full collector experience. Use code{" "}
-            <span className="font-bold text-white">FIRSTMONTHFREE</span> at
+            <span className="font-bold text-slate-900">FIRSTMONTHFREE</span> at
             checkout for your monthly plan.
           </p>
         </div>
 
         {error ? (
-          <div className="mb-8 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+          <div className="mb-8 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">
             {error}
           </div>
         ) : null}
 
         <div className="grid gap-8 md:grid-cols-2">
-          <section className="rounded-3xl border border-blue-500/30 bg-white p-8 text-slate-900 shadow-2xl">
+          <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-lg">
             <div className="mb-3 inline-block rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-700">
               Flexible
             </div>
@@ -73,7 +73,7 @@ export default function PricingPage() {
 
             <div className="mb-2 text-5xl font-black">
               $3
-              <span className="ml-1 text-2xl font-semibold text-slate-600">
+              <span className="ml-1 text-2xl font-semibold text-slate-500">
                 /month
               </span>
             </div>
@@ -91,14 +91,14 @@ export default function PricingPage() {
             <button
               type="button"
               onClick={() => handleCheckout("monthly")}
-              disabled={loadingPlan !== null}
-              className="w-full rounded-full bg-blue-600 px-5 py-3.5 font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={loadingPlan === "monthly"}
+              className="w-full rounded-2xl bg-blue-600 px-5 py-4 text-base font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loadingPlan === "monthly" ? "Loading..." : "Start Monthly ✨"}
             </button>
           </section>
 
-          <section className="rounded-3xl border-2 border-amber-400 bg-white p-8 text-slate-900 shadow-2xl">
+          <section className="rounded-3xl border-2 border-amber-400 bg-white p-8 shadow-xl">
             <div className="mb-3 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-700">
               Best Value
             </div>
@@ -107,7 +107,7 @@ export default function PricingPage() {
 
             <div className="mb-2 text-5xl font-black">
               $15
-              <span className="ml-1 text-2xl font-semibold text-slate-600">
+              <span className="ml-1 text-2xl font-semibold text-slate-500">
                 /year
               </span>
             </div>
@@ -125,8 +125,8 @@ export default function PricingPage() {
             <button
               type="button"
               onClick={() => handleCheckout("yearly")}
-              disabled={loadingPlan !== null}
-              className="w-full rounded-full bg-amber-500 px-5 py-3.5 font-bold text-white transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={loadingPlan === "yearly"}
+              className="w-full rounded-2xl bg-amber-500 px-5 py-4 text-base font-bold text-white transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loadingPlan === "yearly" ? "Loading..." : "Get Best Deal 🚀"}
             </button>

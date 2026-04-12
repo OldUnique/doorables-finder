@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
+import { computeLocalAccess } from "../../lib/access";
 
 type Listing = {
   id: string;
@@ -15,10 +16,49 @@ type Listing = {
   created_at: string | null;
 };
 
-export default function MarketplacePage() {
-const supabase = getSupabase();
+async function ensureUserExists(user: { id: string; email?: string | null }) {
+  const supabase = getSupabase();
 
+  const { data: existing, error } = await supabase
+    .from("users")
+    .select("id, is_subscribed")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    alert("LOOKUP ERROR: " + error.message);
+    return { is_subscribed: false };
+  }
+
+  const bypassAccess = computeLocalAccess(user.email, false).accessGranted;
+
+  if (!existing) {
+    const { error: insertError } = await supabase.from("users").insert({
+      id: user.id,
+      email: user.email ?? null,
+      is_subscribed: bypassAccess,
+    });
+
+    if (insertError) {
+      alert("INSERT ERROR: " + insertError.message);
+    }
+
+    return { is_subscribed: bypassAccess };
+  }
+
+  return {
+    ...existing,
+    is_subscribed: computeLocalAccess(
+      user.email,
+      !!existing.is_subscribed
+    ).accessGranted,
+  };
+}
+
+export default function MarketplacePage() {
+  const supabase = useMemo(() => getSupabase(), []);
   const router = useRouter();
+
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
   const [search, setSearch] = useState("");
@@ -26,12 +66,27 @@ const supabase = getSupabase();
   const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    const subscribed = localStorage.getItem("doorables_subscribed");
-    setIsSubscribed(subscribed === "true");
-  }, []);
+    async function initAccessAndLoad() {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData.user;
 
-  useEffect(() => {
-    async function loadListings() {
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      const profile = await ensureUserExists({
+        id: user.id,
+        email: user.email,
+      });
+
+      const access = computeLocalAccess(
+        user.email,
+        profile?.is_subscribed === true
+      );
+
+      setIsSubscribed(access.accessGranted);
+
       const { data, error } = await supabase
         .from("marketplace_listings")
         .select("id,title,description,price,image_url,seller_name,status,created_at")
@@ -48,8 +103,8 @@ const supabase = getSupabase();
       setLoading(false);
     }
 
-    loadListings();
-  }, []);
+    initAccessAndLoad();
+  }, [router, supabase]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -97,7 +152,8 @@ const supabase = getSupabase();
             </div>
 
             <div style={{ fontSize: 18, opacity: 0.95, lineHeight: 1.5 }}>
-              Upgrade to browse listings, buy, and sell in the Doorables marketplace.
+              Upgrade to browse listings, buy, and sell in the Doorables
+              marketplace.
             </div>
 
             <a
@@ -243,53 +299,65 @@ const supabase = getSupabase();
                       <img
                         src={item.image_url}
                         alt={item.title}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
                       />
                     ) : (
-                      <div style={{ color: "#6b7280", fontWeight: 700 }}>No Image</div>
+                      <div style={{ color: "#6b7280", fontWeight: 700 }}>
+                        No Image
+                      </div>
                     )}
                   </div>
 
-                  <div style={{ fontSize: 20, fontWeight: 800 }}>{item.title}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800 }}>
+                    {item.title}
+                  </div>
 
                   <div style={{ marginTop: 6, color: "#374151", minHeight: 48 }}>
                     {item.description || "No description provided."}
                   </div>
 
                   <div style={{ marginTop: 12, fontWeight: 900, fontSize: 24 }}>
-                    {item.price != null ? `$${Number(item.price).toFixed(2)}` : "Offer"}
+                    {item.price != null
+                      ? `$${Number(item.price).toFixed(2)}`
+                      : "Offer"}
                   </div>
 
                   <div style={{ marginTop: 6, color: "#6b7280" }}>
                     Seller: {item.seller_name || "Unknown"}
                   </div>
 
-<button
-  onClick={async () => {
-  const { error } = await supabase
-    .from("marketplace_listings")
-    .delete()
-    .eq("id", item.id);
+                  <button
+                    onClick={async () => {
+                      const { error } = await supabase
+                        .from("marketplace_listings")
+                        .delete()
+                        .eq("id", item.id);
 
-  if (error) {
-    alert("Delete failed: " + error.message);
-    return;
-  }
+                      if (error) {
+                        alert("Delete failed: " + error.message);
+                        return;
+                      }
 
-  setListings((prev) => prev.filter((listing) => listing.id !== item.id));
-  }}
-  style={{
-    marginTop: "10px",
-    background: "#ff4d4d",
-    color: "white",
-    padding: "6px 10px",
-    borderRadius: "6px",
-    border: "none",
-    cursor: "pointer"
-  }}
->
-  Delete
-</button>
+                      setListings((prev) =>
+                        prev.filter((listing) => listing.id !== item.id)
+                      );
+                    }}
+                    style={{
+                      marginTop: "10px",
+                      background: "#ff4d4d",
+                      color: "white",
+                      padding: "6px 10px",
+                      borderRadius: "6px",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Delete
+                  </button>
                 </div>
               ))}
             </div>
@@ -299,4 +367,3 @@ const supabase = getSupabase();
     </div>
   );
 }
-

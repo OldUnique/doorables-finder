@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
+import { computeLocalAccess } from "../../lib/access";
 
 type Doorable = {
   id: string;
@@ -15,7 +16,8 @@ type Doorable = {
 };
 
 async function ensureUserExists(user: { id: string; email?: string | null }) {
-const supabase = getSupabase();
+  const supabase = getSupabase();
+
   const { data: existing, error } = await supabase
     .from("users")
     .select("id, is_subscribed")
@@ -27,24 +29,35 @@ const supabase = getSupabase();
     return { is_subscribed: false };
   }
 
+  const bypassAccess = computeLocalAccess(user.email, false).accessGranted;
+
   if (!existing) {
     const { error: insertError } = await supabase.from("users").insert({
       id: user.id,
       email: user.email ?? null,
-      is_subscribed: false,
+      is_subscribed: bypassAccess,
     });
 
     if (insertError) {
       alert("INSERT ERROR: " + insertError.message);
     }
 
-    return { is_subscribed: false };
+    return { is_subscribed: bypassAccess };
   }
 
-  return existing;
+  return {
+    ...existing,
+    is_subscribed: computeLocalAccess(
+      user.email,
+      !!existing.is_subscribed
+    ).accessGranted,
+  };
 }
+
 function uniqueSorted(values: (string | null)[]) {
-  return Array.from(new Set(values.filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b));
+  return Array.from(new Set(values.filter(Boolean) as string[])).sort((a, b) =>
+    a.localeCompare(b)
+  );
 }
 
 function getSeriesNumber(value: string | null) {
@@ -102,6 +115,8 @@ function getRarityTheme(rarity?: string | null) {
 
 export default function Page() {
   const router = useRouter();
+  const supabase = useMemo(() => getSupabase(), []);
+
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [items, setItems] = useState<Doorable[]>([]);
   const [search, setSearch] = useState("");
@@ -130,28 +145,30 @@ export default function Page() {
         email: user.email,
       });
 
+      const access = computeLocalAccess(
+        user.email,
+        profile?.is_subscribed === true
+      );
 
-const ownerEmail = (user.email || "").toLowerCase().trim();
-const isOwner = ownerEmail === "riffeljosh80@gmail.com";
-setIsSubscribed(isOwner || profile?.is_subscribed === true);
+      setIsSubscribed(access.accessGranted);
 
-const { data: ownedRows, error: ownedError } = await supabase
-  .from("user_doorables")
-  .select("doorable_id, qty_owned, custom_tag")
-  .eq("user_id", user.id);
+      const { data: ownedRows, error: ownedError } = await supabase
+        .from("user_doorables")
+        .select("doorable_id, qty_owned, custom_tag")
+        .eq("user_id", user.id);
 
-if (!ownedError && ownedRows) {
-const owned: Record<string, number> = {};
-const notes: Record<string, string> = {};
+      if (!ownedError && ownedRows) {
+        const owned: Record<string, number> = {};
+        const notes: Record<string, string> = {};
 
-ownedRows.forEach((row) => {
-  owned[row.doorable_id] = row.qty_owned || 0;
-  notes[row.doorable_id] = row.custom_tag || "";
-});
+        ownedRows.forEach((row) => {
+          owned[row.doorable_id] = row.qty_owned || 0;
+          notes[row.doorable_id] = row.custom_tag || "";
+        });
 
-setOwnedMap(owned);
-setNoteMap(notes);
-}
+        setOwnedMap(owned);
+        setNoteMap(notes);
+      }
 
       const savedNeed = localStorage.getItem("doorables-need-map");
       if (savedNeed) {
@@ -176,105 +193,98 @@ setNoteMap(notes);
     }
 
     load();
-  }, [router]);
+  }, [router, supabase]);
 
+  async function changeNote(itemId: string, value: string) {
+    const next = { ...noteMap, [itemId]: value };
+    setNoteMap(next);
 
-async function changeNote(itemId: string, value: string) {
-  const next = { ...noteMap, [itemId]: value };
-  setNoteMap(next);
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData.user;
 
-  const { data: authData } = await supabase.auth.getUser();
-  const user = authData.user;
+    if (!user) {
+      alert("No user found");
+      return;
+    }
 
-  if (!user) {
-    alert("No user found");
-    return;
-  }
+    const qtyOwned = ownedMap[itemId] || 0;
+    const wanted = !!needMap[itemId];
 
-  const qtyOwned = ownedMap[itemId] || 0;
-  const wanted = !!needMap[itemId];
+    if (qtyOwned === 0 && !wanted && !value.trim()) {
+      const { error } = await supabase
+        .from("user_doorables")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("doorable_id", itemId);
 
-  if (qtyOwned === 0 && !wanted && !value.trim()) {
+      if (error) {
+        alert("Delete note error: " + error.message);
+      }
+
+      return;
+    }
+
     const { error } = await supabase
       .from("user_doorables")
-      .delete()
+      .update({
+        custom_tag: value,
+        qty_owned: qtyOwned,
+        wanted: wanted,
+      })
       .eq("user_id", user.id)
       .eq("doorable_id", itemId);
 
     if (error) {
-      alert("Delete note error: " + error.message);
+      alert("Note save error: " + error.message);
+    }
+  }
+
+  async function changeOwned(itemId: string, amount: number) {
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData.user;
+
+    if (!user) {
+      alert("Please log in first.");
+      return;
     }
 
-    return;
+    const nextValue = Math.max(0, (ownedMap[itemId] || 0) + amount);
+    const next = { ...ownedMap, [itemId]: nextValue };
+    setOwnedMap(next);
+    localStorage.setItem("doorables-owned-counts", JSON.stringify(next));
+
+    let error = null;
+
+    if (nextValue === 0) {
+      const result = await supabase
+        .from("user_doorables")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("doorable_id", itemId);
+
+      error = result.error;
+    } else {
+      const result = await supabase.from("user_doorables").upsert(
+        {
+          user_id: user.id,
+          doorable_id: itemId,
+          qty_owned: nextValue,
+          wanted: false,
+          favorited: false,
+          custom_tag: noteMap[itemId] || "",
+        },
+        {
+          onConflict: "user_id,doorable_id",
+        }
+      );
+
+      error = result.error;
+    }
+
+    if (error) {
+      alert("Owned save error: " + error.message);
+    }
   }
-
-  const { error } = await supabase
-    .from("user_doorables")
-    .update({
-      custom_tag: value,
-      qty_owned: qtyOwned,
-      wanted: wanted,
-    })
-    .eq("user_id", user.id)
-    .eq("doorable_id", itemId);
-
-  if (error) {
-    alert("Note save error: " + error.message);
-  } else {
-  }
-}
-async function changeOwned(itemId: string, amount: number) {
-  const { data: authData } = await supabase.auth.getUser();
-  const user = authData.user;
-
-  if (!user) {
-    alert("Please log in first.");
-    return;
-  }
-
-  const nextValue = Math.max(0, (ownedMap[itemId] || 0) + amount);
-  const next = { ...ownedMap, [itemId]: nextValue };
-  setOwnedMap(next);
-  localStorage.setItem("doorables-owned-counts", JSON.stringify(next));
-
- let error = null;
-
-if (nextValue === 0) {
-  const result = await supabase
-    .from("user_doorables")
-    .delete()
-    .eq("user_id", user.id)
-    .eq("doorable_id", itemId);
-
-  error = result.error;
-} else {
-  const result = await supabase
-    .from("user_doorables")
-    .upsert(
-      {
-        user_id: user.id,
-        doorable_id: itemId,
-        qty_owned: nextValue,
-        wanted: false,
-        favorited: false,
-        custom_tag: "",
-      },
-      {
-        onConflict: "user_id,doorable_id",
-      }
-    );
-
-  error = result.error;
-}
-
-if (error) {
-  alert("Owned save error: " + error.message);
-}
-
-  if (error) {
-    alert("Owned save error: " + error.message);
-  }
-}
 
   function toggleNeed(itemId: string) {
     const next = { ...needMap, [itemId]: !needMap[itemId] };
@@ -321,11 +331,16 @@ if (error) {
       alert(insertError.message);
       return;
     }
-
   }
 
-  const movieOptions = useMemo(() => uniqueSorted(items.map((i) => i.movie)), [items]);
-  const rarityOptions = useMemo(() => uniqueSorted(items.map((i) => i.rarity)), [items]);
+  const movieOptions = useMemo(
+    () => uniqueSorted(items.map((i) => i.movie)),
+    [items]
+  );
+  const rarityOptions = useMemo(
+    () => uniqueSorted(items.map((i) => i.rarity)),
+    [items]
+  );
   const seriesOptions = useMemo(
     () =>
       uniqueSorted(items.map((i) => i.series)).sort((a, b) => {
@@ -339,9 +354,16 @@ if (error) {
     const q = search.trim().toLowerCase();
 
     const filteredItems = items.filter((item) => {
-      const joined = [item.name, item.series, item.subcategory, item.rarity, item.movie]
+      const joined = [
+        item.name,
+        item.series,
+        item.subcategory,
+        item.rarity,
+        item.movie,
+      ]
         .join(" ")
         .toLowerCase();
+
       const owned = ownedMap[item.id] || 0;
       const needed = !!needMap[item.id];
 
@@ -362,7 +384,17 @@ if (error) {
       if (seriesDiff !== 0) return seriesDiff;
       return (a.name || "").localeCompare(b.name || "");
     });
-  }, [items, search, movieFilter, rarityFilter, seriesFilter, ownedFilter, needFilter, ownedMap, needMap]);
+  }, [
+    items,
+    search,
+    movieFilter,
+    rarityFilter,
+    seriesFilter,
+    ownedFilter,
+    needFilter,
+    ownedMap,
+    needMap,
+  ]);
 
   const totalOwned = useMemo(
     () => Object.values(ownedMap).reduce((sum, value) => sum + Number(value || 0), 0),
@@ -374,7 +406,10 @@ if (error) {
     [ownedMap]
   );
 
-  const neededCount = useMemo(() => Object.values(needMap).filter(Boolean).length, [needMap]);
+  const neededCount = useMemo(
+    () => Object.values(needMap).filter(Boolean).length,
+    [needMap]
+  );
 
   const seriesProgress = useMemo(() => {
     const map: Record<string, { total: number; owned: number }> = {};
@@ -726,26 +761,27 @@ if (error) {
                       onChange={(e) => uploadImage(e.target.files?.[0], item.id)}
                     />
                   </label>
-<textarea
-  value={noteMap[item.id] || ""}
-  onChange={(e) =>
-    setNoteMap({ ...noteMap, [item.id]: e.target.value })
-  }
-  onBlur={(e) => changeNote(item.id, e.target.value)}
-  placeholder="Add A Personal Message..."
-  style={{
-    width: "100%",
-    marginTop: 10,
-    padding: 10,
-    borderRadius: 12,
-    border: "1px solid #d1d5db",
-    minHeight: 48,
-    resize: "vertical",
-    boxSizing: "border-box",
-    fontFamily: "inherit",
-    fontSize: 14,
-  }}
-/>
+
+                  <textarea
+                    value={noteMap[item.id] || ""}
+                    onChange={(e) =>
+                      setNoteMap({ ...noteMap, [item.id]: e.target.value })
+                    }
+                    onBlur={(e) => changeNote(item.id, e.target.value)}
+                    placeholder="Add A Personal Message..."
+                    style={{
+                      width: "100%",
+                      marginTop: 10,
+                      padding: 10,
+                      borderRadius: 12,
+                      border: "1px solid #d1d5db",
+                      minHeight: 48,
+                      resize: "vertical",
+                      boxSizing: "border-box",
+                      fontFamily: "inherit",
+                      fontSize: 14,
+                    }}
+                  />
                 </div>
               );
             })}
@@ -755,4 +791,3 @@ if (error) {
     </>
   );
 }
-

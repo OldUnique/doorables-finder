@@ -40,6 +40,10 @@ export default function PricingPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-6 py-16 text-white">
+<div className="mb-6 rounded-2xl bg-red-500 p-6 text-3xl font-black text-white">
+  TEST PRICING PAGE
+</div>
+
       <div className="mx-auto max-w-6xl">
         <section className="mb-12 overflow-hidden rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur sm:p-12">
           <div className="mx-auto max-w-3xl text-center">

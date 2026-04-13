@@ -16,6 +16,7 @@ const links = [
   { href: "/sell", label: "Sell" },
   { href: "/pricing", label: "Pricing" },
   { href: "/account", label: "Account" },
+  { href: "/feedback", label: "❤️Feedback❤️" }
 ];
 
 export default function AppHeader() {

@@ -49,6 +49,77 @@ export default function SellPage() {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
+  async function uploadImage(file: File) {
+    const fileName = `listing-${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("marketplace")
+      .upload(fileName, file);
+
+    if (uploadError) {
+      throw new Error(uploadError.message);
+    }
+
+    const { data } = supabase.storage
+      .from("marketplace")
+      .getPublicUrl(fileName);
+
+    return data.publicUrl;
+  }
+
+  async function handleSubmit() {
+    setLoading(true);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user || !user.email_confirmed_at) {
+      alert("Please sign in and confirm your email first.");
+      setLoading(false);
+      router.replace("/auth");
+      return;
+    }
+
+    let imageUrl: string | null = null;
+
+    try {
+      if (selectedFile) {
+        setUploading(true);
+        imageUrl = await uploadImage(selectedFile);
+        setUploading(false);
+      }
+    } catch (err: any) {
+      alert("Upload failed: " + err.message);
+      setLoading(false);
+      setUploading(false);
+      return;
+    }
+
+    const { error } = await supabase.from("marketplace_listings").insert([
+      {
+        title,
+        description,
+        price: Number(price),
+        image_url: imageUrl,
+        seller_name: seller,
+        status: "active",
+        user_id: user.id,
+      },
+    ]);
+
+    if (error) {
+      alert(error.message);
+      setLoading(false);
+      return;
+    }
+
+    alert("Listing created! 🎉");
+    router.push("/marketplace");
+  }
+
+  if (checkingAuth) {
     return <main style={loadingScreen}>Checking account...</main>;
   }
 
@@ -57,179 +128,44 @@ export default function SellPage() {
       <div style={cardStyle}>
         <h1 style={titleStyle}>Create Listing</h1>
 
-        <input
-          placeholder="Title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          style={inputStyle}
-        />
-
-        <input
-          placeholder="Seller name"
-          value={seller}
-          onChange={(e) => setSeller(e.target.value)}
-          style={inputStyle}
-        />
-
-        <textarea
-          placeholder="Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          style={{ ...inputStyle, minHeight: 120, resize: "vertical" as const }}
-        />
-
-        <input
-          placeholder="Price"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          style={inputStyle}
-        />
+        <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} style={inputStyle} />
+        <input placeholder="Seller name" value={seller} onChange={(e) => setSeller(e.target.value)} style={inputStyle} />
+        <textarea placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 120 }} />
+        <input placeholder="Price" value={price} onChange={(e) => setPrice(e.target.value)} style={inputStyle} />
 
         <label style={uploadStyle}>
           📸 Choose Image
-          <input
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-          />
+          <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
         </label>
 
-        {selectedFile && (
-          <div style={fileInfoStyle}>
-            Selected: {selectedFile.name}
-          </div>
-        )}
+        {selectedFile && <div style={fileInfoStyle}>Selected: {selectedFile.name}</div>}
 
         {previewUrl && (
           <div style={previewWrapStyle}>
             <div style={previewLabelStyle}>Preview</div>
             <div style={previewBoxStyle}>
-              <img
-                src={previewUrl}
-                alt="Listing preview"
-                style={previewImageStyle}
-              />
+              <img src={previewUrl} alt="preview" style={previewImageStyle} />
             </div>
           </div>
         )}
 
-        <button
-          onClick={handleSubmit}
-          disabled={loading || uploading}
-          style={{
-            ...buttonStyle,
-            opacity: loading || uploading ? 0.8 : 1,
-            cursor: loading || uploading ? "not-allowed" : "pointer",
-          }}
-        >
-          {uploading
-            ? "Uploading image..."
-            : loading
-            ? "Posting..."
-            : "Post Listing"}
+        <button onClick={handleSubmit} disabled={loading || uploading} style={buttonStyle}>
+          {uploading ? "Uploading..." : loading ? "Posting..." : "Post Listing"}
         </button>
       </div>
     </main>
   );
 }
 
-const pageStyle = {
-  minHeight: "100vh",
-  padding: 24,
-  background: "linear-gradient(135deg,#0f172a,#1d4ed8)",
-};
-
-const cardStyle = {
-  maxWidth: 760,
-  margin: "0 auto",
-  background: "rgba(255,255,255,0.96)",
-  borderRadius: 24,
-  padding: 24,
-  boxShadow: "0 20px 50px rgba(0,0,0,0.18)",
-};
-
-const titleStyle = {
-  textAlign: "center" as const,
-  fontSize: 42,
-  fontWeight: 900,
-  color: "#111827",
-  marginTop: 0,
-  marginBottom: 20,
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: 14,
-  marginBottom: 14,
-  borderRadius: 12,
-  border: "1px solid #d1d5db",
-  fontSize: 16,
-  boxSizing: "border-box" as const,
-};
-
-const uploadStyle = {
-  display: "inline-block",
-  padding: "12px 16px",
-  borderRadius: 12,
-  background: "#f3f4f6",
-  border: "1px solid #d1d5db",
-  cursor: "pointer",
-  fontWeight: 700,
-  marginBottom: 14,
-};
-
-const fileInfoStyle = {
-  marginBottom: 14,
-  color: "#374151",
-  fontWeight: 600,
-};
-
-const previewWrapStyle = {
-  marginBottom: 18,
-};
-
-const previewLabelStyle = {
-  marginBottom: 8,
-  color: "#111827",
-  fontWeight: 800,
-};
-
-const previewBoxStyle = {
-  width: "100%",
-  height: 260,
-  borderRadius: 16,
-  background: "#f3f4f6",
-  border: "1px solid #d1d5db",
-  overflow: "hidden",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
-const previewImageStyle = {
-  width: "100%",
-  height: "100%",
-  objectFit: "contain" as const,
-};
-
-const buttonStyle = {
-  width: "100%",
-  padding: 16,
-  borderRadius: 14,
-  background: "linear-gradient(135deg,#4f8cff,#6fa8ff)",
-  color: "white",
-  fontWeight: 900,
-  fontSize: 16,
-  border: "none",
-};
-
-const loadingScreen = {
-  minHeight: "100vh",
-  display: "grid",
-  placeItems: "center",
-  background: "linear-gradient(135deg,#0f172a,#1d4ed8)",
-  color: "white",
-  fontSize: 24,
-  fontWeight: 800,
-};
+const pageStyle = { minHeight: "100vh", padding: 24 };
+const cardStyle = { maxWidth: 760, margin: "0 auto" };
+const titleStyle = { fontSize: 42 };
+const inputStyle = { width: "100%", padding: 10, marginBottom: 10 };
+const uploadStyle = { padding: 10, background: "#eee", cursor: "pointer" };
+const fileInfoStyle = { marginBottom: 10 };
+const previewWrapStyle = { marginBottom: 10 };
+const previewLabelStyle = { fontWeight: "bold" };
+const previewBoxStyle = { height: 200 };
+const previewImageStyle = { width: "100%", height: "100%", objectFit: "contain" };
+const buttonStyle = { padding: 12, background: "blue", color: "white" };
+const loadingScreen = { minHeight: "100vh", display: "grid", placeItems: "center" };

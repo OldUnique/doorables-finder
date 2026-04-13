@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getSupabase } from "../../../lib/supabase";
 
 type Feedback = {
@@ -14,17 +15,41 @@ type Feedback = {
 
 export default function AdminFeedbackPage() {
   const supabase = getSupabase();
-  const [items, setItems] = useState<Feedback[]>([]);
+  const router = useRouter();
 
+  const [items, setItems] = useState<Feedback[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 🔒 ADMIN LOCK
+  useEffect(() => {
+    async function checkAdmin() {
+      const { data } = await supabase.auth.getUser();
+      const email = data.user?.email?.toLowerCase();
+
+      if (email !== "riffeljosh80@gmail.com") {
+        router.push("/");
+        return;
+      }
+
+      setLoading(false);
+    }
+
+    checkAdmin();
+  }, [router]);
+
+  // 📦 LOAD FEEDBACK
   async function load() {
     const { data, error } = await supabase
       .from("feedback_posts")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!error) setItems(data || []);
+    if (!error) {
+      setItems(data || []);
+    }
   }
 
+  // ✅ APPROVE
   async function approve(id: string) {
     await supabase
       .from("feedback_posts")
@@ -34,6 +59,7 @@ export default function AdminFeedbackPage() {
     load();
   }
 
+  // ❌ DELETE
   async function remove(id: string) {
     await supabase
       .from("feedback_posts")
@@ -44,14 +70,37 @@ export default function AdminFeedbackPage() {
   }
 
   useEffect(() => {
-    load();
-  }, []);
+    if (!loading) {
+      load();
+    }
+  }, [loading]);
+
+  if (loading) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          color: "white",
+          fontSize: 24,
+          fontWeight: 800,
+        }}
+      >
+        Checking admin access...
+      </main>
+    );
+  }
 
   return (
     <main style={{ padding: 20 }}>
       <h1 style={{ fontSize: 32, fontWeight: 900 }}>
         Admin Feedback 💜
       </h1>
+
+      {items.length === 0 && (
+        <div style={{ marginTop: 20 }}>No feedback yet.</div>
+      )}
 
       {items.map((item) => (
         <div
@@ -68,9 +117,9 @@ export default function AdminFeedbackPage() {
             {item.name || "Anonymous"}
           </div>
 
-          <div>{item.message}</div>
+          <div style={{ marginTop: 6 }}>{item.message}</div>
 
-          <div style={{ fontSize: 12, opacity: 0.6 }}>
+          <div style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>
             {item.category}
           </div>
 

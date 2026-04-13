@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Nav from "../components/Nav";
 import { getSupabase } from "../lib/supabase";
 
 export default function HomePage() {

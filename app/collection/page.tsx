@@ -185,7 +185,6 @@ export default function Page() {
       const merged: Card[] = (doorables || [])
         .map((d: any) => {
           const row = userMap.get(String(d.id));
-
           return {
             id: String(d.id ?? ""),
             name: String(d.name ?? "Unknown"),
@@ -301,10 +300,8 @@ export default function Page() {
       const matchesSubcategory = subcategoryFilter === "all" || card.subcategory === subcategoryFilter;
       const matchesRarity = rarityFilter === "all" || card.rarity === rarityFilter;
       const matchesMovie = movieFilter === "all" || card.movie === movieFilter;
-
       const matchesStatus =
         statusFilter === "all" ? true : statusFilter === "owned" ? card.qty > 0 : card.qty <= 0;
-
       const matchesCollection =
         collectionFilter === "all" ? true : collectionFilter === "have" ? card.qty > 0 : card.qty <= 0;
 
@@ -328,21 +325,18 @@ export default function Page() {
   const seriesProgress = useMemo(() => {
     const grouped = new Map<
       string,
-      { total: number; owned: number; subs: Map<string, { total: number; owned: number }> }
+      { total: number; owned: number; subcategories: string[] }
     >();
 
     cards.forEach((card) => {
       const key = card.series || "Unknown Series";
-      const current = grouped.get(key) || { total: 0, owned: 0, subs: new Map() };
+      const current = grouped.get(key) || { total: 0, owned: 0, subcategories: [] };
 
       current.total += 1;
       if (card.qty > 0) current.owned += 1;
 
-      if (card.subcategory) {
-        const sub = current.subs.get(card.subcategory) || { total: 0, owned: 0 };
-        sub.total += 1;
-        if (card.qty > 0) sub.owned += 1;
-        current.subs.set(card.subcategory, sub);
+      if (card.subcategory && !current.subcategories.includes(card.subcategory)) {
+        current.subcategories.push(card.subcategory);
       }
 
       grouped.set(key, current);
@@ -354,28 +348,14 @@ export default function Page() {
         total: value.total,
         owned: value.owned,
         percent: value.total ? Math.round((value.owned / value.total) * 100) : 0,
-        subcategories: Array.from(value.subs.entries())
-          .map(([name, sub]) => ({
-            name,
-            total: sub.total,
-            owned: sub.owned,
-            percent: sub.total ? Math.round((sub.owned / sub.total) * 100) : 0,
-          }))
-          .sort((a, b) => a.name.localeCompare(b.name)),
+        subcategoryLabel: value.subcategories.join(", "),
       }))
       .sort((a, b) => seriesSort(a.series, b.series));
   }, [cards]);
 
   if (loading) {
     return (
-      <div
-        style={{
-          padding: 24,
-          minHeight: "100vh",
-          background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)",
-          color: "white",
-        }}
-      >
+      <div style={{ padding: 24, minHeight: "100vh", background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)", color: "white" }}>
         Loading collection...
       </div>
     );
@@ -383,14 +363,7 @@ export default function Page() {
 
   if (error) {
     return (
-      <div
-        style={{
-          padding: 24,
-          minHeight: "100vh",
-          background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)",
-          color: "white",
-        }}
-      >
+      <div style={{ padding: 24, minHeight: "100vh", background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)", color: "white" }}>
         <h1>Collection Error</h1>
         <div>{error}</div>
       </div>
@@ -650,11 +623,31 @@ export default function Page() {
                   background: "#ffffff",
                 }}
               >
-                <div style={{ fontWeight: 800, marginBottom: 6 }}>{entry.series}</div>
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>
+                  {entry.series}
+                  {entry.subcategoryLabel && (
+                    <button
+                      onClick={() => setSubcategoryFilter(entry.subcategoryLabel.split(", ")[0])}
+                      style={{
+                        marginLeft: 8,
+                        background: "none",
+                        border: "none",
+                        color: "#6366f1",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
+                      • {entry.subcategoryLabel}
+                    </button>
+                  )}
+                </div>
+
                 <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
                   {entry.owned}/{entry.total} collected • {entry.percent}%
                 </div>
-                <div style={{ height: 10, borderRadius: 999, background: "#e5e7eb", overflow: "hidden", marginBottom: 10 }}>
+
+                <div style={{ height: 10, borderRadius: 999, background: "#e5e7eb", overflow: "hidden" }}>
                   <div
                     style={{
                       width: `${entry.percent}%`,
@@ -663,27 +656,6 @@ export default function Page() {
                     }}
                   />
                 </div>
-
-                {entry.subcategories.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {entry.subcategories.map((sub) => (
-                      <div
-                        key={sub.name}
-                        style={{
-                          fontSize: 12,
-                          padding: "6px 8px",
-                          borderRadius: 999,
-                          background: "#eef2ff",
-                          color: "#4338ca",
-                          border: "1px solid #c7d2fe",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {sub.name} · {sub.owned}/{sub.total}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             ))}
           </div>

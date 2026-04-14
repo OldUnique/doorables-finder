@@ -5,145 +5,222 @@ import Link from "next/link";
 import { getSupabase } from "../lib/supabase";
 
 export default function HomePage() {
-const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-useEffect(() => {
-const checkUser = async () => {
-const supabase = getSupabase();
-const { data } = await supabase.auth.getUser();
-setIsLoggedIn(!!data?.user);
-};
+  useEffect(() => {
+    const checkUser = async () => {
+      const supabase = getSupabase();
+      const { data } = await supabase.auth.getUser();
+      setIsLoggedIn(!!data?.user);
+    };
 
-checkUser();
+    checkUser();
+  }, []);
 
-}, []);
+  return (
+    <>
+      <style jsx>{`
+        .page {
+          min-height: 100vh;
+          background:
+            radial-gradient(circle at top right, rgba(250, 204, 21, 0.12), transparent 22%),
+            linear-gradient(135deg, #0f172a, #1d4ed8);
+          color: white;
+        }
 
-return (
-<main
-style={{
-minHeight: "100vh",
-background: "linear-gradient(135deg,#0f172a,#1d4ed8)",
-color: "white",
-}}
->
-<div style={{ maxWidth: 1200, margin: "0 auto", padding: 20 }}>
+        .container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 20px;
+        }
 
-    {/* HERO */}
-    <div
-      style={{
-        marginTop: 20,
-        background: "linear-gradient(135deg,#5b21b6,#2563eb)",
-        padding: 32,
-        borderRadius: 28,
-        textAlign: "center",
-        boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
-      }}
-    >
-      <h1 style={{ margin: 0, fontSize: 56, fontWeight: 900 }}>
-        Doorables Finder 💜
-      </h1>
+        .hero {
+          margin-top: 20px;
+          background: linear-gradient(135deg, #5b21b6, #2563eb);
+          padding: 32px;
+          border-radius: 28px;
+          text-align: center;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        }
 
-      <p style={{ marginTop: 12, fontSize: 18, opacity: 0.9 }}>
-        Track your collection, find what you need, and buy & sell Doorables
-        all in one place.
-      </p>
+        .title {
+          margin: 0;
+          font-size: clamp(2.3rem, 7vw, 3.5rem);
+          font-weight: 900;
+          line-height: 1.05;
+        }
 
-      <div
-        style={{
-          marginTop: 24,
-          display: "flex",
-          justifyContent: "center",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <Link
-          href={isLoggedIn ? "/collection" : "/login"}
-          style={primaryBtn}
-        >
-          {isLoggedIn ? "Go to Collection 🚀" : "Start Collecting ✨"}
-        </Link>
+        .subtitle {
+          margin: 14px auto 0;
+          font-size: clamp(1rem, 2.2vw, 1.125rem);
+          opacity: 0.92;
+          max-width: 720px;
+          line-height: 1.65;
+        }
 
-        <Link href="/marketplace" style={secondaryBtn}>
-          Browse Marketplace 🛒
-        </Link>
+        .ctaRow {
+          margin-top: 24px;
+          display: flex;
+          justify-content: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
 
-        <Link href="/feedback" style={ghostBtn}>
-          💜 Feedback
-        </Link>
-      </div>
+        .promo {
+          margin-top: 18px;
+          opacity: 0.9;
+          font-size: 15px;
+          line-height: 1.6;
+        }
 
-      <div style={{ marginTop: 18, opacity: 0.85 }}>
-        💡 First month FREE with code <b>FIRSTMONTHFREE</b>
-      </div>
-    </div>
+        .tagline {
+          opacity: 0.88;
+          margin-top: 12px;
+          font-weight: 600;
+          font-size: 15px;
+        }
 
-    {/* FEATURES */}
-    <div
-      style={{
-        marginTop: 24,
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))",
-        gap: 16,
-      }}
-    >
-      <div style={card}>
-        <h3>📦 Track Collection</h3>
-        <p>Keep track of what you own and what you still need.</p>
-      </div>
+        .featureGrid {
+          margin-top: 24px;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 16px;
+        }
 
-      <div style={card}>
-        <h3>🛒 Marketplace</h3>
-        <p>Buy and sell Doorables with other collectors.</p>
-      </div>
+        .card {
+          background: rgba(255, 255, 255, 0.96);
+          color: #111827;
+          padding: 20px;
+          border-radius: 18px;
+          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
+        }
 
-      <div style={card}>
-        <h3>📸 Upload Photos</h3>
-        <p>Share your finds and listings easily from your phone.</p>
-      </div>
+        .card h3 {
+          margin-top: 0;
+          margin-bottom: 10px;
+          font-size: 1.1rem;
+        }
 
-      <div style={card}>
-        <h3>💬 Community Feedback</h3>
-        <p>Suggest features and help shape the app.</p>
-      </div>
-    </div>
-  </div>
-</main>
+        .card p {
+          margin: 0;
+          color: #374151;
+          line-height: 1.6;
+        }
 
-);
+        .btn {
+          padding: 14px 22px;
+          border-radius: 14px;
+          font-weight: 900;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 180px;
+          text-align: center;
+          transition: transform 0.18s ease, opacity 0.18s ease;
+        }
+
+        .btn:hover {
+          transform: translateY(-1px);
+        }
+
+        .primaryBtn {
+          background: #facc15;
+          color: #111827;
+        }
+
+        .secondaryBtn {
+          background: #2563eb;
+          color: white;
+        }
+
+        .ghostBtn {
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          color: white;
+          background: rgba(255, 255, 255, 0.05);
+        }
+
+        @media (max-width: 700px) {
+          .container {
+            padding: 14px;
+          }
+
+          .hero {
+            margin-top: 12px;
+            padding: 22px 16px;
+            border-radius: 22px;
+          }
+
+          .ctaRow {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .btn {
+            width: 100%;
+            min-width: 0;
+          }
+
+          .featureGrid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+
+      <main className="page">
+        <div className="container">
+          <div className="hero">
+            <h1 className="title">Doorables Finder 💜</h1>
+
+            <p className="subtitle">
+              Track your collection, find what you need, and buy &amp; sell Doorables
+              all in one place.
+            </p>
+
+            <div className="ctaRow">
+              <Link href={isLoggedIn ? "/collection" : "/login"} className="btn primaryBtn">
+                {isLoggedIn ? "Go to Collection 🚀" : "Start Collecting ✨"}
+              </Link>
+
+              <Link href="/marketplace" className="btn secondaryBtn">
+                Browse Marketplace 🛒
+              </Link>
+
+              <Link href="/feedback" className="btn ghostBtn">
+                💜 Feedback
+              </Link>
+            </div>
+
+            <div className="promo">
+              💡 First month FREE with code <b>FIRSTMONTHFREE</b>
+            </div>
+
+            <p className="tagline">💜 Built by collectors, for collectors like you</p>
+          </div>
+
+          <div className="featureGrid">
+            <div className="card">
+              <h3>📦 Track Collection</h3>
+              <p>Keep track of what you own and what you still need.</p>
+            </div>
+
+            <div className="card">
+              <h3>🛒 Marketplace</h3>
+              <p>Buy and sell Doorables with other collectors.</p>
+            </div>
+
+            <div className="card">
+              <h3>📸 Upload Photos</h3>
+              <p>Share your finds and listings easily from your phone.</p>
+            </div>
+
+            <div className="card">
+              <h3>💬 Community Feedback</h3>
+              <p>Suggest features and help shape the app.</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </>
+  );
 }
-
-const primaryBtn = {
-padding: "14px 22px",
-borderRadius: 14,
-background: "#facc15",
-color: "#111827",
-fontWeight: 900,
-textDecoration: "none",
-};
-
-const secondaryBtn = {
-padding: "14px 22px",
-borderRadius: 14,
-background: "#2563eb",
-color: "white",
-fontWeight: 900,
-textDecoration: "none",
-};
-
-const ghostBtn = {
-padding: "14px 22px",
-borderRadius: 14,
-border: "1px solid rgba(255,255,255,0.3)",
-color: "white",
-fontWeight: 900,
-textDecoration: "none",
-};
-
-const card = {
-background: "rgba(255,255,255,0.95)",
-color: "#111827",
-padding: 18,
-borderRadius: 18,
-boxShadow: "0 10px 24px rgba(0,0,0,0.15)",
-}; 

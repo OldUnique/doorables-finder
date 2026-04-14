@@ -18,12 +18,14 @@ type UserDoorableRow = {
   id?: string;
   user_id?: string;
   doorable_id?: string;
-  owned?: number | boolean | null;
-  need_status?: string | boolean | null;
+  qty_owned?: number | null;
+  wanted?: boolean | null;
+  favorited?: boolean | null;
   custom_tag?: string | null;
-  notes?: string | null;
   personal_message?: string | null;
+  notes?: string | null;
   image_url?: string | null;
+  created_at?: string | null;
   [key: string]: any;
 };
 
@@ -34,50 +36,35 @@ type CollectionCard = {
   subcategory: string;
   rarity: string;
   imageUrl: string | null;
-  ownedCount: number;
-  need: boolean;
+  qtyOwned: number;
+  wanted: boolean;
+  favorited: boolean;
   customTag: string;
   notes: string;
+  userRowId?: string;
 };
-
-function toOwnedCount(value: unknown): number {
-  if (typeof value === "number") return value;
-  if (typeof value === "boolean") return value ? 1 : 0;
-  if (typeof value === "string") {
-    const n = Number(value);
-    if (!Number.isNaN(n)) return n;
-    return value.toLowerCase() === "true" ? 1 : 0;
-  }
-  return 0;
-}
-
-function toNeed(value: unknown): boolean {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "string") {
-    const normalized = value.toLowerCase().trim();
-    return ["need", "needed", "wanted", "want", "true", "yes"].includes(normalized);
-  }
-  return false;
-}
 
 function rarityColors(rarity: string) {
   const value = rarity.toLowerCase();
-  if (value.includes("ultra")) return { bg: "#ede9fe", fg: "#6d28d9" };
-  if (value.includes("rare")) return { bg: "#dbeafe", fg: "#1d4ed8" };
-  if (value.includes("special")) return { bg: "#fef3c7", fg: "#b45309" };
-  return { bg: "#e5e7eb", fg: "#111827" };
+  if (value.includes("ultra")) return { bg: "#ede9fe", fg: "#6d28d9", card: "#faf5ff", border: "#ddd6fe" };
+  if (value.includes("rare")) return { bg: "#dbeafe", fg: "#1d4ed8", card: "#eff6ff", border: "#bfdbfe" };
+  if (value.includes("special")) return { bg: "#fef3c7", fg: "#b45309", card: "#fffbeb", border: "#fde68a" };
+  return { bg: "#e5e7eb", fg: "#111827", card: "#f9fafb", border: "#e5e7eb" };
 }
 
 export default function CollectionPage() {
   const supabase = useMemo(() => getSupabase(), []);
   const router = useRouter();
 
+  const [userId, setUserId] = useState<string>("");
   const [cards, setCards] = useState<CollectionCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "owned" | "need">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "owned" | "need" | "favorites">("all");
   const [seriesFilter, setSeriesFilter] = useState("all");
+  const [rarityFilter, setRarityFilter] = useState("all");
+  const [savingId, setSavingId] = useState<string>("");
 
   useEffect(() => {
     async function loadCollection() {
@@ -90,9 +77,15 @@ export default function CollectionPage() {
         return;
       }
 
+      setUserId(user.id);
+
       const [{ data: doorables, error: doorablesError }, { data: userDoorables, error: userDoorablesError }] =
         await Promise.all([
-          supabase.from("doorables").select("*").order("series", { ascending: true }).order("name", { ascending: true }),
+          supabase
+            .from("doorables")
+            .select("*")
+            .order("series", { ascending: true })
+            .order("name", { ascending: true }),
           supabase.from("user_doorables").select("*").eq("user_id", user.id),
         ]);
 
@@ -109,30 +102,12 @@ export default function CollectionPage() {
       }
 
       const userMap = new Map<string, UserDoorableRow>();
-
       (userDoorables || []).forEach((row: UserDoorableRow) => {
-        const key =
-          row.doorable_id ||
-          row.doorables_id ||
-          row.item_id ||
-          row.catalog_id ||
-          row.id;
-
-        if (key) {
-          userMap.set(String(key), row);
-        }
+        if (row.doorable_id) userMap.set(String(row.doorable_id), row);
       });
 
       const merged: CollectionCard[] = (doorables || []).map((doorable: DoorableRow) => {
         const userRow = userMap.get(String(doorable.id));
-
-        const ownedCount = toOwnedCount(
-          userRow?.owned ?? userRow?.owned_count ?? userRow?.quantity ?? 0
-        );
-
-        const need = toNeed(
-          userRow?.need_status ?? userRow?.needed ?? userRow?.want ?? false
-        ) || ownedCount <= 0;
 
         return {
           id: String(doorable.id),
@@ -141,10 +116,12 @@ export default function CollectionPage() {
           subcategory: doorable.subcategory || doorable.movie || "Unknown Group",
           rarity: doorable.rarity || "Common",
           imageUrl: userRow?.image_url || doorable.image_url || null,
-          ownedCount,
-          need,
+          qtyOwned: Number(userRow?.qty_owned || 0),
+          wanted: Boolean(userRow?.wanted) || Number(userRow?.qty_owned || 0) <= 0,
+          favorited: Boolean(userRow?.favorited),
           customTag: userRow?.custom_tag || "",
           notes: userRow?.notes || userRow?.personal_message || "",
+          userRowId: userRow?.id ? String(userRow.id) : undefined,
         };
       });
 
@@ -155,9 +132,15 @@ export default function CollectionPage() {
     loadCollection();
   }, [router, supabase]);
 
-  const seriesOptions = useMemo(() => {
-    return ["all", ...Array.from(new Set(cards.map((card) => card.series))).sort()];
-  }, [cards]);
+  const seriesOptions = useMemo(
+    () => ["all", ...Array.from(new Set(cards.map((card) => card.series))).sort()],
+    [cards]
+  );
+
+  const rarityOptions = useMemo(
+    () => ["all", ...Array.from(new Set(cards.map((card) => card.rarity))).sort()],
+    [cards]
+  );
 
   const filteredCards = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -174,18 +157,105 @@ export default function CollectionPage() {
         statusFilter === "all"
           ? true
           : statusFilter === "owned"
-          ? card.ownedCount > 0
-          : card.need;
+          ? card.qtyOwned > 0
+          : statusFilter === "need"
+          ? card.qtyOwned <= 0 || card.wanted
+          : card.favorited;
 
       const matchesSeries = seriesFilter === "all" ? true : card.series === seriesFilter;
+      const matchesRarity = rarityFilter === "all" ? true : card.rarity === rarityFilter;
 
-      return matchesSearch && matchesStatus && matchesSeries;
+      return matchesSearch && matchesStatus && matchesSeries && matchesRarity;
     });
-  }, [cards, search, statusFilter, seriesFilter]);
+  }, [cards, search, statusFilter, seriesFilter, rarityFilter]);
 
-  const ownedCount = cards.filter((card) => card.ownedCount > 0).length;
-  const needCount = cards.filter((card) => card.need).length;
+  const ownedCount = cards.filter((card) => card.qtyOwned > 0).length;
+  const needCount = cards.filter((card) => card.qtyOwned <= 0 || card.wanted).length;
   const completion = cards.length ? Math.round((ownedCount / cards.length) * 100) : 0;
+
+  const seriesProgress = useMemo(() => {
+    const grouped = new Map<string, { total: number; owned: number }>();
+
+    cards.forEach((card) => {
+      const current = grouped.get(card.series) || { total: 0, owned: 0 };
+      current.total += 1;
+      if (card.qtyOwned > 0) current.owned += 1;
+      grouped.set(card.series, current);
+    });
+
+    return Array.from(grouped.entries())
+      .map(([series, value]) => ({
+        series,
+        total: value.total,
+        owned: value.owned,
+        percent: value.total ? Math.round((value.owned / value.total) * 100) : 0,
+      }))
+      .sort((a, b) => a.series.localeCompare(b.series));
+  }, [cards]);
+
+  async function updateQuantity(card: CollectionCard, delta: number) {
+    if (!userId) return;
+
+    const nextQty = Math.max(0, card.qtyOwned + delta);
+    setSavingId(card.id);
+
+    const optimistic = cards.map((item) =>
+      item.id === card.id
+        ? {
+            ...item,
+            qtyOwned: nextQty,
+            wanted: nextQty <= 0 ? true : false,
+          }
+        : item
+    );
+    setCards(optimistic);
+
+    let errorMessage = "";
+
+    if (card.userRowId) {
+      const { error } = await supabase
+        .from("user_doorables")
+        .update({
+          qty_owned: nextQty,
+          wanted: nextQty <= 0,
+        })
+        .eq("id", card.userRowId);
+
+      if (error) errorMessage = error.message;
+    } else {
+      const { data, error } = await supabase
+        .from("user_doorables")
+        .insert([
+          {
+            user_id: userId,
+            doorable_id: card.id,
+            qty_owned: nextQty,
+            wanted: nextQty <= 0,
+            favorited: card.favorited,
+            custom_tag: card.customTag || null,
+          },
+        ])
+        .select()
+        .single();
+
+      if (error) {
+        errorMessage = error.message;
+      } else if (data) {
+        setCards((prev) =>
+          prev.map((item) =>
+            item.id === card.id ? { ...item, userRowId: String(data.id) } : item
+          )
+        );
+      }
+    }
+
+    if (errorMessage) {
+      alert("Save failed: " + errorMessage);
+      setCards(cards);
+    }
+
+    setSavingId("");
+  }
 
   return (
     <main
@@ -227,7 +297,7 @@ export default function CollectionPage() {
                 My Collection 💜
               </h1>
               <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
-                Powered by your Supabase Doorables database.
+                It only gets better 💜
               </div>
             </div>
 
@@ -330,7 +400,7 @@ export default function CollectionPage() {
 
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as "all" | "owned" | "need")}
+              onChange={(e) => setStatusFilter(e.target.value as "all" | "owned" | "need" | "favorites")}
               style={{
                 padding: 14,
                 borderRadius: 14,
@@ -342,6 +412,7 @@ export default function CollectionPage() {
               <option value="all">All Statuses</option>
               <option value="owned">Owned</option>
               <option value="need">Need</option>
+              <option value="favorites">Favorites</option>
             </select>
 
             <select
@@ -361,6 +432,80 @@ export default function CollectionPage() {
                 </option>
               ))}
             </select>
+
+            <select
+              value={rarityFilter}
+              onChange={(e) => setRarityFilter(e.target.value)}
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                fontSize: 15,
+                minWidth: 180,
+              }}
+            >
+              {rarityOptions.map((rarity) => (
+                <option key={rarity} value={rarity}>
+                  {rarity === "all" ? "All Rarities" : rarity}
+                </option>
+              ))}
+            </select>
+          </div>
+        </section>
+
+        <section
+          style={{
+            background: "rgba(255,255,255,0.97)",
+            color: "#111827",
+            borderRadius: 24,
+            padding: 16,
+            boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+            marginBottom: 18,
+          }}
+        >
+          <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 12 }}>
+            Series Progress
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {seriesProgress.map((entry) => (
+              <div
+                key={entry.series}
+                style={{
+                  borderRadius: 18,
+                  border: "1px solid #e5e7eb",
+                  padding: 14,
+                  background: "#ffffff",
+                }}
+              >
+                <div style={{ fontWeight: 800, marginBottom: 8 }}>{entry.series}</div>
+                <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
+                  {entry.owned}/{entry.total} collected
+                </div>
+                <div
+                  style={{
+                    height: 10,
+                    borderRadius: 999,
+                    background: "#e5e7eb",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${entry.percent}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg,#60a5fa,#a78bfa)",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -390,7 +535,7 @@ export default function CollectionPage() {
           <section
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
               gap: 16,
             }}
           >
@@ -401,18 +546,19 @@ export default function CollectionPage() {
                 <div
                   key={item.id}
                   style={{
-                    background: "rgba(255,255,255,0.98)",
+                    background: rarity.card,
                     color: "#111827",
                     borderRadius: 22,
                     padding: 14,
                     boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
+                    border: `2px solid ${rarity.border}`,
                   }}
                 >
                   <div
                     style={{
                       height: 170,
                       borderRadius: 16,
-                      background: "#f3f4f6",
+                      background: "#ffffff",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -460,12 +606,12 @@ export default function CollectionPage() {
                         borderRadius: 999,
                         fontSize: 12,
                         fontWeight: 900,
-                        background: item.ownedCount > 0 ? "#dcfce7" : "#fee2e2",
-                        color: item.ownedCount > 0 ? "#166534" : "#b91c1c",
+                        background: rarity.bg,
+                        color: rarity.fg,
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {item.ownedCount > 0 ? `Owned: ${item.ownedCount}` : "Need"}
+                      {item.rarity}
                     </div>
                   </div>
 
@@ -475,17 +621,51 @@ export default function CollectionPage() {
 
                   <div
                     style={{
-                      display: "inline-block",
-                      padding: "6px 10px",
-                      borderRadius: 999,
-                      fontSize: 12,
-                      fontWeight: 900,
-                      background: rarity.bg,
-                      color: rarity.fg,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
                       marginBottom: 10,
                     }}
                   >
-                    {item.rarity}
+                    <button
+                      onClick={() => updateQuantity(item, -1)}
+                      disabled={savingId === item.id}
+                      style={qtyButtonStyle}
+                    >
+                      –
+                    </button>
+
+                    <div
+                      style={{
+                        minWidth: 68,
+                        textAlign: "center",
+                        fontWeight: 900,
+                        fontSize: 20,
+                        color: "#111827",
+                      }}
+                    >
+                      {item.qtyOwned}
+                    </div>
+
+                    <button
+                      onClick={() => updateQuantity(item, 1)}
+                      disabled={savingId === item.id}
+                      style={qtyButtonStyle}
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <div
+                    style={{
+                      marginBottom: 8,
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: item.qtyOwned > 0 ? "#166534" : "#b91c1c",
+                    }}
+                  >
+                    {item.qtyOwned > 0 ? "Owned" : "Need"}
                   </div>
 
                   {item.customTag ? (
@@ -513,3 +693,15 @@ export default function CollectionPage() {
     </main>
   );
 }
+
+const qtyButtonStyle = {
+  width: 36,
+  height: 36,
+  borderRadius: 12,
+  border: "none",
+  cursor: "pointer",
+  fontSize: 22,
+  fontWeight: 900,
+  background: "#e5e7eb",
+  color: "#111827",
+};

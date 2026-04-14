@@ -1,13 +1,25 @@
-// SAFER UPGRADED COLLECTION PAGE
+// COLLECTION PAGE REPLACEMENT - movie + subcategory fix included
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { getSupabase } from "../../lib/supabase";
 
-function rarityTheme(rarity) {
+type Card = {
+  id: string;
+  name: string;
+  series: string;
+  rarity: string;
+  subcategory: string;
+  movie: string;
+  image: string;
+  qty: number;
+  note: string;
+  rowId: string | null;
+};
+
+function rarityTheme(rarity: string) {
   const value = String(rarity || "").toLowerCase().trim();
 
-  // Exclusive = gold
   if (value === "exclusive" || value.includes("exclusive")) {
     return {
       bg: "#fff7d6",
@@ -18,7 +30,6 @@ function rarityTheme(rarity) {
     };
   }
 
-  // Special Edition = purple
   if (value.includes("special edition")) {
     return {
       bg: "#f4e8ff",
@@ -29,7 +40,6 @@ function rarityTheme(rarity) {
     };
   }
 
-  // Limited Edition = yellow
   if (value.includes("limited edition")) {
     return {
       bg: "#fffbd1",
@@ -40,7 +50,6 @@ function rarityTheme(rarity) {
     };
   }
 
-  // Ultra Rare = blue
   if (value.includes("ultra rare")) {
     return {
       bg: "#e8f1ff",
@@ -51,7 +60,6 @@ function rarityTheme(rarity) {
     };
   }
 
-  // Rare = green
   if (value === "rare" || (value.includes("rare") && !value.includes("ultra"))) {
     return {
       bg: "#eafaf0",
@@ -62,7 +70,6 @@ function rarityTheme(rarity) {
     };
   }
 
-  // Common = white
   return {
     bg: "#ffffff",
     border: "#d1d5db",
@@ -72,7 +79,7 @@ function rarityTheme(rarity) {
   };
 }
 
-function seriesSort(a, b) {
+function seriesSort(a: string, b: string) {
   const aStr = String(a || "");
   const bStr = String(b || "");
   const aMatch = aStr.match(/\d+/);
@@ -91,7 +98,7 @@ function seriesSort(a, b) {
 }
 
 export default function Page() {
-  const [cards, setCards] = useState([]);
+  const [cards, setCards] = useState<Card[]>([]);
   const [userId, setUserId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -152,13 +159,13 @@ export default function Page() {
         return;
       }
 
-      const userMap = new Map();
-      (userDoorables || []).forEach((row) => {
+      const userMap = new Map<string, any>();
+      (userDoorables || []).forEach((row: any) => {
         userMap.set(String(row.doorable_id), row);
       });
 
-      const merged = (doorables || [])
-        .map((d) => {
+      const merged: Card[] = (doorables || [])
+        .map((d: any) => {
           const row = userMap.get(String(d.id));
 
           return {
@@ -166,7 +173,8 @@ export default function Page() {
             name: String(d.name ?? "Unknown"),
             series: String(d.series ?? "Unknown Series"),
             rarity: String(d.rarity ?? "Common"),
-            subcategory: String(d.subcategory ?? d.movie ?? ""),
+            subcategory: String(d.subcategory ?? ""),
+            movie: String(d.movie ?? ""),
             image: String(d.image_url ?? ""),
             qty: Number(row?.qty_owned ?? 0),
             note: String(row?.custom_tag ?? ""),
@@ -187,7 +195,7 @@ export default function Page() {
     }
   }
 
-  async function saveCard(card, nextQty, nextNote) {
+  async function saveCard(card: Card, nextQty: number, nextNote: string) {
     try {
       const supabase = getSupabase();
 
@@ -251,9 +259,14 @@ export default function Page() {
     const q = search.trim().toLowerCase();
 
     return cards.filter((card) => {
+      const detailText =
+        card.subcategory && card.movie
+          ? `${card.subcategory} ${card.movie}`
+          : card.subcategory || card.movie || "";
+
       const matchesSearch =
         !q ||
-        [card.name, card.series, card.rarity, card.subcategory, card.note]
+        [card.name, card.series, card.rarity, detailText, card.note]
           .join(" ")
           .toLowerCase()
           .includes(q);
@@ -278,7 +291,7 @@ export default function Page() {
   const completion = totalCount ? Math.round((ownedCount / totalCount) * 100) : 0;
 
   const seriesProgress = useMemo(() => {
-    const grouped = new Map();
+    const grouped = new Map<string, { total: number; owned: number }>();
 
     cards.forEach((card) => {
       const current = grouped.get(card.series) || { total: 0, owned: 0 };
@@ -417,7 +430,7 @@ export default function Page() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, series, rarity, notes..."
+              placeholder="Search by name, series, rarity, movie, notes..."
               style={{
                 flex: "1 1 280px",
                 padding: 14,
@@ -546,36 +559,38 @@ export default function Page() {
             gap: 16,
           }}
         >
-          {filteredCards.map((card) => {
-            const theme = rarityTheme(card.rarity);
+          {filteredCards.map((item) => {
+            const rarity = rarityTheme(item.rarity);
 
             return (
               <div
-                key={card.id}
+                key={item.id}
                 style={{
-                  background: theme.bg,
-                  border: "2px solid " + theme.border,
-                  borderRadius: 16,
+                  background: rarity.bg,
+                  color: "#111827",
+                  borderRadius: 22,
                   padding: 12,
-                  color: theme.text,
+                  border: `5px solid ${rarity.border}`,
                   boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
                 }}
               >
                 <div
                   style={{
-                    height: 150,
+                    height: 170,
+                    background: "rgba(255,255,255,0.92)",
+                    borderRadius: 18,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    marginBottom: 10,
-                    background: "rgba(255,255,255,0.7)",
-                    borderRadius: 12,
+                    marginBottom: 12,
+                    overflow: "hidden",
+                    padding: 14,
                   }}
                 >
-                  {card.image ? (
+                  {item.image ? (
                     <img
-                      src={card.image}
-                      alt={card.name}
+                      src={item.image}
+                      alt={item.name}
                       style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
                     />
                   ) : (
@@ -585,8 +600,8 @@ export default function Page() {
 
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "start", marginBottom: 6 }}>
                   <div>
-                    <div style={{ fontWeight: 900, fontSize: 20 }}>{card.name}</div>
-                    <div style={{ opacity: 0.8, fontSize: 14 }}>{card.series}</div>
+                    <div style={{ fontWeight: 900, fontSize: 20 }}>{item.name}</div>
+                    <div style={{ opacity: 0.8, fontSize: 14 }}>{item.series}</div>
                   </div>
                   <div
                     style={{
@@ -594,28 +609,30 @@ export default function Page() {
                       borderRadius: 999,
                       fontSize: 12,
                       fontWeight: 900,
-                      background: theme.badgeBg,
-                      color: theme.badgeText,
+                      background: rarity.badgeBg,
+                      color: rarity.badgeText,
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {card.rarity}
+                    {item.rarity}
                   </div>
                 </div>
 
                 <div style={{ opacity: 0.8, fontSize: 14, marginBottom: 10 }}>
-                  {card.subcategory}
+                  {item.subcategory && item.movie
+                    ? `${item.subcategory} • ${item.movie}`
+                    : item.subcategory || item.movie || ""}
                 </div>
 
                 <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", justifyContent: "space-between" }}>
                   <button
-                    onClick={() => void saveCard(card, card.qty - 1, card.note)}
-                    disabled={savingId === card.id}
+                    onClick={() => void saveCard(item, item.qty - 1, item.note)}
+                    disabled={savingId === item.id}
                     style={{
                       width: 36,
                       height: 36,
                       borderRadius: 12,
-                      border: "1px solid " + theme.border,
+                      border: "1px solid " + rarity.border,
                       background: "rgba(255,255,255,0.8)",
                       cursor: "pointer",
                     }}
@@ -623,16 +640,16 @@ export default function Page() {
                     -
                   </button>
 
-                  <div style={{ fontWeight: 900, fontSize: 22 }}>{card.qty}</div>
+                  <div style={{ fontWeight: 900, fontSize: 22 }}>{item.qty}</div>
 
                   <button
-                    onClick={() => void saveCard(card, card.qty + 1, card.note)}
-                    disabled={savingId === card.id}
+                    onClick={() => void saveCard(item, item.qty + 1, item.note)}
+                    disabled={savingId === item.id}
                     style={{
                       width: 36,
                       height: 36,
                       borderRadius: 12,
-                      border: "1px solid " + theme.border,
+                      border: "1px solid " + rarity.border,
                       background: "rgba(255,255,255,0.8)",
                       cursor: "pointer",
                     }}
@@ -641,16 +658,16 @@ export default function Page() {
                   </button>
                 </div>
 
-                <div style={{ marginTop: 8, marginBottom: 8, fontWeight: 800, color: card.qty > 0 ? "#166534" : "#b91c1c" }}>
-                  {savingId === card.id ? "Saving..." : card.qty > 0 ? "Owned" : "Need"}
+                <div style={{ marginTop: 8, marginBottom: 8, fontWeight: 800, color: item.qty > 0 ? "#166534" : "#b91c1c" }}>
+                  {savingId === item.id ? "Saving..." : item.qty > 0 ? "Owned" : "Need"}
                 </div>
 
                 <textarea
-                  value={card.note}
+                  value={item.note}
                   onChange={(e) => {
                     const value = e.target.value;
                     setCards((prev) =>
-                      prev.map((c) => (c.id === card.id ? { ...c, note: value } : c))
+                      prev.map((c) => (c.id === item.id ? { ...c, note: value } : c))
                     );
                   }}
                   placeholder="Notes..."
@@ -659,17 +676,17 @@ export default function Page() {
                     marginTop: 8,
                     minHeight: 70,
                     borderRadius: 12,
-                    border: "1px solid " + theme.border,
+                    border: "1px solid " + rarity.border,
                     background: "rgba(255,255,255,0.82)",
                     padding: 10,
-                    color: theme.text,
+                    color: "#111827",
                     boxSizing: "border-box",
                   }}
                 />
 
                 <button
-                  onClick={() => void saveCard(card, card.qty, card.note)}
-                  disabled={savingId === card.id}
+                  onClick={() => void saveCard(item, item.qty, item.note)}
+                  disabled={savingId === item.id}
                   style={{
                     marginTop: 8,
                     width: "100%",
@@ -678,11 +695,11 @@ export default function Page() {
                     border: "none",
                     cursor: "pointer",
                     fontWeight: 800,
-                    background: theme.badgeBg,
-                    color: theme.badgeText,
+                    background: rarity.badgeBg,
+                    color: rarity.badgeText,
                   }}
                 >
-                  {savingId === card.id ? "Saving Note..." : "Save Note"}
+                  {savingId === item.id ? "Saving Note..." : "Save Note"}
                 </button>
               </div>
             );

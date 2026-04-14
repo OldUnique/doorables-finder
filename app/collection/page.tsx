@@ -1,4 +1,9 @@
-// COLLECTION PAGE REPLACEMENT - movie + subcategory fix included
+// COLLECTION PAGE REPLACEMENT
+// - 4 cards per row on desktop
+// - 2 cards per row on smaller screens
+// - movie shown on its own row with a little movie icon
+// - keeps rarity colors, filters, series progress, notes, and qty saving
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -259,10 +264,7 @@ export default function Page() {
     const q = search.trim().toLowerCase();
 
     return cards.filter((card) => {
-      const detailText =
-        card.subcategory && card.movie
-          ? `${card.subcategory} ${card.movie}`
-          : card.subcategory || card.movie || "";
+      const detailText = [card.subcategory, card.movie].filter(Boolean).join(" ");
 
       const matchesSearch =
         !q ||
@@ -336,7 +338,7 @@ export default function Page() {
         color: "white",
       }}
     >
-      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+      <div style={{ maxWidth: 1400, margin: "0 auto" }}>
         <section
           style={{
             background: "linear-gradient(135deg, #111827, #4338ca)",
@@ -552,13 +554,21 @@ export default function Page() {
           </div>
         </section>
 
-        <section
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))",
-            gap: 16,
-          }}
-        >
+        <style jsx>{`
+          .cardsGrid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+          }
+
+          @media (min-width: 900px) {
+            .cardsGrid {
+              grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+          }
+        `}</style>
+
+        <section className="cardsGrid">
           {filteredCards.map((item) => {
             const rarity = rarityTheme(item.rarity);
 
@@ -619,9 +629,16 @@ export default function Page() {
                 </div>
 
                 <div style={{ opacity: 0.8, fontSize: 14, marginBottom: 10 }}>
-                  {item.subcategory && item.movie
-                    ? `${item.subcategory} • ${item.movie}`
-                    : item.subcategory || item.movie || ""}
+                  {item.subcategory && (
+                    <div>{item.subcategory}</div>
+                  )}
+
+                  {item.movie && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span aria-hidden="true">🎬</span>
+                      <span>{item.movie}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", justifyContent: "space-between" }}>

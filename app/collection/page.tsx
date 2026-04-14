@@ -13,7 +13,6 @@ type Card = {
   image: string;
   qty: number;
   note: string;
-  wanted: boolean;
   rowId: string | null;
 };
 
@@ -197,7 +196,6 @@ export default function Page() {
             image: String(d.image_url ?? ""),
             qty: Number(row?.qty_owned ?? 0),
             note: String(row?.custom_tag ?? ""),
-            wanted: Boolean(row?.wanted ?? (Number(row?.qty_owned ?? 0) <= 0)),
             rowId: row?.id ? String(row.id) : null,
           };
         })
@@ -215,12 +213,11 @@ export default function Page() {
     }
   }
 
-  async function saveCard(card: Card, nextQty: number, nextNote: string, nextWanted?: boolean) {
+  async function saveCard(card: Card, nextQty: number, nextNote: string) {
     try {
       const supabase = getSupabase();
       const qty = Math.max(0, Number(nextQty ?? card.qty ?? 0));
       const note = String(nextNote ?? card.note ?? "");
-      const wanted = typeof nextWanted === "boolean" ? nextWanted : card.wanted;
 
       setSavingId(card.id);
 
@@ -228,7 +225,7 @@ export default function Page() {
         user_id: userId,
         doorable_id: card.id,
         qty_owned: qty,
-        wanted,
+        wanted: qty <= 0,
         custom_tag: note,
       };
 
@@ -267,21 +264,25 @@ export default function Page() {
     }
   }
 
-  const seriesOptions = useMemo(() => {
-    return ["all", ...Array.from(new Set(cards.map((c) => c.series).filter(Boolean))).sort(seriesSort)];
-  }, [cards]);
+  const seriesOptions = useMemo(
+    () => ["all", ...Array.from(new Set(cards.map((c) => c.series).filter(Boolean))).sort(seriesSort)],
+    [cards]
+  );
 
-  const subcategoryOptions = useMemo(() => {
-    return ["all", ...Array.from(new Set(cards.map((c) => c.subcategory).filter(Boolean))).sort()];
-  }, [cards]);
+  const subcategoryOptions = useMemo(
+    () => ["all", ...Array.from(new Set(cards.map((c) => c.subcategory).filter(Boolean))).sort()],
+    [cards]
+  );
 
-  const rarityOptions = useMemo(() => {
-    return ["all", ...Array.from(new Set(cards.map((c) => c.rarity).filter(Boolean))).sort()];
-  }, [cards]);
+  const rarityOptions = useMemo(
+    () => ["all", ...Array.from(new Set(cards.map((c) => c.rarity).filter(Boolean))).sort()],
+    [cards]
+  );
 
-  const movieOptions = useMemo(() => {
-    return ["all", ...Array.from(new Set(cards.map((c) => c.movie).filter(Boolean))).sort()];
-  }, [cards]);
+  const movieOptions = useMemo(
+    () => ["all", ...Array.from(new Set(cards.map((c) => c.movie).filter(Boolean))).sort()],
+    [cards]
+  );
 
   const filteredCards = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -302,18 +303,10 @@ export default function Page() {
       const matchesMovie = movieFilter === "all" || card.movie === movieFilter;
 
       const matchesStatus =
-        statusFilter === "all"
-          ? true
-          : statusFilter === "owned"
-          ? card.qty > 0
-          : card.qty <= 0;
+        statusFilter === "all" ? true : statusFilter === "owned" ? card.qty > 0 : card.qty <= 0;
 
       const matchesCollection =
-        collectionFilter === "all"
-          ? true
-          : collectionFilter === "have"
-          ? card.qty > 0
-          : card.qty <= 0;
+        collectionFilter === "all" ? true : collectionFilter === "have" ? card.qty > 0 : card.qty <= 0;
 
       return (
         matchesSearch &&
@@ -333,13 +326,26 @@ export default function Page() {
   const completion = totalCount ? Math.round((ownedCount / totalCount) * 100) : 0;
 
   const seriesProgress = useMemo(() => {
-    const grouped = new Map<string, { total: number; owned: number }>();
+    const grouped = new Map<
+      string,
+      { total: number; owned: number; subs: Map<string, { total: number; owned: number }> }
+    >();
 
     cards.forEach((card) => {
-      const current = grouped.get(card.series) || { total: 0, owned: 0 };
+      const key = card.series || "Unknown Series";
+      const current = grouped.get(key) || { total: 0, owned: 0, subs: new Map() };
+
       current.total += 1;
       if (card.qty > 0) current.owned += 1;
-      grouped.set(card.series, current);
+
+      if (card.subcategory) {
+        const sub = current.subs.get(card.subcategory) || { total: 0, owned: 0 };
+        sub.total += 1;
+        if (card.qty > 0) sub.owned += 1;
+        current.subs.set(card.subcategory, sub);
+      }
+
+      grouped.set(key, current);
     });
 
     return Array.from(grouped.entries())
@@ -348,34 +354,28 @@ export default function Page() {
         total: value.total,
         owned: value.owned,
         percent: value.total ? Math.round((value.owned / value.total) * 100) : 0,
+        subcategories: Array.from(value.subs.entries())
+          .map(([name, sub]) => ({
+            name,
+            total: sub.total,
+            owned: sub.owned,
+            percent: sub.total ? Math.round((sub.owned / sub.total) * 100) : 0,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
       }))
       .sort((a, b) => seriesSort(a.series, b.series));
   }, [cards]);
 
-  const subcategoryProgress = useMemo(() => {
-    const grouped = new Map<string, { total: number; owned: number }>();
-
-    cards.forEach((card) => {
-      if (!card.subcategory) return;
-      const current = grouped.get(card.subcategory) || { total: 0, owned: 0 };
-      current.total += 1;
-      if (card.qty > 0) current.owned += 1;
-      grouped.set(card.subcategory, current);
-    });
-
-    return Array.from(grouped.entries())
-      .map(([subcategory, value]) => ({
-        subcategory,
-        total: value.total,
-        owned: value.owned,
-        percent: value.total ? Math.round((value.owned / value.total) * 100) : 0,
-      }))
-      .sort((a, b) => a.subcategory.localeCompare(b.subcategory));
-  }, [cards]);
-
   if (loading) {
     return (
-      <div style={{ padding: 24, minHeight: "100vh", background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)", color: "white" }}>
+      <div
+        style={{
+          padding: 24,
+          minHeight: "100vh",
+          background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)",
+          color: "white",
+        }}
+      >
         Loading collection...
       </div>
     );
@@ -383,7 +383,14 @@ export default function Page() {
 
   if (error) {
     return (
-      <div style={{ padding: 24, minHeight: "100vh", background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)", color: "white" }}>
+      <div
+        style={{
+          padding: 24,
+          minHeight: "100vh",
+          background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)",
+          color: "white",
+        }}
+      >
         <h1>Collection Error</h1>
         <div>{error}</div>
       </div>
@@ -476,14 +483,7 @@ export default function Page() {
             >
               <div style={{ fontSize: 14, opacity: 0.88, marginBottom: 8 }}>Collection Completion</div>
               <div style={{ fontSize: 30, fontWeight: 900, marginBottom: 10 }}>{completion}%</div>
-              <div
-                style={{
-                  height: 10,
-                  borderRadius: 999,
-                  background: "rgba(255,255,255,0.15)",
-                  overflow: "hidden",
-                }}
-              >
+              <div style={{ height: 10, borderRadius: 999, background: "rgba(255,255,255,0.15)", overflow: "hidden" }}>
                 <div
                   style={{
                     width: `${completion}%`,
@@ -578,33 +578,13 @@ export default function Page() {
               })}
             </div>
 
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                padding: 14,
-                borderRadius: 14,
-                border: "1px solid #d1d5db",
-                fontSize: 15,
-                minWidth: 160,
-              }}
-            >
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 160 }}>
               <option value="all">All Statuses</option>
               <option value="owned">Owned</option>
               <option value="need">Need</option>
             </select>
 
-            <select
-              value={seriesFilter}
-              onChange={(e) => setSeriesFilter(e.target.value)}
-              style={{
-                padding: 14,
-                borderRadius: 14,
-                border: "1px solid #d1d5db",
-                fontSize: 15,
-                minWidth: 180,
-              }}
-            >
+            <select value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}>
               {seriesOptions.map((series) => (
                 <option key={series} value={series}>
                   {series === "all" ? "All Series" : series}
@@ -612,17 +592,7 @@ export default function Page() {
               ))}
             </select>
 
-            <select
-              value={subcategoryFilter}
-              onChange={(e) => setSubcategoryFilter(e.target.value)}
-              style={{
-                padding: 14,
-                borderRadius: 14,
-                border: "1px solid #d1d5db",
-                fontSize: 15,
-                minWidth: 180,
-              }}
-            >
+            <select value={subcategoryFilter} onChange={(e) => setSubcategoryFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}>
               {subcategoryOptions.map((subcategory) => (
                 <option key={subcategory} value={subcategory}>
                   {subcategory === "all" ? "All Subcategories" : subcategory}
@@ -630,17 +600,7 @@ export default function Page() {
               ))}
             </select>
 
-            <select
-              value={movieFilter}
-              onChange={(e) => setMovieFilter(e.target.value)}
-              style={{
-                padding: 14,
-                borderRadius: 14,
-                border: "1px solid #d1d5db",
-                fontSize: 15,
-                minWidth: 180,
-              }}
-            >
+            <select value={movieFilter} onChange={(e) => setMovieFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}>
               {movieOptions.map((movie) => (
                 <option key={movie} value={movie}>
                   {movie === "all" ? "All Movies" : movie}
@@ -648,17 +608,7 @@ export default function Page() {
               ))}
             </select>
 
-            <select
-              value={rarityFilter}
-              onChange={(e) => setRarityFilter(e.target.value)}
-              style={{
-                padding: 14,
-                borderRadius: 14,
-                border: "1px solid #d1d5db",
-                fontSize: 15,
-                minWidth: 180,
-              }}
-            >
+            <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}>
               {rarityOptions.map((rarity) => (
                 <option key={rarity} value={rarity}>
                   {rarity === "all" ? "All Rarities" : rarity}
@@ -686,7 +636,7 @@ export default function Page() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
               gap: 12,
             }}
           >
@@ -704,7 +654,7 @@ export default function Page() {
                 <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
                   {entry.owned}/{entry.total} collected • {entry.percent}%
                 </div>
-                <div style={{ height: 10, borderRadius: 999, background: "#e5e7eb", overflow: "hidden" }}>
+                <div style={{ height: 10, borderRadius: 999, background: "#e5e7eb", overflow: "hidden", marginBottom: 10 }}>
                   <div
                     style={{
                       width: `${entry.percent}%`,
@@ -713,56 +663,27 @@ export default function Page() {
                     }}
                   />
                 </div>
-              </div>
-            ))}
-          </div>
-        </section>
 
-        <section
-          style={{
-            background: "rgba(255,255,255,0.94)",
-            color: "#111827",
-            borderRadius: 24,
-            padding: 16,
-            boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
-            marginBottom: 18,
-            border: "1px solid rgba(255,255,255,0.35)",
-          }}
-        >
-          <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 12 }}>
-            Subcategory Progress
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 12,
-            }}
-          >
-            {subcategoryProgress.map((entry) => (
-              <div
-                key={entry.subcategory}
-                style={{
-                  borderRadius: 18,
-                  border: "1px solid #e5e7eb",
-                  padding: 14,
-                  background: "#ffffff",
-                }}
-              >
-                <div style={{ fontWeight: 800, marginBottom: 6 }}>{entry.subcategory}</div>
-                <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
-                  {entry.owned}/{entry.total} collected • {entry.percent}%
-                </div>
-                <div style={{ height: 10, borderRadius: 999, background: "#e5e7eb", overflow: "hidden" }}>
-                  <div
-                    style={{
-                      width: `${entry.percent}%`,
-                      height: "100%",
-                      background: "linear-gradient(90deg,#34d399,#60a5fa)",
-                    }}
-                  />
-                </div>
+                {entry.subcategories.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {entry.subcategories.map((sub) => (
+                      <div
+                        key={sub.name}
+                        style={{
+                          fontSize: 12,
+                          padding: "6px 8px",
+                          borderRadius: 999,
+                          background: "#eef2ff",
+                          color: "#4338ca",
+                          border: "1px solid #c7d2fe",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {sub.name} · {sub.owned}/{sub.total}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -804,11 +725,7 @@ export default function Page() {
                   }}
                 >
                   {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
-                    />
+                    <img src={item.image} alt={item.name} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
                   ) : (
                     <div>No Image</div>
                   )}
@@ -846,7 +763,7 @@ export default function Page() {
 
                 <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", justifyContent: "space-between" }}>
                   <button
-                    onClick={() => void saveCard(item, item.qty - 1, item.note, item.wanted)}
+                    onClick={() => void saveCard(item, item.qty - 1, item.note)}
                     disabled={savingId === item.id}
                     style={{
                       width: 36,
@@ -863,7 +780,7 @@ export default function Page() {
                   <div style={{ fontWeight: 900, fontSize: 22 }}>{item.qty}</div>
 
                   <button
-                    onClick={() => void saveCard(item, item.qty + 1, item.note, item.wanted)}
+                    onClick={() => void saveCard(item, item.qty + 1, item.note)}
                     disabled={savingId === item.id}
                     style={{
                       width: 36,
@@ -878,53 +795,15 @@ export default function Page() {
                   </button>
                 </div>
 
-                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                  <button
-                    onClick={() => void saveCard(item, item.qty, item.note, false)}
-                    disabled={savingId === item.id}
-                    style={{
-                      flex: 1,
-                      padding: "8px 10px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(0,0,0,0.12)",
-                      background: !item.wanted ? "rgba(34,197,94,0.14)" : "rgba(255,255,255,0.72)",
-                      color: !item.wanted ? "#166534" : "#374151",
-                      fontWeight: 800,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Have
-                  </button>
-
-                  <button
-                    onClick={() => void saveCard(item, item.qty, item.note, true)}
-                    disabled={savingId === item.id}
-                    style={{
-                      flex: 1,
-                      padding: "8px 10px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(0,0,0,0.12)",
-                      background: item.wanted ? "rgba(168,85,247,0.14)" : "rgba(255,255,255,0.72)",
-                      color: item.wanted ? "#6d28d9" : "#374151",
-                      fontWeight: 800,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Want
-                  </button>
-                </div>
-
-                <div style={{ marginTop: 8, marginBottom: 8, fontWeight: 800, color: item.qty > 0 ? "#166534" : "#b91c1c" }}>
-                  {savingId === item.id ? "Saving..." : item.qty > 0 ? "Owned" : "Need"}
+                <div style={{ marginTop: 8, marginBottom: 8, fontWeight: 800, color: item.qty > 0 ? "#166534" : "#7c3aed" }}>
+                  {savingId === item.id ? "Saving..." : item.qty > 0 ? "Have" : "Need"}
                 </div>
 
                 <textarea
                   value={item.note}
                   onChange={(e) => {
                     const value = e.target.value;
-                    setCards((prev) =>
-                      prev.map((c) => (c.id === item.id ? { ...c, note: value } : c))
-                    );
+                    setCards((prev) => prev.map((c) => (c.id === item.id ? { ...c, note: value } : c)));
                   }}
                   placeholder="Notes..."
                   style={{
@@ -941,7 +820,7 @@ export default function Page() {
                 />
 
                 <button
-                  onClick={() => void saveCard(item, item.qty, item.note, item.wanted)}
+                  onClick={() => void saveCard(item, item.qty, item.note)}
                   disabled={savingId === item.id}
                   style={{
                     marginTop: 8,

@@ -39,40 +39,76 @@ type Card = {
 };
 
 function rarityTheme(rarity: string) {
-  const value = rarity.toLowerCase();
+  const value = (rarity || "").toLowerCase().trim();
 
-  if (value.includes("ultra")) {
+  // exclusive -> gold
+  if (value === "exclusive" || value.includes("exclusive")) {
     return {
-      card: "#faf5ff",
-      border: "#d8b4fe",
-      badgeBg: "#ede9fe",
-      badgeText: "#6d28d9",
+      card: "#fff7d6",
+      border: "#d4a017",
+      badgeBg: "#f4cf61",
+      badgeText: "#6b4f00",
+      text: "#2b2110",
+      subtext: "#5b4a21",
     };
   }
 
-  if (value.includes("rare")) {
+  // special edition -> purple
+  if (value.includes("special edition")) {
     return {
-      card: "#eff6ff",
-      border: "#93c5fd",
-      badgeBg: "#dbeafe",
+      card: "#f4e8ff",
+      border: "#8b5cf6",
+      badgeBg: "#d8b4fe",
+      badgeText: "#5b21b6",
+      text: "#2f144f",
+      subtext: "#5b3b8a",
+    };
+  }
+
+  // limited edition -> yellow
+  if (value.includes("limited edition")) {
+    return {
+      card: "#fffbd1",
+      border: "#eab308",
+      badgeBg: "#fde047",
+      badgeText: "#854d0e",
+      text: "#3f2d05",
+      subtext: "#7c650e",
+    };
+  }
+
+  // ultra rare -> blue
+  if (value.includes("ultra rare")) {
+    return {
+      card: "#e8f1ff",
+      border: "#3b82f6",
+      badgeBg: "#93c5fd",
       badgeText: "#1d4ed8",
+      text: "#102a56",
+      subtext: "#33538a",
     };
   }
 
-  if (value.includes("special")) {
+  // rare -> green
+  if (value == "rare" || value.endswith(" rare") || value.includes("rare")) {
     return {
-      card: "#fffbeb",
-      border: "#fcd34d",
-      badgeBg: "#fef3c7",
-      badgeText: "#b45309",
+      card: "#eafaf0",
+      border: "#22c55e",
+      badgeBg: "#86efac",
+      badgeText: "#15803d",
+      text: "#12351f",
+      subtext: "#3e6a4b",
     };
   }
 
+  // common -> white
   return {
-    card: "#f9fafb",
+    card: "#ffffff",
     border: "#d1d5db",
-    badgeBg: "#e5e7eb",
+    badgeBg: "#f3f4f6",
     badgeText: "#111827",
+    text: "#111827",
+    subtext: "#4b5563",
   };
 }
 
@@ -83,7 +119,6 @@ function seriesSort(a: string, b: string) {
   if (aMatch && bMatch) {
     const aNum = Number(aMatch[0]);
     const bNum = Number(bMatch[0]);
-
     if (aNum !== bNum) return aNum - bNum;
   }
 
@@ -242,7 +277,7 @@ export default function CollectionPage() {
   }, [cards]);
 
   async function persistCard(nextCard: Card) {
-    if (!userId) return;
+    if (!userId) return false;
 
     setSavingId(nextCard.id);
 
@@ -279,7 +314,6 @@ export default function CollectionPage() {
       if (error) {
         errorMessage = error.message;
       } else if (data?.id) {
-        nextCard = { ...nextCard, userRowId: String(data.id) };
         setCards((prev) =>
           prev.map((card) =>
             card.id === nextCard.id ? { ...card, userRowId: String(data.id) } : card
@@ -321,11 +355,7 @@ export default function CollectionPage() {
   async function saveNote(cardId: string) {
     const current = cards.find((card) => card.id === cardId);
     if (!current) return;
-
-    await persistCard({
-      ...current,
-      note: current.note ?? "",
-    });
+    await persistCard({ ...current, note: current.note ?? "" });
   }
 
   function updateLocalNote(cardId: string, value: string) {
@@ -575,7 +605,6 @@ export default function CollectionPage() {
                     borderRadius: 999,
                     background: "#e5e7eb",
                     overflow: "hidden",
-                    marginBottom: 8,
                   }}
                 >
                   <div
@@ -629,7 +658,7 @@ export default function CollectionPage() {
                   key={item.id}
                   style={{
                     background: theme.card,
-                    color: "#111827",
+                    color: theme.text,
                     borderRadius: 22,
                     padding: 14,
                     boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
@@ -640,13 +669,13 @@ export default function CollectionPage() {
                     style={{
                       height: 170,
                       borderRadius: 16,
-                      background: "#ffffff",
+                      background: "rgba(255,255,255,0.8)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       marginBottom: 12,
                       overflow: "hidden",
-                      border: "1px solid #e5e7eb",
+                      border: "1px solid rgba(0,0,0,0.06)",
                       padding: 10,
                     }}
                   >
@@ -662,7 +691,7 @@ export default function CollectionPage() {
                         }}
                       />
                     ) : (
-                      <div style={{ color: "#9ca3af", fontWeight: 700, fontSize: 14 }}>
+                      <div style={{ color: theme.subtext, fontWeight: 700, fontSize: 14 }}>
                         No Image
                       </div>
                     )}
@@ -678,8 +707,12 @@ export default function CollectionPage() {
                     }}
                   >
                     <div>
-                      <div style={{ fontWeight: 900, fontSize: 20 }}>{item.name}</div>
-                      <div style={{ color: "#6b7280", fontSize: 14 }}>{item.series}</div>
+                      <div style={{ fontWeight: 900, fontSize: 20, color: theme.text }}>
+                        {item.name}
+                      </div>
+                      <div style={{ color: theme.subtext, fontSize: 14 }}>
+                        {item.series}
+                      </div>
                     </div>
 
                     <div
@@ -697,7 +730,7 @@ export default function CollectionPage() {
                     </div>
                   </div>
 
-                  <div style={{ color: "#4b5563", fontSize: 14, marginBottom: 10 }}>
+                  <div style={{ color: theme.subtext, fontSize: 14, marginBottom: 10 }}>
                     {item.subcategory}
                   </div>
 
@@ -713,7 +746,12 @@ export default function CollectionPage() {
                     <button
                       onClick={() => updateQuantity(item.id, -1)}
                       disabled={savingId === item.id}
-                      style={qtyButtonStyle}
+                      style={{
+                        ...qtyButtonStyle,
+                        background: "rgba(255,255,255,0.8)",
+                        color: theme.text,
+                        border: `1px solid ${theme.border}`,
+                      }}
                     >
                       –
                     </button>
@@ -724,7 +762,7 @@ export default function CollectionPage() {
                         textAlign: "center",
                         fontWeight: 900,
                         fontSize: 20,
-                        color: "#111827",
+                        color: theme.text,
                       }}
                     >
                       {item.qtyOwned}
@@ -733,7 +771,12 @@ export default function CollectionPage() {
                     <button
                       onClick={() => updateQuantity(item.id, 1)}
                       disabled={savingId === item.id}
-                      style={qtyButtonStyle}
+                      style={{
+                        ...qtyButtonStyle,
+                        background: "rgba(255,255,255,0.8)",
+                        color: theme.text,
+                        border: `1px solid ${theme.border}`,
+                      }}
                     >
                       +
                     </button>
@@ -762,9 +805,11 @@ export default function CollectionPage() {
                       width: "100%",
                       minHeight: 78,
                       borderRadius: 14,
-                      border: "1px solid #d1d5db",
+                      border: "1px solid rgba(0,0,0,0.1)",
+                      background: "rgba(255,255,255,0.82)",
                       padding: 10,
                       fontSize: 14,
+                      color: theme.text,
                       resize: "vertical",
                       boxSizing: "border-box",
                       marginBottom: 10,
@@ -781,8 +826,8 @@ export default function CollectionPage() {
                       border: "none",
                       cursor: "pointer",
                       fontWeight: 800,
-                      background: "linear-gradient(135deg,#2563eb,#7c3aed)",
-                      color: "white",
+                      background: theme.badgeBg,
+                      color: theme.badgeText,
                     }}
                   >
                     {savingId === item.id ? "Saving Note..." : "Save Note"}
@@ -805,6 +850,4 @@ const qtyButtonStyle = {
   cursor: "pointer",
   fontSize: 22,
   fontWeight: 900,
-  background: "#e5e7eb",
-  color: "#111827",
 };

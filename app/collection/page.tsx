@@ -123,7 +123,6 @@ export default function Page() {
   const [subcategoryFilter, setSubcategoryFilter] = useState("all");
   const [rarityFilter, setRarityFilter] = useState("all");
   const [movieFilter, setMovieFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [collectionFilter, setCollectionFilter] = useState("all");
 
   useEffect(() => {
@@ -551,11 +550,6 @@ export default function Page() {
               })}
             </div>
 
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 160 }}>
-              <option value="all">All Statuses</option>
-              <option value="owned">Owned</option>
-              <option value="need">Need</option>
-            </select>
 
             <select value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}>
               {seriesOptions.map((series) => (

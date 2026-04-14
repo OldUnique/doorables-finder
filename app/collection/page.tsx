@@ -1,164 +1,694 @@
-// CLEAN FINAL COLLECTION PAGE (FIXED)
-
+// SAFER UPGRADED COLLECTION PAGE
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { getSupabase } from "../../lib/supabase";
 
 function rarityTheme(rarity) {
-  const value = String(rarity || "").toLowerCase();
+  const value = String(rarity || "").toLowerCase().trim();
 
-  if (value.includes("exclusive"))
-    return { bg: "#fff7d6", border: "#d4a017" };
+  // Exclusive = gold
+  if (value === "exclusive" || value.includes("exclusive")) {
+    return {
+      bg: "#fff7d6",
+      border: "#d4a017",
+      text: "#2b2110",
+      badgeBg: "#f4cf61",
+      badgeText: "#6b4f00",
+    };
+  }
 
-  if (value.includes("special"))
-    return { bg: "#f4e8ff", border: "#8b5cf6" };
+  // Special Edition = purple
+  if (value.includes("special edition")) {
+    return {
+      bg: "#f4e8ff",
+      border: "#8b5cf6",
+      text: "#2f144f",
+      badgeBg: "#d8b4fe",
+      badgeText: "#5b21b6",
+    };
+  }
 
-  if (value.includes("limited"))
-    return { bg: "#fffbd1", border: "#eab308" };
+  // Limited Edition = yellow
+  if (value.includes("limited edition")) {
+    return {
+      bg: "#fffbd1",
+      border: "#eab308",
+      text: "#3f2d05",
+      badgeBg: "#fde047",
+      badgeText: "#854d0e",
+    };
+  }
 
-  if (value.includes("ultra"))
-    return { bg: "#e8f1ff", border: "#3b82f6" };
+  // Ultra Rare = blue
+  if (value.includes("ultra rare")) {
+    return {
+      bg: "#e8f1ff",
+      border: "#3b82f6",
+      text: "#102a56",
+      badgeBg: "#93c5fd",
+      badgeText: "#1d4ed8",
+    };
+  }
 
-  if (value.includes("rare"))
-    return { bg: "#eafaf0", border: "#22c55e" };
+  // Rare = green
+  if (value === "rare" || (value.includes("rare") && !value.includes("ultra"))) {
+    return {
+      bg: "#eafaf0",
+      border: "#22c55e",
+      text: "#12351f",
+      badgeBg: "#86efac",
+      badgeText: "#15803d",
+    };
+  }
 
-  return { bg: "#ffffff", border: "#d1d5db" };
+  // Common = white
+  return {
+    bg: "#ffffff",
+    border: "#d1d5db",
+    text: "#111827",
+    badgeBg: "#f3f4f6",
+    badgeText: "#111827",
+  };
+}
+
+function seriesSort(a, b) {
+  const aStr = String(a || "");
+  const bStr = String(b || "");
+  const aMatch = aStr.match(/\d+/);
+  const bMatch = bStr.match(/\d+/);
+
+  if (aMatch && bMatch) {
+    const aNum = Number(aMatch[0]);
+    const bNum = Number(bMatch[0]);
+    if (aNum !== bNum) return aNum - bNum;
+  }
+
+  return aStr.localeCompare(bStr, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
 }
 
 export default function Page() {
-  const supabase = getSupabase();
   const [cards, setCards] = useState([]);
   const [userId, setUserId] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [seriesFilter, setSeriesFilter] = useState("all");
+  const [rarityFilter, setRarityFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [savingId, setSavingId] = useState("");
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
 
   async function load() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      setLoading(true);
+      setError("");
 
-    setUserId(user.id);
+      const supabase = getSupabase();
 
-    const { data: doorables } = await supabase
-      .from("doorables")
-      .select("*");
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
 
-    const { data: userDoorables } = await supabase
-      .from("user_doorables")
-      .select("*")
-      .eq("user_id", user.id);
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+        return;
+      }
 
-    const map = {};
-    (userDoorables || []).forEach(d => map[d.doorable_id] = d);
+      if (!user) {
+        setError("You must be signed in.");
+        setLoading(false);
+        return;
+      }
 
-    const merged = (doorables || []).map(d => {
-      const u = map[d.id] || {};
+      setUserId(String(user.id));
 
-      return {
-        id: d.id,
-        name: d.name || "Unknown",
-        series: d.series || "Unknown",
-        rarity: d.rarity || "Common",
-        image: d.image_url || "",
-        qty: u.qty_owned || 0,
-        note: u.custom_tag || "",
-        rowId: u.id || null
+      const { data: doorables, error: doorablesError } = await supabase
+        .from("doorables")
+        .select("*");
+
+      if (doorablesError) {
+        setError(doorablesError.message);
+        setLoading(false);
+        return;
+      }
+
+      const { data: userDoorables, error: userDoorablesError } = await supabase
+        .from("user_doorables")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (userDoorablesError) {
+        setError(userDoorablesError.message);
+        setLoading(false);
+        return;
+      }
+
+      const userMap = new Map();
+      (userDoorables || []).forEach((row) => {
+        userMap.set(String(row.doorable_id), row);
+      });
+
+      const merged = (doorables || [])
+        .map((d) => {
+          const row = userMap.get(String(d.id));
+
+          return {
+            id: String(d.id ?? ""),
+            name: String(d.name ?? "Unknown"),
+            series: String(d.series ?? "Unknown Series"),
+            rarity: String(d.rarity ?? "Common"),
+            subcategory: String(d.subcategory ?? d.movie ?? ""),
+            image: String(d.image_url ?? ""),
+            qty: Number(row?.qty_owned ?? 0),
+            note: String(row?.custom_tag ?? ""),
+            rowId: row?.id ? String(row.id) : null,
+          };
+        })
+        .sort((a, b) => {
+          const seriesCmp = seriesSort(a.series, b.series);
+          if (seriesCmp !== 0) return seriesCmp;
+          return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+        });
+
+      setCards(merged);
+      setLoading(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Collection page crashed while loading.");
+      setLoading(false);
+    }
+  }
+
+  async function saveCard(card, nextQty, nextNote) {
+    try {
+      const supabase = getSupabase();
+
+      const qty = Math.max(0, Number(nextQty ?? card.qty ?? 0));
+      const note = String(nextNote ?? card.note ?? "");
+
+      setSavingId(card.id);
+
+      const payload = {
+        user_id: userId,
+        doorable_id: card.id,
+        qty_owned: qty,
+        wanted: qty <= 0,
+        custom_tag: note,
       };
+
+      if (card.rowId) {
+        const { error } = await supabase
+          .from("user_doorables")
+          .update(payload)
+          .eq("id", card.rowId);
+
+        if (error) {
+          alert("Save failed: " + error.message);
+          setSavingId("");
+          return;
+        }
+      } else {
+        const { data, error } = await supabase
+          .from("user_doorables")
+          .insert([payload])
+          .select()
+          .single();
+
+        if (error) {
+          alert("Save failed: " + error.message);
+          setSavingId("");
+          return;
+        }
+
+        card.rowId = data?.id ? String(data.id) : null;
+      }
+
+      setSavingId("");
+      await load();
+    } catch (err) {
+      setSavingId("");
+      alert("Save failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
+  }
+
+  const seriesOptions = useMemo(() => {
+    return ["all", ...Array.from(new Set(cards.map((c) => c.series))).sort(seriesSort)];
+  }, [cards]);
+
+  const rarityOptions = useMemo(() => {
+    return ["all", ...Array.from(new Set(cards.map((c) => c.rarity))).sort()];
+  }, [cards]);
+
+  const filteredCards = useMemo(() => {
+    const q = search.trim().toLowerCase();
+
+    return cards.filter((card) => {
+      const matchesSearch =
+        !q ||
+        [card.name, card.series, card.rarity, card.subcategory, card.note]
+          .join(" ")
+          .toLowerCase()
+          .includes(q);
+
+      const matchesSeries = seriesFilter === "all" ? true : card.series === seriesFilter;
+      const matchesRarity = rarityFilter === "all" ? true : card.rarity === rarityFilter;
+
+      const matchesStatus =
+        statusFilter === "all"
+          ? true
+          : statusFilter === "owned"
+          ? card.qty > 0
+          : card.qty <= 0;
+
+      return matchesSearch && matchesSeries && matchesRarity && matchesStatus;
+    });
+  }, [cards, search, seriesFilter, rarityFilter, statusFilter]);
+
+  const totalCount = cards.length;
+  const ownedCount = cards.filter((c) => c.qty > 0).length;
+  const needCount = cards.filter((c) => c.qty <= 0).length;
+  const completion = totalCount ? Math.round((ownedCount / totalCount) * 100) : 0;
+
+  const seriesProgress = useMemo(() => {
+    const grouped = new Map();
+
+    cards.forEach((card) => {
+      const current = grouped.get(card.series) || { total: 0, owned: 0 };
+      current.total += 1;
+      if (card.qty > 0) current.owned += 1;
+      grouped.set(card.series, current);
     });
 
-    setCards(merged);
+    return Array.from(grouped.entries())
+      .map(([series, value]) => ({
+        series,
+        total: value.total,
+        owned: value.owned,
+        percent: value.total ? Math.round((value.owned / value.total) * 100) : 0,
+      }))
+      .sort((a, b) => seriesSort(a.series, b.series));
+  }, [cards]);
+
+  if (loading) {
+    return (
+      <div style={{ padding: 20, minHeight: "100vh", background: "linear-gradient(135deg, #0f172a, #2563eb)", color: "white" }}>
+        Loading collection...
+      </div>
+    );
   }
 
-  async function update(card, change) {
-    const qty = Math.max(0, card.qty + change);
-
-    const payload = {
-      user_id: userId,
-      doorable_id: card.id,
-      qty_owned: qty,
-      wanted: qty <= 0,
-      custom_tag: card.note || ""   // 🔥 FIX
-    };
-
-    if (card.rowId) {
-      await supabase
-        .from("user_doorables")
-        .update(payload)
-        .eq("id", card.rowId);
-    } else {
-      const { data } = await supabase
-        .from("user_doorables")
-        .insert([payload])
-        .select()
-        .single();
-
-      card.rowId = data.id;
-    }
-
-    load();
-  }
-
-  async function saveNote(card) {
-    await update(card, 0);
+  if (error) {
+    return (
+      <div style={{ padding: 20, minHeight: "100vh", background: "linear-gradient(135deg, #0f172a, #2563eb)", color: "white" }}>
+        <h1>Collection Error</h1>
+        <div>{error}</div>
+      </div>
+    );
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>My Collection 💜</h1>
-      <p>It only gets better 💜</p>
+    <main
+      style={{
+        minHeight: "100vh",
+        padding: 24,
+        background: "linear-gradient(135deg, #0f172a, #2563eb)",
+        color: "white",
+      }}
+    >
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+        <section
+          style={{
+            background: "linear-gradient(135deg, #111827, #4338ca)",
+            borderRadius: 28,
+            padding: 24,
+            boxShadow: "0 20px 40px rgba(0,0,0,0.24)",
+            marginBottom: 18,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
+            <div>
+              <h1 style={{ margin: 0, fontSize: "clamp(2rem, 5vw, 3.1rem)", fontWeight: 900, letterSpacing: -1 }}>
+                My Collection 💜
+              </h1>
+              <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
+                It only gets better 💜
+              </div>
+            </div>
 
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))",
-        gap: 16
-      }}>
-        {cards.map(card => {
-          const theme = rarityTheme(card.rarity);
-
-          return (
-            <div key={card.id}
+            <div
               style={{
-                background: theme.bg,
-                border: "2px solid " + theme.border,
-                borderRadius: 16,
-                padding: 12
+                minWidth: 250,
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 22,
+                padding: 16,
               }}
             >
-              <div style={{ height:150 }}>
-                {card.image && (
-                  <img src={card.image}
-                    style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain" }}
-                  />
-                )}
-              </div>
-
-              <b>{card.name}</b>
-              <div>{card.series}</div>
-              <div>{card.rarity}</div>
-
-              <div style={{ display:"flex", gap:8, marginTop:8 }}>
-                <button onClick={()=>update(card,-1)}>-</button>
-                <div>{card.qty}</div>
-                <button onClick={()=>update(card,1)}>+</button>
-              </div>
-
-              <textarea
-                value={card.note}
-                onChange={e=>{
-                  card.note = e.target.value;
-                  setCards([...cards]);
+              <div style={{ fontSize: 14, opacity: 0.88, marginBottom: 8 }}>Collection Completion</div>
+              <div style={{ fontSize: 30, fontWeight: 900, marginBottom: 10 }}>{completion}%</div>
+              <div
+                style={{
+                  height: 10,
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.15)",
+                  overflow: "hidden",
                 }}
-                placeholder="Notes..."
-                style={{ width:"100%", marginTop:8 }}
-              />
-
-              <button onClick={()=>saveNote(card)}>Save</button>
+              >
+                <div
+                  style={{
+                    width: `${completion}%`,
+                    height: "100%",
+                    background: "linear-gradient(90deg,#60a5fa,#c084fc)",
+                  }}
+                />
+              </div>
             </div>
-          );
-        })}
+          </div>
+        </section>
+
+        <section
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: 14,
+            marginBottom: 18,
+          }}
+        >
+          {[
+            { label: "Total Doorables", value: totalCount },
+            { label: "Owned", value: ownedCount },
+            { label: "Still Need", value: needCount },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              style={{
+                background: "rgba(255,255,255,0.97)",
+                color: "#111827",
+                borderRadius: 20,
+                padding: 18,
+                boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+              }}
+            >
+              <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>{stat.label}</div>
+              <div style={{ fontSize: 30, fontWeight: 900 }}>{stat.value}</div>
+            </div>
+          ))}
+        </section>
+
+        <section
+          style={{
+            background: "rgba(255,255,255,0.97)",
+            color: "#111827",
+            borderRadius: 24,
+            padding: 16,
+            boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+            marginBottom: 18,
+          }}
+        >
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, series, rarity, notes..."
+              style={{
+                flex: "1 1 280px",
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                fontSize: 15,
+              }}
+            />
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                fontSize: 15,
+                minWidth: 160,
+              }}
+            >
+              <option value="all">All Statuses</option>
+              <option value="owned">Owned</option>
+              <option value="need">Need</option>
+            </select>
+
+            <select
+              value={seriesFilter}
+              onChange={(e) => setSeriesFilter(e.target.value)}
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                fontSize: 15,
+                minWidth: 180,
+              }}
+            >
+              {seriesOptions.map((series) => (
+                <option key={series} value={series}>
+                  {series === "all" ? "All Series" : series}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={rarityFilter}
+              onChange={(e) => setRarityFilter(e.target.value)}
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                fontSize: 15,
+                minWidth: 180,
+              }}
+            >
+              {rarityOptions.map((rarity) => (
+                <option key={rarity} value={rarity}>
+                  {rarity === "all" ? "All Rarities" : rarity}
+                </option>
+              ))}
+            </select>
+          </div>
+        </section>
+
+        <section
+          style={{
+            background: "rgba(255,255,255,0.97)",
+            color: "#111827",
+            borderRadius: 24,
+            padding: 16,
+            boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+            marginBottom: 18,
+          }}
+        >
+          <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 12 }}>
+            Series Progress
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {seriesProgress.map((entry) => (
+              <div
+                key={entry.series}
+                style={{
+                  borderRadius: 18,
+                  border: "1px solid #e5e7eb",
+                  padding: 14,
+                  background: "#ffffff",
+                }}
+              >
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>{entry.series}</div>
+
+                <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
+                  {entry.owned}/{entry.total} collected • {entry.percent}%
+                </div>
+
+                <div
+                  style={{
+                    height: 10,
+                    borderRadius: 999,
+                    background: "#e5e7eb",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${entry.percent}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg,#60a5fa,#a78bfa)",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))",
+            gap: 16,
+          }}
+        >
+          {filteredCards.map((card) => {
+            const theme = rarityTheme(card.rarity);
+
+            return (
+              <div
+                key={card.id}
+                style={{
+                  background: theme.bg,
+                  border: "2px solid " + theme.border,
+                  borderRadius: 16,
+                  padding: 12,
+                  color: theme.text,
+                  boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
+                }}
+              >
+                <div
+                  style={{
+                    height: 150,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 10,
+                    background: "rgba(255,255,255,0.7)",
+                    borderRadius: 12,
+                  }}
+                >
+                  {card.image ? (
+                    <img
+                      src={card.image}
+                      alt={card.name}
+                      style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+                    />
+                  ) : (
+                    <div>No Image</div>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "start", marginBottom: 6 }}>
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: 20 }}>{card.name}</div>
+                    <div style={{ opacity: 0.8, fontSize: 14 }}>{card.series}</div>
+                  </div>
+                  <div
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 999,
+                      fontSize: 12,
+                      fontWeight: 900,
+                      background: theme.badgeBg,
+                      color: theme.badgeText,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {card.rarity}
+                  </div>
+                </div>
+
+                <div style={{ opacity: 0.8, fontSize: 14, marginBottom: 10 }}>
+                  {card.subcategory}
+                </div>
+
+                <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", justifyContent: "space-between" }}>
+                  <button
+                    onClick={() => void saveCard(card, card.qty - 1, card.note)}
+                    disabled={savingId === card.id}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 12,
+                      border: "1px solid " + theme.border,
+                      background: "rgba(255,255,255,0.8)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    -
+                  </button>
+
+                  <div style={{ fontWeight: 900, fontSize: 22 }}>{card.qty}</div>
+
+                  <button
+                    onClick={() => void saveCard(card, card.qty + 1, card.note)}
+                    disabled={savingId === card.id}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 12,
+                      border: "1px solid " + theme.border,
+                      background: "rgba(255,255,255,0.8)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+
+                <div style={{ marginTop: 8, marginBottom: 8, fontWeight: 800, color: card.qty > 0 ? "#166534" : "#b91c1c" }}>
+                  {savingId === card.id ? "Saving..." : card.qty > 0 ? "Owned" : "Need"}
+                </div>
+
+                <textarea
+                  value={card.note}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setCards((prev) =>
+                      prev.map((c) => (c.id === card.id ? { ...c, note: value } : c))
+                    );
+                  }}
+                  placeholder="Notes..."
+                  style={{
+                    width: "100%",
+                    marginTop: 8,
+                    minHeight: 70,
+                    borderRadius: 12,
+                    border: "1px solid " + theme.border,
+                    background: "rgba(255,255,255,0.82)",
+                    padding: 10,
+                    color: theme.text,
+                    boxSizing: "border-box",
+                  }}
+                />
+
+                <button
+                  onClick={() => void saveCard(card, card.qty, card.note)}
+                  disabled={savingId === card.id}
+                  style={{
+                    marginTop: 8,
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 12,
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: 800,
+                    background: theme.badgeBg,
+                    color: theme.badgeText,
+                  }}
+                >
+                  {savingId === card.id ? "Saving Note..." : "Save Note"}
+                </button>
+              </div>
+            );
+          })}
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

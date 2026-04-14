@@ -139,12 +139,12 @@ export default function MarketplacePage() {
             style={{
               maxWidth: 520,
               width: "100%",
-              background: "linear-gradient(135deg,#111827,#4338ca)",
+              background: "linear-gradient(135deg, #111827, #4338ca)",
               color: "white",
               borderRadius: 24,
               padding: 28,
               textAlign: "center",
-              boxShadow: "0 20px 50px rgba(0,0,0,0.35)",
+              boxShadow: "0 20px 50px rgba(0, 0, 0, 0.35)",
             }}
           >
             <div style={{ fontSize: 38, fontWeight: 900, marginBottom: 10 }}>
@@ -152,8 +152,7 @@ export default function MarketplacePage() {
             </div>
 
             <div style={{ fontSize: 18, opacity: 0.95, lineHeight: 1.5 }}>
-              Upgrade to browse listings, buy, and sell in the Doorables
-              marketplace.
+              Upgrade to browse listings, buy, and sell in the Doorables marketplace.
             </div>
 
             <a
@@ -186,12 +185,12 @@ export default function MarketplacePage() {
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div
             style={{
-              background: "linear-gradient(135deg,#111827,#4338ca)",
+              background: "linear-gradient(135deg, #111827, #4338ca)",
               borderRadius: 24,
               padding: 28,
               marginBottom: 20,
               textAlign: "center",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.25)",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.25)",
             }}
           >
             <h1 style={{ margin: 0, fontSize: 42, fontWeight: 900 }}>
@@ -239,53 +238,26 @@ export default function MarketplacePage() {
           </div>
 
           {loading ? (
-            <div style={{ padding: 20 }}>Loading marketplace...</div>
+            <div style={panelStyle}>Loading marketplace...</div>
           ) : loadError ? (
-            <div
-              style={{
-                background: "white",
-                color: "#991b1b",
-                borderRadius: 18,
-                padding: 24,
-                boxShadow: "0 10px 24px rgba(0,0,0,0.10)",
-              }}
-            >
-              {loadError}
-            </div>
+            <div style={{ ...panelStyle, color: "#991b1b" }}>{loadError}</div>
           ) : filtered.length === 0 ? (
-            <div
-              style={{
-                background: "white",
-                color: "#111827",
-                borderRadius: 18,
-                padding: 24,
-                boxShadow: "0 10px 24px rgba(0,0,0,0.10)",
-              }}
-            >
-              No active listings yet.
-            </div>
+            <div style={panelStyle}>No active listings yet.</div>
           ) : (
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))",
+                gridTemplateColumns: "repeat(auto-fit, 280px)",
+                justifyContent: "center",
                 gap: 18,
               }}
             >
               {filtered.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    background: "white",
-                    color: "#111827",
-                    borderRadius: 18,
-                    padding: 14,
-                    boxShadow: "0 10px 24px rgba(0,0,0,0.10)",
-                  }}
-                >
+                <div key={item.id} style={cardStyle}>
                   <div
                     style={{
-                      height: 180,
+                      width: "100%",
+                      height: 160,
                       borderRadius: 12,
                       background: "#f3f4f6",
                       display: "flex",
@@ -293,6 +265,7 @@ export default function MarketplacePage() {
                       justifyContent: "center",
                       overflow: "hidden",
                       marginBottom: 12,
+                      padding: 10,
                     }}
                   >
                     {item.image_url ? (
@@ -300,9 +273,12 @@ export default function MarketplacePage() {
                         src={item.image_url}
                         alt={item.title}
                         style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                          width: "auto",
+                          height: "auto",
+                          objectFit: "contain",
+                          display: "block",
                         }}
                       />
                     ) : (
@@ -312,21 +288,45 @@ export default function MarketplacePage() {
                     )}
                   </div>
 
-                  <div style={{ fontSize: 20, fontWeight: 800 }}>
+                  <div
+                    style={{
+                      fontSize: 20,
+                      fontWeight: 800,
+                      lineHeight: 1.25,
+                      color: "#111827",
+                      wordBreak: "break-word",
+                    }}
+                  >
                     {item.title}
                   </div>
 
-                  <div style={{ marginTop: 6, color: "#374151", minHeight: 48 }}>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      color: "#374151",
+                      minHeight: 44,
+                      lineHeight: 1.45,
+                      fontSize: 14,
+                      overflowWrap: "anywhere",
+                    }}
+                  >
                     {item.description || "No description provided."}
                   </div>
 
-                  <div style={{ marginTop: 12, fontWeight: 900, fontSize: 24 }}>
+                  <div
+                    style={{
+                      marginTop: 12,
+                      fontWeight: 900,
+                      fontSize: 24,
+                      color: "#111827",
+                    }}
+                  >
                     {item.price != null
                       ? `$${Number(item.price).toFixed(2)}`
                       : "Offer"}
                   </div>
 
-                  <div style={{ marginTop: 6, color: "#6b7280" }}>
+                  <div style={{ marginTop: 6, color: "#6b7280", fontSize: 14 }}>
                     Seller: {item.seller_name || "Unknown"}
                   </div>
 
@@ -347,13 +347,14 @@ export default function MarketplacePage() {
                       );
                     }}
                     style={{
-                      marginTop: "10px",
+                      marginTop: 10,
                       background: "#ff4d4d",
                       color: "white",
                       padding: "6px 10px",
-                      borderRadius: "6px",
+                      borderRadius: 6,
                       border: "none",
                       cursor: "pointer",
+                      fontWeight: 700,
                     }}
                   >
                     Delete
@@ -367,3 +368,21 @@ export default function MarketplacePage() {
     </div>
   );
 }
+
+const panelStyle = {
+  background: "white",
+  color: "#111827",
+  borderRadius: 18,
+  padding: 24,
+  boxShadow: "0 10px 24px rgba(0, 0, 0, 0.1)",
+};
+
+const cardStyle = {
+  width: 280,
+  background: "white",
+  color: "#111827",
+  borderRadius: 18,
+  padding: 14,
+  boxShadow: "0 10px 24px rgba(0, 0, 0, 0.1)",
+  boxSizing: "border-box" as const,
+};

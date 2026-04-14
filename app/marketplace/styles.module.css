@@ -1,0 +1,257 @@
+.pageShell {
+  position: relative;
+  min-height: 100vh;
+}
+
+.page {
+  min-height: 100vh;
+  padding: 24px;
+  background: linear-gradient(135deg, #0f172a, #1e3a8a);
+  color: white;
+}
+
+.shell {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.hero {
+  background: linear-gradient(135deg, #111827, #4338ca);
+  border-radius: 24px;
+  padding: 28px;
+  margin-bottom: 20px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 2.625rem);
+  font-weight: 900;
+}
+
+.heroText {
+  margin-top: 10px;
+  font-size: clamp(1rem, 2vw, 1.125rem);
+  opacity: 0.95;
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.searchInput {
+  flex: 1 1 300px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  font-size: 15px;
+}
+
+.createBtn {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: none;
+  background: #f59e0b;
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.panel {
+  background: white;
+  color: #111827;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+}
+
+.errorPanel {
+  color: #991b1b;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 280px));
+  justify-content: center;
+  gap: 18px;
+}
+
+.card {
+  background: white;
+  color: #111827;
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+}
+
+.imageWrap {
+  height: 150px;
+  border-radius: 12px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 12px;
+  padding: 8px;
+}
+
+.listingImage {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.noImage {
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.description {
+  margin-top: 6px;
+  color: #374151;
+  min-height: 44px;
+  line-height: 1.45;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.price {
+  margin-top: 12px;
+  font-weight: 900;
+  font-size: 24px;
+  color: #111827;
+}
+
+.seller {
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.deleteBtn {
+  margin-top: 10px;
+  background: #ff4d4d;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 20, 0.45);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.overlayCard {
+  max-width: 520px;
+  width: 100%;
+  background: linear-gradient(135deg, #111827, #4338ca);
+  color: white;
+  border-radius: 24px;
+  padding: 28px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.overlayTitle {
+  font-size: 38px;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.overlayText {
+  font-size: 18px;
+  opacity: 0.95;
+  line-height: 1.5;
+}
+
+.pricingBtn {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 12px 20px;
+  border-radius: 14px;
+  background: #facc15;
+  color: #111827;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
+  }
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 14px;
+  }
+
+  .hero {
+    padding: 22px 16px;
+    border-radius: 20px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+  }
+
+  .searchInput,
+  .createBtn {
+    width: 100%;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .card {
+    padding: 12px;
+  }
+
+  .imageWrap {
+    height: 120px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .price {
+    font-size: 22px;
+  }
+
+  .overlayTitle {
+    font-size: 30px;
+  }
+
+  .overlayText {
+    font-size: 16px;
+  }
+}

@@ -576,7 +576,8 @@ export default function Page() {
               <div
                 key={item.id}
                 style={{
-                  background: rarity.bg,
+                  background: 'linear-gradient(rgba(0,0,0,0,0.1),
+		  rgba(0,0,0,0,0.1)), ${rarity.bg}',
                   color: "#111827",
                   borderRadius: 22,
                   padding: 12,

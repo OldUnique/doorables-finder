@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
 
 type DoorableRow = {
@@ -8,23 +9,27 @@ type DoorableRow = {
   name?: string | null;
   series?: string | null;
   subcategory?: string | null;
-  movie?: string | null;
   rarity?: string | null;
   image_url?: string | null;
+  [key: string]: any;
 };
 
 type UserDoorableRow = {
-  id: string;
-  user_id: string;
-  doorable_id: string;
+  id?: string;
+  user_id?: string;
+  doorable_id?: string;
   qty_owned?: number | null;
   wanted?: boolean | null;
   favorited?: boolean | null;
   custom_tag?: string | null;
+  personal_message?: string | null;
+  notes?: string | null;
+  image_url?: string | null;
   created_at?: string | null;
+  [key: string]: any;
 };
 
-type Card = {
+type CollectionCard = {
   id: string;
   name: string;
   series: string;
@@ -34,89 +39,41 @@ type Card = {
   qtyOwned: number;
   wanted: boolean;
   favorited: boolean;
-  note: string;
-  userRowId: string | null;
+  customTag: string;
+  notes: string;
+  userRowId?: string;
 };
 
-function rarityTheme(rarity: string) {
+function rarityColors(rarity: string) {
   const value = rarity.toLowerCase();
-
-  if (value.includes("ultra")) {
-    return {
-      card: "#faf5ff",
-      border: "#d8b4fe",
-      badgeBg: "#ede9fe",
-      badgeText: "#6d28d9",
-    };
-  }
-
-  if (value.includes("rare")) {
-    return {
-      card: "#eff6ff",
-      border: "#93c5fd",
-      badgeBg: "#dbeafe",
-      badgeText: "#1d4ed8",
-    };
-  }
-
-  if (value.includes("special")) {
-    return {
-      card: "#fffbeb",
-      border: "#fcd34d",
-      badgeBg: "#fef3c7",
-      badgeText: "#b45309",
-    };
-  }
-
-  return {
-    card: "#f9fafb",
-    border: "#d1d5db",
-    badgeBg: "#e5e7eb",
-    badgeText: "#111827",
-  };
-}
-
-function seriesSort(a: string, b: string) {
-  const aMatch = a.match(/\d+/);
-  const bMatch = b.match(/\d+/);
-
-  if (aMatch && bMatch) {
-    const aNum = Number(aMatch[0]);
-    const bNum = Number(bMatch[0]);
-
-    if (aNum !== bNum) return aNum - bNum;
-  }
-
-  return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+  if (value.includes("ultra")) return { bg: "#ede9fe", fg: "#6d28d9", card: "#faf5ff", border: "#ddd6fe" };
+  if (value.includes("rare")) return { bg: "#dbeafe", fg: "#1d4ed8", card: "#eff6ff", border: "#bfdbfe" };
+  if (value.includes("special")) return { bg: "#fef3c7", fg: "#b45309", card: "#fffbeb", border: "#fde68a" };
+  return { bg: "#e5e7eb", fg: "#111827", card: "#f9fafb", border: "#e5e7eb" };
 }
 
 export default function CollectionPage() {
   const supabase = useMemo(() => getSupabase(), []);
+  const router = useRouter();
 
   const [userId, setUserId] = useState<string>("");
-  const [cards, setCards] = useState<Card[]>([]);
+  const [cards, setCards] = useState<CollectionCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [savingId, setSavingId] = useState<string>("");
-
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "owned" | "need" | "favorites">("all");
   const [seriesFilter, setSeriesFilter] = useState("all");
   const [rarityFilter, setRarityFilter] = useState("all");
+  const [savingId, setSavingId] = useState<string>("");
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setLoadError("");
-
+    async function loadCollection() {
       const {
         data: { user },
-        error: authError,
       } = await supabase.auth.getUser();
 
-      if (authError || !user) {
-        setLoadError(authError?.message || "You must be signed in.");
-        setLoading(false);
+      if (!user) {
+        router.push("/login");
         return;
       }
 
@@ -126,11 +83,10 @@ export default function CollectionPage() {
         await Promise.all([
           supabase
             .from("doorables")
-            .select("id,name,series,subcategory,movie,rarity,image_url"),
-          supabase
-            .from("user_doorables")
-            .select("id,user_id,doorable_id,qty_owned,wanted,favorited,custom_tag,created_at")
-            .eq("user_id", user.id),
+            .select("*")
+            .order("series", { ascending: true })
+            .order("name", { ascending: true }),
+          supabase.from("user_doorables").select("*").eq("user_id", user.id),
         ]);
 
       if (doorablesError) {
@@ -146,48 +102,45 @@ export default function CollectionPage() {
       }
 
       const userMap = new Map<string, UserDoorableRow>();
-      (userDoorables || []).forEach((row) => {
-        userMap.set(String(row.doorable_id), row);
+      (userDoorables || []).forEach((row: UserDoorableRow) => {
+        if (row.doorable_id) userMap.set(String(row.doorable_id), row);
       });
 
-      const merged: Card[] = (doorables || [])
-        .map((doorable: DoorableRow) => {
-          const userRow = userMap.get(String(doorable.id));
+      const merged: CollectionCard[] = (doorables || []).map((doorable: DoorableRow) => {
+        const userRow = userMap.get(String(doorable.id));
 
-          return {
-            id: String(doorable.id),
-            name: doorable.name || "Unnamed",
-            series: doorable.series || "Unknown Series",
-            subcategory: doorable.subcategory || doorable.movie || "Unknown Group",
-            rarity: doorable.rarity || "Common",
-            imageUrl: doorable.image_url || null,
-            qtyOwned: Number(userRow?.qty_owned || 0),
-            wanted: Boolean(userRow?.wanted) || Number(userRow?.qty_owned || 0) <= 0,
-            favorited: Boolean(userRow?.favorited),
-            note: userRow?.custom_tag || "",
-            userRowId: userRow?.id || null,
-          };
-        })
-        .sort((a, b) => {
-          const seriesCmp = seriesSort(a.series, b.series);
-          if (seriesCmp !== 0) return seriesCmp;
-          return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-        });
+        return {
+          id: String(doorable.id),
+          name: doorable.name || "Unnamed",
+          series: doorable.series || "Unknown Series",
+          subcategory: doorable.subcategory || doorable.movie || "Unknown Group",
+          rarity: doorable.rarity || "Common",
+          imageUrl: userRow?.image_url || doorable.image_url || null,
+          qtyOwned: Number(userRow?.qty_owned || 0),
+          wanted: Boolean(userRow?.wanted) || Number(userRow?.qty_owned || 0) <= 0,
+          favorited: Boolean(userRow?.favorited),
+          customTag: userRow?.custom_tag || "",
+          notes: userRow?.notes || userRow?.personal_message || "",
+          userRowId: userRow?.id ? String(userRow.id) : undefined,
+        };
+      });
 
       setCards(merged);
       setLoading(false);
     }
 
-    load();
-  }, [supabase]);
+    loadCollection();
+  }, [router, supabase]);
 
-  const seriesOptions = useMemo(() => {
-    return ["all", ...Array.from(new Set(cards.map((card) => card.series))).sort(seriesSort)];
-  }, [cards]);
+  const seriesOptions = useMemo(
+    () => ["all", ...Array.from(new Set(cards.map((card) => card.series))).sort()],
+    [cards]
+  );
 
-  const rarityOptions = useMemo(() => {
-    return ["all", ...Array.from(new Set(cards.map((card) => card.rarity))).sort()];
-  }, [cards]);
+  const rarityOptions = useMemo(
+    () => ["all", ...Array.from(new Set(cards.map((card) => card.rarity))).sort()],
+    [cards]
+  );
 
   const filteredCards = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -195,7 +148,7 @@ export default function CollectionPage() {
     return cards.filter((card) => {
       const matchesSearch =
         !q ||
-        [card.name, card.series, card.subcategory, card.rarity, card.note]
+        [card.name, card.series, card.subcategory, card.rarity, card.customTag, card.notes]
           .join(" ")
           .toLowerCase()
           .includes(q);
@@ -216,10 +169,9 @@ export default function CollectionPage() {
     });
   }, [cards, search, statusFilter, seriesFilter, rarityFilter]);
 
-  const totalCount = cards.length;
   const ownedCount = cards.filter((card) => card.qtyOwned > 0).length;
   const needCount = cards.filter((card) => card.qtyOwned <= 0 || card.wanted).length;
-  const completion = totalCount ? Math.round((ownedCount / totalCount) * 100) : 0;
+  const completion = cards.length ? Math.round((ownedCount / cards.length) * 100) : 0;
 
   const seriesProgress = useMemo(() => {
     const grouped = new Map<string, { total: number; owned: number }>();
@@ -238,26 +190,36 @@ export default function CollectionPage() {
         owned: value.owned,
         percent: value.total ? Math.round((value.owned / value.total) * 100) : 0,
       }))
-      .sort((a, b) => seriesSort(a.series, b.series));
+      .sort((a, b) => a.series.localeCompare(b.series));
   }, [cards]);
 
-  async function persistCard(nextCard: Card) {
+  async function updateQuantity(card: CollectionCard, delta: number) {
     if (!userId) return;
 
-    setSavingId(nextCard.id);
+    const nextQty = Math.max(0, card.qtyOwned + delta);
+    setSavingId(card.id);
+
+    const optimistic = cards.map((item) =>
+      item.id === card.id
+        ? {
+            ...item,
+            qtyOwned: nextQty,
+            wanted: nextQty <= 0 ? true : false,
+          }
+        : item
+    );
+    setCards(optimistic);
 
     let errorMessage = "";
 
-    if (nextCard.userRowId) {
+    if (card.userRowId) {
       const { error } = await supabase
         .from("user_doorables")
         .update({
-          qty_owned: nextCard.qtyOwned,
-          wanted: nextCard.qtyOwned <= 0,
-          favorited: nextCard.favorited,
-          custom_tag: nextCard.note ?? "",
+          qty_owned: nextQty,
+          wanted: nextQty <= 0,
         })
-        .eq("id", nextCard.userRowId);
+        .eq("id", card.userRowId);
 
       if (error) errorMessage = error.message;
     } else {
@@ -266,72 +228,33 @@ export default function CollectionPage() {
         .insert([
           {
             user_id: userId,
-            doorable_id: nextCard.id,
-            qty_owned: nextCard.qtyOwned,
-            wanted: nextCard.qtyOwned <= 0,
-            favorited: nextCard.favorited ?? false,
-            custom_tag: nextCard.note ?? "",
+            doorable_id: card.id,
+            qty_owned: nextQty,
+            wanted: nextQty <= 0,
+            favorited: card.favorited,
+            custom_tag: card.customTag || null,
           },
         ])
-        .select("id")
+        .select()
         .single();
 
       if (error) {
         errorMessage = error.message;
-      } else if (data?.id) {
-        nextCard = { ...nextCard, userRowId: String(data.id) };
+      } else if (data) {
         setCards((prev) =>
-          prev.map((card) =>
-            card.id === nextCard.id ? { ...card, userRowId: String(data.id) } : card
+          prev.map((item) =>
+            item.id === card.id ? { ...item, userRowId: String(data.id) } : item
           )
         );
       }
     }
 
-    setSavingId("");
-
     if (errorMessage) {
       alert("Save failed: " + errorMessage);
-      return false;
+      setCards(cards);
     }
 
-    return true;
-  }
-
-  async function updateQuantity(cardId: string, delta: number) {
-    const current = cards.find((card) => card.id === cardId);
-    if (!current) return;
-
-    const nextQty = Math.max(0, current.qtyOwned + delta);
-    const nextCard: Card = {
-      ...current,
-      qtyOwned: nextQty,
-      wanted: nextQty <= 0,
-      note: current.note ?? "",
-    };
-
-    setCards((prev) => prev.map((card) => (card.id === cardId ? nextCard : card)));
-    const success = await persistCard(nextCard);
-
-    if (!success) {
-      setCards((prev) => prev.map((card) => (card.id === cardId ? current : card)));
-    }
-  }
-
-  async function saveNote(cardId: string) {
-    const current = cards.find((card) => card.id === cardId);
-    if (!current) return;
-
-    await persistCard({
-      ...current,
-      note: current.note ?? "",
-    });
-  }
-
-  function updateLocalNote(cardId: string, value: string) {
-    setCards((prev) =>
-      prev.map((card) => (card.id === cardId ? { ...card, note: value } : card))
-    );
+    setSavingId("");
   }
 
   return (
@@ -422,7 +345,7 @@ export default function CollectionPage() {
           }}
         >
           {[
-            { label: "Total Doorables", value: totalCount },
+            { label: "Total Doorables", value: cards.length },
             { label: "Owned", value: ownedCount },
             { label: "Still Need", value: needCount },
           ].map((stat) => (
@@ -477,9 +400,7 @@ export default function CollectionPage() {
 
             <select
               value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value as "all" | "owned" | "need" | "favorites")
-              }
+              onChange={(e) => setStatusFilter(e.target.value as "all" | "owned" | "need" | "favorites")}
               style={{
                 padding: 14,
                 borderRadius: 14,
@@ -563,19 +484,16 @@ export default function CollectionPage() {
                   background: "#ffffff",
                 }}
               >
-                <div style={{ fontWeight: 800, marginBottom: 6 }}>{entry.series}</div>
-
+                <div style={{ fontWeight: 800, marginBottom: 8 }}>{entry.series}</div>
                 <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
-                  {entry.owned}/{entry.total} collected • {entry.percent}%
+                  {entry.owned}/{entry.total} collected
                 </div>
-
                 <div
                   style={{
                     height: 10,
                     borderRadius: 999,
                     background: "#e5e7eb",
                     overflow: "hidden",
-                    marginBottom: 8,
                   }}
                 >
                   <div
@@ -617,23 +535,23 @@ export default function CollectionPage() {
           <section
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
               gap: 16,
             }}
           >
             {filteredCards.map((item) => {
-              const theme = rarityTheme(item.rarity);
+              const rarity = rarityColors(item.rarity);
 
               return (
                 <div
                   key={item.id}
                   style={{
-                    background: theme.card,
+                    background: rarity.card,
                     color: "#111827",
                     borderRadius: 22,
                     padding: 14,
                     boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
-                    border: `2px solid ${theme.border}`,
+                    border: `2px solid ${rarity.border}`,
                   }}
                 >
                   <div
@@ -688,8 +606,8 @@ export default function CollectionPage() {
                         borderRadius: 999,
                         fontSize: 12,
                         fontWeight: 900,
-                        background: theme.badgeBg,
-                        color: theme.badgeText,
+                        background: rarity.bg,
+                        color: rarity.fg,
                         whiteSpace: "nowrap",
                       }}
                     >
@@ -711,7 +629,7 @@ export default function CollectionPage() {
                     }}
                   >
                     <button
-                      onClick={() => updateQuantity(item.id, -1)}
+                      onClick={() => updateQuantity(item, -1)}
                       disabled={savingId === item.id}
                       style={qtyButtonStyle}
                     >
@@ -731,7 +649,7 @@ export default function CollectionPage() {
                     </div>
 
                     <button
-                      onClick={() => updateQuantity(item.id, 1)}
+                      onClick={() => updateQuantity(item, 1)}
                       disabled={savingId === item.id}
                       style={qtyButtonStyle}
                     >
@@ -741,52 +659,31 @@ export default function CollectionPage() {
 
                   <div
                     style={{
-                      marginBottom: 10,
+                      marginBottom: 8,
                       fontSize: 13,
                       fontWeight: 800,
                       color: item.qtyOwned > 0 ? "#166534" : "#b91c1c",
                     }}
                   >
-                    {savingId === item.id
-                      ? "Saving..."
-                      : item.qtyOwned > 0
-                      ? "Owned"
-                      : "Need"}
+                    {item.qtyOwned > 0 ? "Owned" : "Need"}
                   </div>
 
-                  <textarea
-                    value={item.note}
-                    onChange={(e) => updateLocalNote(item.id, e.target.value)}
-                    placeholder="Add personal notes..."
-                    style={{
-                      width: "100%",
-                      minHeight: 78,
-                      borderRadius: 14,
-                      border: "1px solid #d1d5db",
-                      padding: 10,
-                      fontSize: 14,
-                      resize: "vertical",
-                      boxSizing: "border-box",
-                      marginBottom: 10,
-                    }}
-                  />
+                  {item.customTag ? (
+                    <div
+                      style={{
+                        marginBottom: 8,
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: "#1d4ed8",
+                      }}
+                    >
+                      Tag: {item.customTag}
+                    </div>
+                  ) : null}
 
-                  <button
-                    onClick={() => saveNote(item.id)}
-                    disabled={savingId === item.id}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 12,
-                      border: "none",
-                      cursor: "pointer",
-                      fontWeight: 800,
-                      background: "linear-gradient(135deg,#2563eb,#7c3aed)",
-                      color: "white",
-                    }}
-                  >
-                    {savingId === item.id ? "Saving Note..." : "Save Note"}
-                  </button>
+                  <div style={{ color: "#4b5563", fontSize: 14, lineHeight: 1.45 }}>
+                    {item.notes || "No personal notes yet."}
+                  </div>
                 </div>
               );
             })}

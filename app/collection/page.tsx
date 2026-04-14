@@ -13,6 +13,7 @@ type Card = {
   image: string;
   qty: number;
   note: string;
+  wanted: boolean;
   rowId: string | null;
 };
 
@@ -124,6 +125,7 @@ export default function Page() {
   const [rarityFilter, setRarityFilter] = useState("all");
   const [movieFilter, setMovieFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [collectionFilter, setCollectionFilter] = useState("all");
 
   useEffect(() => {
     void load();
@@ -195,6 +197,7 @@ export default function Page() {
             image: String(d.image_url ?? ""),
             qty: Number(row?.qty_owned ?? 0),
             note: String(row?.custom_tag ?? ""),
+            wanted: Boolean(row?.wanted ?? (Number(row?.qty_owned ?? 0) <= 0)),
             rowId: row?.id ? String(row.id) : null,
           };
         })
@@ -212,11 +215,12 @@ export default function Page() {
     }
   }
 
-  async function saveCard(card: Card, nextQty: number, nextNote: string) {
+  async function saveCard(card: Card, nextQty: number, nextNote: string, nextWanted?: boolean) {
     try {
       const supabase = getSupabase();
       const qty = Math.max(0, Number(nextQty ?? card.qty ?? 0));
       const note = String(nextNote ?? card.note ?? "");
+      const wanted = typeof nextWanted === "boolean" ? nextWanted : card.wanted;
 
       setSavingId(card.id);
 
@@ -224,7 +228,7 @@ export default function Page() {
         user_id: userId,
         doorable_id: card.id,
         qty_owned: qty,
-        wanted: qty <= 0,
+        wanted,
         custom_tag: note,
       };
 
@@ -304,16 +308,24 @@ export default function Page() {
           ? card.qty > 0
           : card.qty <= 0;
 
+      const matchesCollection =
+        collectionFilter === "all"
+          ? true
+          : collectionFilter === "have"
+          ? card.qty > 0
+          : card.qty <= 0;
+
       return (
         matchesSearch &&
         matchesSeries &&
         matchesSubcategory &&
         matchesRarity &&
         matchesMovie &&
-        matchesStatus
+        matchesStatus &&
+        matchesCollection
       );
     });
-  }, [cards, search, seriesFilter, subcategoryFilter, rarityFilter, movieFilter, statusFilter]);
+  }, [cards, search, seriesFilter, subcategoryFilter, rarityFilter, movieFilter, statusFilter, collectionFilter]);
 
   const totalCount = cards.length;
   const ownedCount = cards.filter((c) => c.qty > 0).length;
@@ -338,6 +350,27 @@ export default function Page() {
         percent: value.total ? Math.round((value.owned / value.total) * 100) : 0,
       }))
       .sort((a, b) => seriesSort(a.series, b.series));
+  }, [cards]);
+
+  const subcategoryProgress = useMemo(() => {
+    const grouped = new Map<string, { total: number; owned: number }>();
+
+    cards.forEach((card) => {
+      if (!card.subcategory) return;
+      const current = grouped.get(card.subcategory) || { total: 0, owned: 0 };
+      current.total += 1;
+      if (card.qty > 0) current.owned += 1;
+      grouped.set(card.subcategory, current);
+    });
+
+    return Array.from(grouped.entries())
+      .map(([subcategory, value]) => ({
+        subcategory,
+        total: value.total,
+        owned: value.owned,
+        percent: value.total ? Math.round((value.owned / value.total) * 100) : 0,
+      }))
+      .sort((a, b) => a.subcategory.localeCompare(b.subcategory));
   }, [cards]);
 
   if (loading) {
@@ -381,7 +414,7 @@ export default function Page() {
         }
 
         .floatCard {
-          transition: transform 0.18s ease, box-shadow 0.18s ease;
+          transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
         }
 
         .floatCard:hover {
@@ -518,6 +551,33 @@ export default function Page() {
               }}
             />
 
+            <div style={{ display: "flex", gap: 8, alignItems: "center", padding: 6, borderRadius: 14, background: "#eef2ff", border: "1px solid #c7d2fe" }}>
+              {[
+                { value: "all", label: "All" },
+                { value: "have", label: "Have" },
+                { value: "need", label: "Need" },
+              ].map((option) => {
+                const active = collectionFilter === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => setCollectionFilter(option.value)}
+                    style={{
+                      padding: "9px 14px",
+                      borderRadius: 10,
+                      border: "none",
+                      cursor: "pointer",
+                      fontWeight: 800,
+                      background: active ? "#4f46e5" : "transparent",
+                      color: active ? "white" : "#3730a3",
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -641,19 +701,10 @@ export default function Page() {
                 }}
               >
                 <div style={{ fontWeight: 800, marginBottom: 6 }}>{entry.series}</div>
-
                 <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
                   {entry.owned}/{entry.total} collected • {entry.percent}%
                 </div>
-
-                <div
-                  style={{
-                    height: 10,
-                    borderRadius: 999,
-                    background: "#e5e7eb",
-                    overflow: "hidden",
-                  }}
-                >
+                <div style={{ height: 10, borderRadius: 999, background: "#e5e7eb", overflow: "hidden" }}>
                   <div
                     style={{
                       width: `${entry.percent}%`,
@@ -667,21 +718,76 @@ export default function Page() {
           </div>
         </section>
 
+        <section
+          style={{
+            background: "rgba(255,255,255,0.94)",
+            color: "#111827",
+            borderRadius: 24,
+            padding: 16,
+            boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+            marginBottom: 18,
+            border: "1px solid rgba(255,255,255,0.35)",
+          }}
+        >
+          <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 12 }}>
+            Subcategory Progress
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {subcategoryProgress.map((entry) => (
+              <div
+                key={entry.subcategory}
+                style={{
+                  borderRadius: 18,
+                  border: "1px solid #e5e7eb",
+                  padding: 14,
+                  background: "#ffffff",
+                }}
+              >
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>{entry.subcategory}</div>
+                <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
+                  {entry.owned}/{entry.total} collected • {entry.percent}%
+                </div>
+                <div style={{ height: 10, borderRadius: 999, background: "#e5e7eb", overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${entry.percent}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg,#34d399,#60a5fa)",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="cardsGrid">
           {filteredCards.map((item) => {
             const rarity = rarityTheme(item.rarity);
+            const subtleOverlay =
+              item.qty > 0
+                ? "linear-gradient(rgba(34,197,94,0.08), rgba(34,197,94,0.08))"
+                : "linear-gradient(rgba(168,85,247,0.08), rgba(168,85,247,0.08))";
 
             return (
               <div
                 key={item.id}
                 className="floatCard"
                 style={{
-                  background: `linear-gradient(rgba(0,0,0,0.08), rgba(0,0,0,0.08)), ${rarity.bg}`,
+                  background: `${subtleOverlay}, linear-gradient(rgba(0,0,0,0.08), rgba(0,0,0,0.08)), ${rarity.bg}`,
                   color: rarity.text,
                   borderRadius: 22,
                   padding: 12,
                   border: `5px solid ${rarity.border}`,
                   boxShadow: `0 12px 28px rgba(0,0,0,0.14), 0 0 18px ${rarity.glow}`,
+                  filter: item.qty > 0 ? "saturate(1.02)" : "saturate(0.98)",
                 }}
               >
                 <div
@@ -740,7 +846,7 @@ export default function Page() {
 
                 <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", justifyContent: "space-between" }}>
                   <button
-                    onClick={() => void saveCard(item, item.qty - 1, item.note)}
+                    onClick={() => void saveCard(item, item.qty - 1, item.note, item.wanted)}
                     disabled={savingId === item.id}
                     style={{
                       width: 36,
@@ -757,7 +863,7 @@ export default function Page() {
                   <div style={{ fontWeight: 900, fontSize: 22 }}>{item.qty}</div>
 
                   <button
-                    onClick={() => void saveCard(item, item.qty + 1, item.note)}
+                    onClick={() => void saveCard(item, item.qty + 1, item.note, item.wanted)}
                     disabled={savingId === item.id}
                     style={{
                       width: 36,
@@ -769,6 +875,42 @@ export default function Page() {
                     }}
                   >
                     +
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  <button
+                    onClick={() => void saveCard(item, item.qty, item.note, false)}
+                    disabled={savingId === item.id}
+                    style={{
+                      flex: 1,
+                      padding: "8px 10px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.12)",
+                      background: !item.wanted ? "rgba(34,197,94,0.14)" : "rgba(255,255,255,0.72)",
+                      color: !item.wanted ? "#166534" : "#374151",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Have
+                  </button>
+
+                  <button
+                    onClick={() => void saveCard(item, item.qty, item.note, true)}
+                    disabled={savingId === item.id}
+                    style={{
+                      flex: 1,
+                      padding: "8px 10px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.12)",
+                      background: item.wanted ? "rgba(168,85,247,0.14)" : "rgba(255,255,255,0.72)",
+                      color: item.wanted ? "#6d28d9" : "#374151",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Want
                   </button>
                 </div>
 
@@ -799,7 +941,7 @@ export default function Page() {
                 />
 
                 <button
-                  onClick={() => void saveCard(item, item.qty, item.note)}
+                  onClick={() => void saveCard(item, item.qty, item.note, item.wanted)}
                   disabled={savingId === item.id}
                   style={{
                     marginTop: 8,

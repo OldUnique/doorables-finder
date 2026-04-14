@@ -120,6 +120,7 @@ export default function Page() {
 
   const [search, setSearch] = useState("");
   const [seriesFilter, setSeriesFilter] = useState("all");
+  const [subcategoryFilter, setSubcategoryFilter] = useState("all");
   const [rarityFilter, setRarityFilter] = useState("all");
   const [movieFilter, setMovieFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -266,6 +267,10 @@ export default function Page() {
     return ["all", ...Array.from(new Set(cards.map((c) => c.series).filter(Boolean))).sort(seriesSort)];
   }, [cards]);
 
+  const subcategoryOptions = useMemo(() => {
+    return ["all", ...Array.from(new Set(cards.map((c) => c.subcategory).filter(Boolean))).sort()];
+  }, [cards]);
+
   const rarityOptions = useMemo(() => {
     return ["all", ...Array.from(new Set(cards.map((c) => c.rarity).filter(Boolean))).sort()];
   }, [cards]);
@@ -288,6 +293,7 @@ export default function Page() {
           .includes(q);
 
       const matchesSeries = seriesFilter === "all" || card.series === seriesFilter;
+      const matchesSubcategory = subcategoryFilter === "all" || card.subcategory === subcategoryFilter;
       const matchesRarity = rarityFilter === "all" || card.rarity === rarityFilter;
       const matchesMovie = movieFilter === "all" || card.movie === movieFilter;
 
@@ -298,9 +304,16 @@ export default function Page() {
           ? card.qty > 0
           : card.qty <= 0;
 
-      return matchesSearch && matchesSeries && matchesRarity && matchesMovie && matchesStatus;
+      return (
+        matchesSearch &&
+        matchesSeries &&
+        matchesSubcategory &&
+        matchesRarity &&
+        matchesMovie &&
+        matchesStatus
+      );
     });
-  }, [cards, search, seriesFilter, rarityFilter, movieFilter, statusFilter]);
+  }, [cards, search, seriesFilter, subcategoryFilter, rarityFilter, movieFilter, statusFilter]);
 
   const totalCount = cards.length;
   const ownedCount = cards.filter((c) => c.qty > 0).length;
@@ -535,6 +548,24 @@ export default function Page() {
               {seriesOptions.map((series) => (
                 <option key={series} value={series}>
                   {series === "all" ? "All Series" : series}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={subcategoryFilter}
+              onChange={(e) => setSubcategoryFilter(e.target.value)}
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                fontSize: 15,
+                minWidth: 180,
+              }}
+            >
+              {subcategoryOptions.map((subcategory) => (
+                <option key={subcategory} value={subcategory}>
+                  {subcategory === "all" ? "All Subcategories" : subcategory}
                 </option>
               ))}
             </select>

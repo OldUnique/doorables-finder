@@ -299,8 +299,6 @@ export default function Page() {
       const matchesSubcategory = subcategoryFilter === "all" || card.subcategory === subcategoryFilter;
       const matchesRarity = rarityFilter === "all" || card.rarity === rarityFilter;
       const matchesMovie = movieFilter === "all" || card.movie === movieFilter;
-      const matchesStatus =
-        statusFilter === "all" ? true : statusFilter === "owned" ? card.qty > 0 : card.qty <= 0;
       const matchesCollection =
         collectionFilter === "all" ? true : collectionFilter === "have" ? card.qty > 0 : card.qty <= 0;
 
@@ -310,11 +308,10 @@ export default function Page() {
         matchesSubcategory &&
         matchesRarity &&
         matchesMovie &&
-        matchesStatus &&
         matchesCollection
       );
     });
-  }, [cards, search, seriesFilter, subcategoryFilter, rarityFilter, movieFilter, statusFilter, collectionFilter]);
+  }, [cards, search, seriesFilter, subcategoryFilter, rarityFilter, movieFilter, collectionFilter]);
 
   const totalCount = cards.length;
   const ownedCount = cards.filter((c) => c.qty > 0).length;

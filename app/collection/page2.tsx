@@ -1,4 +1,3 @@
-// COLLECTION PAGE REPLACEMENT - movie + subcategory fix included
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -17,65 +16,80 @@ type Card = {
   rowId: string | null;
 };
 
-function rarityTheme(rarity: string) {
+type Theme = {
+  bg: string;
+  border: string;
+  text: string;
+  badgeBg: string;
+  badgeText: string;
+  glow: string;
+};
+
+function rarityTheme(rarity: string): Theme {
   const value = String(rarity || "").toLowerCase().trim();
 
   if (value === "exclusive" || value.includes("exclusive")) {
     return {
-      bg: "#fff7d6",
-      border: "#d4a017",
-      text: "#2b2110",
-      badgeBg: "#f4cf61",
-      badgeText: "#6b4f00",
+      bg: "#f6e5a8",
+      border: "#c89211",
+      text: "#332400",
+      badgeBg: "#e7bc44",
+      badgeText: "#4c3500",
+      glow: "rgba(200,146,17,0.22)",
     };
   }
 
   if (value.includes("special edition")) {
     return {
-      bg: "#f4e8ff",
-      border: "#8b5cf6",
-      text: "#2f144f",
-      badgeBg: "#d8b4fe",
-      badgeText: "#5b21b6",
+      bg: "#e6d2ff",
+      border: "#7c3aed",
+      text: "#2f1458",
+      badgeBg: "#c084fc",
+      badgeText: "#3b0764",
+      glow: "rgba(124,58,237,0.20)",
     };
   }
 
   if (value.includes("limited edition")) {
     return {
-      bg: "#fffbd1",
-      border: "#eab308",
-      text: "#3f2d05",
-      badgeBg: "#fde047",
-      badgeText: "#854d0e",
+      bg: "#f8ef9b",
+      border: "#d4a500",
+      text: "#403000",
+      badgeBg: "#f2d64c",
+      badgeText: "#5c4300",
+      glow: "rgba(212,165,0,0.20)",
     };
   }
 
   if (value.includes("ultra rare")) {
     return {
-      bg: "#e8f1ff",
-      border: "#3b82f6",
+      bg: "#cfe2ff",
+      border: "#2563eb",
       text: "#102a56",
-      badgeBg: "#93c5fd",
-      badgeText: "#1d4ed8",
+      badgeBg: "#7db7ff",
+      badgeText: "#123d92",
+      glow: "rgba(37,99,235,0.20)",
     };
   }
 
   if (value === "rare" || (value.includes("rare") && !value.includes("ultra"))) {
     return {
-      bg: "#eafaf0",
-      border: "#22c55e",
-      text: "#12351f",
-      badgeBg: "#86efac",
-      badgeText: "#15803d",
+      bg: "#d5f5df",
+      border: "#16a34a",
+      text: "#13361d",
+      badgeBg: "#7ee29c",
+      badgeText: "#14532d",
+      glow: "rgba(22,163,74,0.18)",
     };
   }
 
   return {
-    bg: "#ffffff",
-    border: "#d1d5db",
+    bg: "#f2f4f7",
+    border: "#cbd5e1",
     text: "#111827",
-    badgeBg: "#f3f4f6",
+    badgeBg: "#e5e7eb",
     badgeText: "#111827",
+    glow: "rgba(148,163,184,0.16)",
   };
 }
 
@@ -102,11 +116,13 @@ export default function Page() {
   const [userId, setUserId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState("");
+
   const [search, setSearch] = useState("");
   const [seriesFilter, setSeriesFilter] = useState("all");
   const [rarityFilter, setRarityFilter] = useState("all");
+  const [movieFilter, setMovieFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [savingId, setSavingId] = useState("");
 
   useEffect(() => {
     void load();
@@ -182,8 +198,8 @@ export default function Page() {
           };
         })
         .sort((a, b) => {
-          const seriesCmp = seriesSort(a.series, b.series);
-          if (seriesCmp !== 0) return seriesCmp;
+          const bySeries = seriesSort(a.series, b.series);
+          if (bySeries !== 0) return bySeries;
           return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
         });
 
@@ -198,7 +214,6 @@ export default function Page() {
   async function saveCard(card: Card, nextQty: number, nextNote: string) {
     try {
       const supabase = getSupabase();
-
       const qty = Math.max(0, Number(nextQty ?? card.qty ?? 0));
       const note = String(nextNote ?? card.note ?? "");
 
@@ -248,21 +263,22 @@ export default function Page() {
   }
 
   const seriesOptions = useMemo(() => {
-    return ["all", ...Array.from(new Set(cards.map((c) => c.series))).sort(seriesSort)];
+    return ["all", ...Array.from(new Set(cards.map((c) => c.series).filter(Boolean))).sort(seriesSort)];
   }, [cards]);
 
   const rarityOptions = useMemo(() => {
-    return ["all", ...Array.from(new Set(cards.map((c) => c.rarity))).sort()];
+    return ["all", ...Array.from(new Set(cards.map((c) => c.rarity).filter(Boolean))).sort()];
+  }, [cards]);
+
+  const movieOptions = useMemo(() => {
+    return ["all", ...Array.from(new Set(cards.map((c) => c.movie).filter(Boolean))).sort()];
   }, [cards]);
 
   const filteredCards = useMemo(() => {
     const q = search.trim().toLowerCase();
 
     return cards.filter((card) => {
-      const detailText =
-        card.subcategory && card.movie
-          ? `${card.subcategory} ${card.movie}`
-          : card.subcategory || card.movie || "";
+      const detailText = [card.subcategory, card.movie].filter(Boolean).join(" ");
 
       const matchesSearch =
         !q ||
@@ -271,8 +287,9 @@ export default function Page() {
           .toLowerCase()
           .includes(q);
 
-      const matchesSeries = seriesFilter === "all" ? true : card.series === seriesFilter;
-      const matchesRarity = rarityFilter === "all" ? true : card.rarity === rarityFilter;
+      const matchesSeries = seriesFilter === "all" || card.series === seriesFilter;
+      const matchesRarity = rarityFilter === "all" || card.rarity === rarityFilter;
+      const matchesMovie = movieFilter === "all" || card.movie === movieFilter;
 
       const matchesStatus =
         statusFilter === "all"
@@ -281,9 +298,9 @@ export default function Page() {
           ? card.qty > 0
           : card.qty <= 0;
 
-      return matchesSearch && matchesSeries && matchesRarity && matchesStatus;
+      return matchesSearch && matchesSeries && matchesRarity && matchesMovie && matchesStatus;
     });
-  }, [cards, search, seriesFilter, rarityFilter, statusFilter]);
+  }, [cards, search, seriesFilter, rarityFilter, movieFilter, statusFilter]);
 
   const totalCount = cards.length;
   const ownedCount = cards.filter((c) => c.qty > 0).length;
@@ -312,7 +329,7 @@ export default function Page() {
 
   if (loading) {
     return (
-      <div style={{ padding: 20, minHeight: "100vh", background: "linear-gradient(135deg, #0f172a, #2563eb)", color: "white" }}>
+      <div style={{ padding: 24, minHeight: "100vh", background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)", color: "white" }}>
         Loading collection...
       </div>
     );
@@ -320,7 +337,7 @@ export default function Page() {
 
   if (error) {
     return (
-      <div style={{ padding: 20, minHeight: "100vh", background: "linear-gradient(135deg, #0f172a, #2563eb)", color: "white" }}>
+      <div style={{ padding: 24, minHeight: "100vh", background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)", color: "white" }}>
         <h1>Collection Error</h1>
         <div>{error}</div>
       </div>
@@ -332,18 +349,64 @@ export default function Page() {
       style={{
         minHeight: "100vh",
         padding: 24,
-        background: "linear-gradient(135deg, #0f172a, #2563eb)",
         color: "white",
+        background:
+          "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), radial-gradient(circle at 70% 70%, rgba(236,72,153,0.18) 0%, rgba(236,72,153,0) 20%), linear-gradient(180deg, #09090f 0%, #111827 38%, #0f172a 65%, #020617 100%)",
       }}
     >
-      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+      <style jsx>{`
+        .cardsGrid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 16px;
+        }
+
+        @media (min-width: 900px) {
+          .cardsGrid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+        }
+
+        .floatCard {
+          transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .floatCard:hover {
+          transform: translateY(-6px);
+        }
+
+        .galaxyStars {
+          position: relative;
+        }
+
+        .galaxyStars::before {
+          content: "";
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          background-image:
+            radial-gradient(2px 2px at 10% 20%, rgba(255,255,255,0.95) 40%, transparent 41%),
+            radial-gradient(1.5px 1.5px at 25% 80%, rgba(255,255,255,0.9) 40%, transparent 41%),
+            radial-gradient(1.8px 1.8px at 40% 15%, rgba(255,255,255,0.9) 40%, transparent 41%),
+            radial-gradient(2px 2px at 55% 70%, rgba(255,255,255,0.9) 40%, transparent 41%),
+            radial-gradient(1.6px 1.6px at 72% 35%, rgba(255,255,255,0.95) 40%, transparent 41%),
+            radial-gradient(2px 2px at 85% 60%, rgba(255,255,255,0.9) 40%, transparent 41%),
+            radial-gradient(1.5px 1.5px at 92% 25%, rgba(255,255,255,0.85) 40%, transparent 41%);
+          opacity: 0.65;
+          z-index: 0;
+        }
+      `}</style>
+
+      <div className="galaxyStars" style={{ maxWidth: 1400, margin: "0 auto", position: "relative", zIndex: 1 }}>
         <section
           style={{
-            background: "linear-gradient(135deg, #111827, #4338ca)",
+            background: "linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88))",
             borderRadius: 28,
             padding: 24,
-            boxShadow: "0 20px 40px rgba(0,0,0,0.24)",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.30)",
             marginBottom: 18,
+            border: "1px solid rgba(255,255,255,0.08)",
+            backdropFilter: "blur(6px)",
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
@@ -352,7 +415,7 @@ export default function Page() {
                 My Collection 💜
               </h1>
               <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
-                It only gets better 💜
+                It only gets better in this galaxy 💜
               </div>
             </div>
 
@@ -403,11 +466,12 @@ export default function Page() {
             <div
               key={stat.label}
               style={{
-                background: "rgba(255,255,255,0.97)",
+                background: "rgba(255,255,255,0.94)",
                 color: "#111827",
                 borderRadius: 20,
                 padding: 18,
-                boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+                boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+                border: "1px solid rgba(255,255,255,0.35)",
               }}
             >
               <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>{stat.label}</div>
@@ -418,12 +482,13 @@ export default function Page() {
 
         <section
           style={{
-            background: "rgba(255,255,255,0.97)",
+            background: "rgba(255,255,255,0.94)",
             color: "#111827",
             borderRadius: 24,
             padding: 16,
-            boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+            boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
             marginBottom: 18,
+            border: "1px solid rgba(255,255,255,0.35)",
           }}
         >
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
@@ -475,6 +540,24 @@ export default function Page() {
             </select>
 
             <select
+              value={movieFilter}
+              onChange={(e) => setMovieFilter(e.target.value)}
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                fontSize: 15,
+                minWidth: 180,
+              }}
+            >
+              {movieOptions.map((movie) => (
+                <option key={movie} value={movie}>
+                  {movie === "all" ? "All Movies" : movie}
+                </option>
+              ))}
+            </select>
+
+            <select
               value={rarityFilter}
               onChange={(e) => setRarityFilter(e.target.value)}
               style={{
@@ -496,12 +579,13 @@ export default function Page() {
 
         <section
           style={{
-            background: "rgba(255,255,255,0.97)",
+            background: "rgba(255,255,255,0.94)",
             color: "#111827",
             borderRadius: 24,
             padding: 16,
-            boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+            boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
             marginBottom: 18,
+            border: "1px solid rgba(255,255,255,0.35)",
           }}
         >
           <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 12 }}>
@@ -552,26 +636,21 @@ export default function Page() {
           </div>
         </section>
 
-        <section
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))",
-            gap: 16,
-          }}
-        >
+        <section className="cardsGrid">
           {filteredCards.map((item) => {
             const rarity = rarityTheme(item.rarity);
 
             return (
               <div
                 key={item.id}
+                className="floatCard"
                 style={{
-                  background: rarity.bg,
-                  color: "#111827",
+                  background: `linear-gradient(rgba(0,0,0,0.08), rgba(0,0,0,0.08)), ${rarity.bg}`,
+                  color: rarity.text,
                   borderRadius: 22,
                   padding: 12,
                   border: `5px solid ${rarity.border}`,
-                  boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
+                  boxShadow: `0 12px 28px rgba(0,0,0,0.14), 0 0 18px ${rarity.glow}`,
                 }}
               >
                 <div
@@ -618,10 +697,14 @@ export default function Page() {
                   </div>
                 </div>
 
-                <div style={{ opacity: 0.8, fontSize: 14, marginBottom: 10 }}>
-                  {item.subcategory && item.movie
-                    ? `${item.subcategory} • ${item.movie}`
-                    : item.subcategory || item.movie || ""}
+                <div style={{ opacity: 0.86, fontSize: 14, marginBottom: 10 }}>
+                  {item.subcategory && <div>{item.subcategory}</div>}
+                  {item.movie && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span aria-hidden="true">🎬</span>
+                      <span>{item.movie}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", justifyContent: "space-between" }}>
@@ -633,7 +716,7 @@ export default function Page() {
                       height: 36,
                       borderRadius: 12,
                       border: "1px solid " + rarity.border,
-                      background: "rgba(255,255,255,0.8)",
+                      background: "rgba(255,255,255,0.84)",
                       cursor: "pointer",
                     }}
                   >
@@ -650,7 +733,7 @@ export default function Page() {
                       height: 36,
                       borderRadius: 12,
                       border: "1px solid " + rarity.border,
-                      background: "rgba(255,255,255,0.8)",
+                      background: "rgba(255,255,255,0.84)",
                       cursor: "pointer",
                     }}
                   >

@@ -120,6 +120,7 @@ export default function Page() {
 
   const [search, setSearch] = useState("");
   const [seriesFilter, setSeriesFilter] = useState("all");
+  const [subcategoryFilter, setSubcategoryFilter] = useState("all");
   const [rarityFilter, setRarityFilter] = useState("all");
   const [movieFilter, setMovieFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -266,6 +267,10 @@ export default function Page() {
     return ["all", ...Array.from(new Set(cards.map((c) => c.series).filter(Boolean))).sort(seriesSort)];
   }, [cards]);
 
+  const subcategoryOptions = useMemo(() => {
+    return ["all", ...Array.from(new Set(cards.map((c) => c.subcategory).filter(Boolean))).sort()];
+  }, [cards]);
+
   const rarityOptions = useMemo(() => {
     return ["all", ...Array.from(new Set(cards.map((c) => c.rarity).filter(Boolean))).sort()];
   }, [cards]);
@@ -288,6 +293,7 @@ export default function Page() {
           .includes(q);
 
       const matchesSeries = seriesFilter === "all" || card.series === seriesFilter;
+      const matchesSubcategory = subcategoryFilter === "all" || card.subcategory === subcategoryFilter;
       const matchesRarity = rarityFilter === "all" || card.rarity === rarityFilter;
       const matchesMovie = movieFilter === "all" || card.movie === movieFilter;
 
@@ -298,9 +304,16 @@ export default function Page() {
           ? card.qty > 0
           : card.qty <= 0;
 
-      return matchesSearch && matchesSeries && matchesRarity && matchesMovie && matchesStatus;
+      return (
+        matchesSearch &&
+        matchesSeries &&
+        matchesSubcategory &&
+        matchesRarity &&
+        matchesMovie &&
+        matchesStatus
+      );
     });
-  }, [cards, search, seriesFilter, rarityFilter, movieFilter, statusFilter]);
+  }, [cards, search, seriesFilter, subcategoryFilter, rarityFilter, movieFilter, statusFilter]);
 
   const totalCount = cards.length;
   const ownedCount = cards.filter((c) => c.qty > 0).length;
@@ -329,7 +342,7 @@ export default function Page() {
 
   if (loading) {
     return (
-      <div style={{ padding: 24, minHeight: "100vh", background: "linear-gradient(135deg, #0f172a, #2563eb)", color: "white" }}>
+      <div style={{ padding: 24, minHeight: "100vh", background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)", color: "white" }}>
         Loading collection...
       </div>
     );
@@ -337,7 +350,7 @@ export default function Page() {
 
   if (error) {
     return (
-      <div style={{ padding: 24, minHeight: "100vh", background: "linear-gradient(135deg, #0f172a, #2563eb)", color: "white" }}>
+      <div style={{ padding: 24, minHeight: "100vh", background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)", color: "white" }}>
         <h1>Collection Error</h1>
         <div>{error}</div>
       </div>
@@ -349,18 +362,64 @@ export default function Page() {
       style={{
         minHeight: "100vh",
         padding: 24,
-        background: "linear-gradient(135deg, #0f172a, #2563eb)",
         color: "white",
+        background:
+          "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), radial-gradient(circle at 70% 70%, rgba(236,72,153,0.18) 0%, rgba(236,72,153,0) 20%), linear-gradient(180deg, #09090f 0%, #111827 38%, #0f172a 65%, #020617 100%)",
       }}
     >
-      <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+      <style jsx>{`
+        .cardsGrid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 16px;
+        }
+
+        @media (min-width: 900px) {
+          .cardsGrid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+        }
+
+        .floatCard {
+          transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .floatCard:hover {
+          transform: translateY(-6px);
+        }
+
+        .galaxyStars {
+          position: relative;
+        }
+
+        .galaxyStars::before {
+          content: "";
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          background-image:
+            radial-gradient(2px 2px at 10% 20%, rgba(255,255,255,0.95) 40%, transparent 41%),
+            radial-gradient(1.5px 1.5px at 25% 80%, rgba(255,255,255,0.9) 40%, transparent 41%),
+            radial-gradient(1.8px 1.8px at 40% 15%, rgba(255,255,255,0.9) 40%, transparent 41%),
+            radial-gradient(2px 2px at 55% 70%, rgba(255,255,255,0.9) 40%, transparent 41%),
+            radial-gradient(1.6px 1.6px at 72% 35%, rgba(255,255,255,0.95) 40%, transparent 41%),
+            radial-gradient(2px 2px at 85% 60%, rgba(255,255,255,0.9) 40%, transparent 41%),
+            radial-gradient(1.5px 1.5px at 92% 25%, rgba(255,255,255,0.85) 40%, transparent 41%);
+          opacity: 0.65;
+          z-index: 0;
+        }
+      `}</style>
+
+      <div className="galaxyStars" style={{ maxWidth: 1400, margin: "0 auto", position: "relative", zIndex: 1 }}>
         <section
           style={{
-            background: "linear-gradient(135deg, #111827, #4338ca)",
+            background: "linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88))",
             borderRadius: 28,
             padding: 24,
-            boxShadow: "0 20px 40px rgba(0,0,0,0.24)",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.30)",
             marginBottom: 18,
+            border: "1px solid rgba(255,255,255,0.08)",
+            backdropFilter: "blur(6px)",
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
@@ -369,7 +428,7 @@ export default function Page() {
                 My Collection 💜
               </h1>
               <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
-                It only gets better 💜
+                It only gets better in this galaxy 💜
               </div>
             </div>
 
@@ -420,11 +479,12 @@ export default function Page() {
             <div
               key={stat.label}
               style={{
-                background: "rgba(255,255,255,0.97)",
+                background: "rgba(255,255,255,0.94)",
                 color: "#111827",
                 borderRadius: 20,
                 padding: 18,
-                boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+                boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+                border: "1px solid rgba(255,255,255,0.35)",
               }}
             >
               <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>{stat.label}</div>
@@ -435,12 +495,13 @@ export default function Page() {
 
         <section
           style={{
-            background: "rgba(255,255,255,0.97)",
+            background: "rgba(255,255,255,0.94)",
             color: "#111827",
             borderRadius: 24,
             padding: 16,
-            boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+            boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
             marginBottom: 18,
+            border: "1px solid rgba(255,255,255,0.35)",
           }}
         >
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
@@ -492,6 +553,24 @@ export default function Page() {
             </select>
 
             <select
+              value={subcategoryFilter}
+              onChange={(e) => setSubcategoryFilter(e.target.value)}
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                fontSize: 15,
+                minWidth: 180,
+              }}
+            >
+              {subcategoryOptions.map((subcategory) => (
+                <option key={subcategory} value={subcategory}>
+                  {subcategory === "all" ? "All Subcategories" : subcategory}
+                </option>
+              ))}
+            </select>
+
+            <select
               value={movieFilter}
               onChange={(e) => setMovieFilter(e.target.value)}
               style={{
@@ -531,12 +610,13 @@ export default function Page() {
 
         <section
           style={{
-            background: "rgba(255,255,255,0.97)",
+            background: "rgba(255,255,255,0.94)",
             color: "#111827",
             borderRadius: 24,
             padding: 16,
-            boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+            boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
             marginBottom: 18,
+            border: "1px solid rgba(255,255,255,0.35)",
           }}
         >
           <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 12 }}>
@@ -586,28 +666,6 @@ export default function Page() {
             ))}
           </div>
         </section>
-
-        <style jsx>{`
-          .cardsGrid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px;
-          }
-
-          @media (min-width: 900px) {
-            .cardsGrid {
-              grid-template-columns: repeat(4, minmax(0, 1fr));
-            }
-          }
-
-          .floatCard {
-            transition: transform 0.18s ease, box-shadow 0.18s ease;
-          }
-
-          .floatCard:hover {
-            transform: translateY(-6px);
-          }
-        `}</style>
 
         <section className="cardsGrid">
           {filteredCards.map((item) => {

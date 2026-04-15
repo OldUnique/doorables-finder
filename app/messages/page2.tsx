@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
 
 type Conversation = {
@@ -10,7 +11,7 @@ type Conversation = {
   buyer_id: string;
   seller_id: string;
   created_at: string | null;
-  listing_title: string | null;
+  listing_title?: string | null;
 };
 
 type Message = {
@@ -23,6 +24,7 @@ type Message = {
 
 export default function MessagesPage() {
   const supabase = useMemo(() => getSupabase(), []);
+  const searchParams = useSearchParams();
 
   const [userId, setUserId] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -48,18 +50,14 @@ export default function MessagesPage() {
       } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        setError(authError?.message || "Auth session missing!");
+        setError(authError?.message || "Please sign in.");
         setLoading(false);
         return;
       }
 
       setUserId(String(user.id));
 
-      const listingId =
-        typeof window !== "undefined"
-          ? new URLSearchParams(window.location.search).get("listing")
-          : null;
-
+      const listingId = searchParams.get("listing");
       if (listingId) {
         await ensureConversation(String(user.id), listingId);
       }
@@ -94,7 +92,7 @@ export default function MessagesPage() {
       return;
     }
 
-    const { data: created, error: createError } = await supabase
+    const { data: created } = await supabase
       .from("marketplace_conversations")
       .insert([
         {
@@ -106,7 +104,7 @@ export default function MessagesPage() {
       .select()
       .single();
 
-    if (!createError && created) {
+    if (created) {
       setSelectedConversationId(String(created.id));
     }
   }

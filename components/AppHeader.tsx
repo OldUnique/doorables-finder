@@ -8,9 +8,9 @@ import { getSupabase } from "../lib/supabase";
 const links = [
   { href: "/", label: "🏠 Home" },
   { href: "/app", label: "Collection" },
+  { href: "/sell", label: "Sell" },
   { href: "/marketplace", label: "Marketplace" },
   { href: "/messages", label: "Messages" },
-  { href: "/sell", label: "Sell" },
   { href: "/pricing", label: "Subscription" },
   { href: "/feedback", label: "💙 Feedback" },
 ];
@@ -29,17 +29,28 @@ export default function AppHeader() {
     let active = true;
 
     async function loadUser() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!active) return;
+
       setEmail(user?.email ?? null);
       setLoading(false);
-      if (user?.id) await loadUnreadCount(user.id);
+
+      if (user?.id) {
+        await loadUnreadCount(user.id);
+      } else {
+        setUnreadCount(0);
+      }
     }
 
     void loadUser();
 
     const authSub = supabase.auth.onAuthStateChange((_event, session) => {
       setEmail(session?.user?.email ?? null);
+      setLoading(false);
+
       if (session?.user?.id) {
         void loadUnreadCount(session.user.id);
       } else {
@@ -53,7 +64,9 @@ export default function AppHeader() {
         "postgres_changes",
         { event: "*", schema: "public", table: "marketplace_messages" },
         async () => {
-          const { data: { user } } = await supabase.auth.getUser();
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
           if (user?.id) await loadUnreadCount(user.id);
         }
       )
@@ -61,7 +74,9 @@ export default function AppHeader() {
         "postgres_changes",
         { event: "*", schema: "public", table: "marketplace_conversations" },
         async () => {
-          const { data: { user } } = await supabase.auth.getUser();
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
           if (user?.id) await loadUnreadCount(user.id);
         }
       )
@@ -157,7 +172,9 @@ export default function AppHeader() {
           </div>
           <div>
             <div style={{ fontSize: 20, lineHeight: 1.1 }}>Doorables Finder</div>
-            <div style={{ fontSize: 12, opacity: 0.72, fontWeight: 700 }}>collect • browse • sell</div>
+            <div style={{ fontSize: 12, opacity: 0.72, fontWeight: 700 }}>
+              collect • browse • sell
+            </div>
           </div>
         </Link>
 
@@ -249,12 +266,43 @@ export default function AppHeader() {
             color: "white",
             fontSize: 14,
             fontWeight: 700,
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
           }}
         >
-          <span style={{ opacity: 0.84 }}>{loading ? "Loading..." : email ?? ""}</span>
-          {!loading && email && (
-            <button
-              onClick={() => void handleLogout()}
+          {loading ? (
+            <span style={{ opacity: 0.84 }}>Loading...</span>
+          ) : email ? (
+            <>
+              <span
+                style={{
+                  opacity: 0.84,
+                  maxWidth: 220,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {email}
+              </span>
+              <button
+                onClick={() => void handleLogout()}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 14,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.08)",
+                  color: "white",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                Log Out
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
               style={{
                 padding: "10px 14px",
                 borderRadius: 14,
@@ -262,11 +310,11 @@ export default function AppHeader() {
                 background: "rgba(255,255,255,0.08)",
                 color: "white",
                 fontWeight: 800,
-                cursor: "pointer",
+                textDecoration: "none",
               }}
             >
-              Log Out
-            </button>
+              Log In
+            </Link>
           )}
         </div>
       </div>
@@ -276,12 +324,15 @@ export default function AppHeader() {
           .mobileMenuToggle {
             display: inline-flex !important;
           }
+
           nav {
             width: 100%;
             display: none !important;
             flex-direction: column;
             align-items: stretch !important;
+            order: 3;
           }
+
           nav.navOpen {
             display: flex !important;
           }

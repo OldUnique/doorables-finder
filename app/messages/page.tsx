@@ -55,7 +55,7 @@ export default function MessagesPage() {
         },
         async () => {
           await loadMessages(selectedConversationId);
-          await markConversationRead(selectedConversationId);
+          await markConversationRead(selectedConversationId, userId);
         }
       )
       .subscribe();
@@ -63,7 +63,7 @@ export default function MessagesPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedConversationId, supabase]);
+  }, [selectedConversationId, supabase, userId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -74,14 +74,19 @@ export default function MessagesPage() {
       setLoading(true);
       setError("");
 
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
       if (authError || !user) {
         setError(authError?.message || "Auth session missing!");
         setLoading(false);
         return;
       }
 
-      setUserId(String(user.id));
+      const currentUserId = String(user.id);
+      setUserId(currentUserId);
 
       const listingId =
         typeof window !== "undefined"
@@ -89,10 +94,10 @@ export default function MessagesPage() {
           : null;
 
       if (listingId) {
-        await ensureConversation(String(user.id), listingId);
+        await ensureConversation(currentUserId, listingId);
       }
 
-      await loadConversations(String(user.id));
+      await loadConversations(currentUserId);
       setLoading(false);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Could not load messages.");
@@ -161,7 +166,7 @@ export default function MessagesPage() {
       return;
     }
 
-    const mapped = (data || []).map((row: any) => ({
+    const mapped = ((data || []) as any[]).map((row) => ({
       id: String(row.id),
       listing_id: String(row.listing_id),
       buyer_id: String(row.buyer_id),
@@ -178,7 +183,7 @@ export default function MessagesPage() {
 
     if (firstId) {
       await loadMessages(firstId);
-      await markConversationRead(firstId);
+      await markConversationRead(firstId, currentUserId);
     } else {
       setMessages([]);
     }
@@ -208,14 +213,15 @@ export default function MessagesPage() {
     );
   }
 
-  async function markConversationRead(conversationId: string) {
-    if (!userId) return;
+  async function markConversationRead(conversationId: string, currentUserId?: string) {
+    const activeUserId = currentUserId || userId;
+    if (!activeUserId) return;
 
     await supabase
       .from("marketplace_messages")
       .update({ read_at: new Date().toISOString() })
       .eq("conversation_id", conversationId)
-      .neq("sender_id", userId)
+      .neq("sender_id", activeUserId)
       .is("read_at", null);
   }
 
@@ -315,7 +321,7 @@ export default function MessagesPage() {
                       onClick={() => {
                         setSelectedConversationId(item.id);
                         void loadMessages(item.id);
-                        void markConversationRead(item.id);
+                        void markConversationRead(item.id, userId);
                       }}
                       style={{
                         textAlign: "left",

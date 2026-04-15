@@ -16,6 +16,7 @@ export default function SellPage() {
   const [imageUrl, setImageUrl] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [error, setError] = useState("");
 
@@ -34,6 +35,51 @@ export default function SellPage() {
     }
 
     setCheckingAuth(false);
+  }
+
+  async function handleFileUpload(file: File | null) {
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      setError("");
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setError("Please sign in first.");
+        setUploading(false);
+        return;
+      }
+
+      const fileExt = file.name.split(".").pop() || "jpg";
+      const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("marketplace-images")
+        .upload(fileName, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        setError(uploadError.message);
+        setUploading(false);
+        return;
+      }
+
+      const { data } = supabase.storage
+        .from("marketplace-images")
+        .getPublicUrl(fileName);
+
+      setImageUrl(data.publicUrl);
+      setUploading(false);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not upload image.");
+      setUploading(false);
+    }
   }
 
   async function handleSubmit() {
@@ -197,6 +243,26 @@ export default function SellPage() {
           opacity: 0.7;
           cursor: wait;
         }
+
+        .uploadBox {
+          border: 2px dashed #c7d2fe;
+          background: #eef2ff;
+          border-radius: 18px;
+          padding: 18px;
+        }
+
+        .previewBox {
+          margin-top: 10px;
+          border-radius: 16px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          padding: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 220px;
+          overflow: hidden;
+        }
       `}</style>
 
       <div className="shell">
@@ -253,12 +319,39 @@ export default function SellPage() {
               onChange={(e) => setPrice(e.target.value)}
             />
 
-            <input
-              className="field"
-              placeholder="Image URL"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-            />
+            <div className="uploadBox">
+              <div style={{ fontWeight: 900, marginBottom: 8 }}>Upload picture</div>
+
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => void handleFileUpload(e.target.files?.[0] ?? null)}
+                style={{ marginBottom: 10 }}
+              />
+
+              <input
+                className="field"
+                placeholder="Or paste image URL instead"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+              />
+
+              <div style={{ marginTop: 8, fontSize: 14, color: "#4b5563" }}>
+                {uploading ? "Uploading image..." : "You can upload from your device or paste an image link."}
+              </div>
+
+              <div className="previewBox">
+                {imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt="Preview"
+                    style={{ maxWidth: "100%", maxHeight: 320, objectFit: "contain" }}
+                  />
+                ) : (
+                  <div style={{ color: "#6b7280", fontWeight: 700 }}>Image preview will show here</div>
+                )}
+              </div>
+            </div>
 
             {!!error && (
               <div style={{ color: "#b91c1c", fontWeight: 700 }}>
@@ -269,7 +362,7 @@ export default function SellPage() {
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <button
                 onClick={() => void handleSubmit()}
-                disabled={loading}
+                disabled={loading || uploading}
                 className="submitButton"
               >
                 {loading ? "Posting..." : "Post Listing"}

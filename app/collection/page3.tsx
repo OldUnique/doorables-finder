@@ -123,7 +123,7 @@ export default function Page() {
   const [subcategoryFilter, setSubcategoryFilter] = useState("all");
   const [rarityFilter, setRarityFilter] = useState("all");
   const [movieFilter, setMovieFilter] = useState("all");
-  const [collectionFilter, setCollectionFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     void load();
@@ -184,6 +184,7 @@ export default function Page() {
       const merged: Card[] = (doorables || [])
         .map((d: any) => {
           const row = userMap.get(String(d.id));
+
           return {
             id: String(d.id ?? ""),
             name: String(d.name ?? "Unknown"),
@@ -262,25 +263,21 @@ export default function Page() {
     }
   }
 
-  const seriesOptions = useMemo(
-    () => ["all", ...Array.from(new Set(cards.map((c) => c.series).filter(Boolean))).sort(seriesSort)],
-    [cards]
-  );
+  const seriesOptions = useMemo(() => {
+    return ["all", ...Array.from(new Set(cards.map((c) => c.series).filter(Boolean))).sort(seriesSort)];
+  }, [cards]);
 
-  const subcategoryOptions = useMemo(
-    () => ["all", ...Array.from(new Set(cards.map((c) => c.subcategory).filter(Boolean))).sort()],
-    [cards]
-  );
+  const subcategoryOptions = useMemo(() => {
+    return ["all", ...Array.from(new Set(cards.map((c) => c.subcategory).filter(Boolean))).sort()];
+  }, [cards]);
 
-  const rarityOptions = useMemo(
-    () => ["all", ...Array.from(new Set(cards.map((c) => c.rarity).filter(Boolean))).sort()],
-    [cards]
-  );
+  const rarityOptions = useMemo(() => {
+    return ["all", ...Array.from(new Set(cards.map((c) => c.rarity).filter(Boolean))).sort()];
+  }, [cards]);
 
-  const movieOptions = useMemo(
-    () => ["all", ...Array.from(new Set(cards.map((c) => c.movie).filter(Boolean))).sort()],
-    [cards]
-  );
+  const movieOptions = useMemo(() => {
+    return ["all", ...Array.from(new Set(cards.map((c) => c.movie).filter(Boolean))).sort()];
+  }, [cards]);
 
   const filteredCards = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -299,8 +296,13 @@ export default function Page() {
       const matchesSubcategory = subcategoryFilter === "all" || card.subcategory === subcategoryFilter;
       const matchesRarity = rarityFilter === "all" || card.rarity === rarityFilter;
       const matchesMovie = movieFilter === "all" || card.movie === movieFilter;
-      const matchesCollection =
-        collectionFilter === "all" ? true : collectionFilter === "have" ? card.qty > 0 : card.qty <= 0;
+
+      const matchesStatus =
+        statusFilter === "all"
+          ? true
+          : statusFilter === "owned"
+          ? card.qty > 0
+          : card.qty <= 0;
 
       return (
         matchesSearch &&
@@ -308,10 +310,10 @@ export default function Page() {
         matchesSubcategory &&
         matchesRarity &&
         matchesMovie &&
-        matchesCollection
+        matchesStatus
       );
     });
-  }, [cards, search, seriesFilter, subcategoryFilter, rarityFilter, movieFilter, collectionFilter]);
+  }, [cards, search, seriesFilter, subcategoryFilter, rarityFilter, movieFilter, statusFilter]);
 
   const totalCount = cards.length;
   const ownedCount = cards.filter((c) => c.qty > 0).length;
@@ -319,23 +321,13 @@ export default function Page() {
   const completion = totalCount ? Math.round((ownedCount / totalCount) * 100) : 0;
 
   const seriesProgress = useMemo(() => {
-    const grouped = new Map<
-      string,
-      { total: number; owned: number; subcategories: string[] }
-    >();
+    const grouped = new Map<string, { total: number; owned: number }>();
 
     cards.forEach((card) => {
-      const key = card.series || "Unknown Series";
-      const current = grouped.get(key) || { total: 0, owned: 0, subcategories: [] };
-
+      const current = grouped.get(card.series) || { total: 0, owned: 0 };
       current.total += 1;
       if (card.qty > 0) current.owned += 1;
-
-      if (card.subcategory && !current.subcategories.includes(card.subcategory)) {
-        current.subcategories.push(card.subcategory);
-      }
-
-      grouped.set(key, current);
+      grouped.set(card.series, current);
     });
 
     return Array.from(grouped.entries())
@@ -344,7 +336,6 @@ export default function Page() {
         total: value.total,
         owned: value.owned,
         percent: value.total ? Math.round((value.owned / value.total) * 100) : 0,
-        subcategoryLabel: value.subcategories.join(", "),
       }))
       .sort((a, b) => seriesSort(a.series, b.series));
   }, [cards]);
@@ -390,7 +381,7 @@ export default function Page() {
         }
 
         .floatCard {
-          transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+          transition: transform 0.18s ease, box-shadow 0.18s ease;
         }
 
         .floatCard:hover {
@@ -452,7 +443,14 @@ export default function Page() {
             >
               <div style={{ fontSize: 14, opacity: 0.88, marginBottom: 8 }}>Collection Completion</div>
               <div style={{ fontSize: 30, fontWeight: 900, marginBottom: 10 }}>{completion}%</div>
-              <div style={{ height: 10, borderRadius: 999, background: "rgba(255,255,255,0.15)", overflow: "hidden" }}>
+              <div
+                style={{
+                  height: 10,
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.15)",
+                  overflow: "hidden",
+                }}
+              >
                 <div
                   style={{
                     width: `${completion}%`,
@@ -520,35 +518,33 @@ export default function Page() {
               }}
             />
 
-            <div style={{ display: "flex", gap: 8, alignItems: "center", padding: 6, borderRadius: 14, background: "#eef2ff", border: "1px solid #c7d2fe" }}>
-              {[
-                { value: "all", label: "All" },
-                { value: "have", label: "Have" },
-                { value: "need", label: "Need" },
-              ].map((option) => {
-                const active = collectionFilter === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    onClick={() => setCollectionFilter(option.value)}
-                    style={{
-                      padding: "9px 14px",
-                      borderRadius: 10,
-                      border: "none",
-                      cursor: "pointer",
-                      fontWeight: 800,
-                      background: active ? "#4f46e5" : "transparent",
-                      color: active ? "white" : "#3730a3",
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                fontSize: 15,
+                minWidth: 160,
+              }}
+            >
+              <option value="all">All Statuses</option>
+              <option value="owned">Owned</option>
+              <option value="need">Need</option>
+            </select>
 
-
-            <select value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}>
+            <select
+              value={seriesFilter}
+              onChange={(e) => setSeriesFilter(e.target.value)}
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                fontSize: 15,
+                minWidth: 180,
+              }}
+            >
               {seriesOptions.map((series) => (
                 <option key={series} value={series}>
                   {series === "all" ? "All Series" : series}
@@ -556,7 +552,17 @@ export default function Page() {
               ))}
             </select>
 
-            <select value={subcategoryFilter} onChange={(e) => setSubcategoryFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}>
+            <select
+              value={subcategoryFilter}
+              onChange={(e) => setSubcategoryFilter(e.target.value)}
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                fontSize: 15,
+                minWidth: 180,
+              }}
+            >
               {subcategoryOptions.map((subcategory) => (
                 <option key={subcategory} value={subcategory}>
                   {subcategory === "all" ? "All Subcategories" : subcategory}
@@ -564,7 +570,17 @@ export default function Page() {
               ))}
             </select>
 
-            <select value={movieFilter} onChange={(e) => setMovieFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}>
+            <select
+              value={movieFilter}
+              onChange={(e) => setMovieFilter(e.target.value)}
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                fontSize: 15,
+                minWidth: 180,
+              }}
+            >
               {movieOptions.map((movie) => (
                 <option key={movie} value={movie}>
                   {movie === "all" ? "All Movies" : movie}
@@ -572,7 +588,17 @@ export default function Page() {
               ))}
             </select>
 
-            <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}>
+            <select
+              value={rarityFilter}
+              onChange={(e) => setRarityFilter(e.target.value)}
+              style={{
+                padding: 14,
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                fontSize: 15,
+                minWidth: 180,
+              }}
+            >
               {rarityOptions.map((rarity) => (
                 <option key={rarity} value={rarity}>
                   {rarity === "all" ? "All Rarities" : rarity}
@@ -600,7 +626,7 @@ export default function Page() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
               gap: 12,
             }}
           >
@@ -614,31 +640,20 @@ export default function Page() {
                   background: "#ffffff",
                 }}
               >
-                <div style={{ fontWeight: 800, marginBottom: 6 }}>
-                  {entry.series}
-                  {entry.subcategoryLabel && (
-                    <button
-                      onClick={() => setSubcategoryFilter(entry.subcategoryLabel.split(", ")[0])}
-                      style={{
-                        marginLeft: 8,
-                        background: "none",
-                        border: "none",
-                        color: "#6366f1",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        padding: 0,
-                      }}
-                    >
-                      • {entry.subcategoryLabel}
-                    </button>
-                  )}
-                </div>
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>{entry.series}</div>
 
                 <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
                   {entry.owned}/{entry.total} collected • {entry.percent}%
                 </div>
 
-                <div style={{ height: 10, borderRadius: 999, background: "#e5e7eb", overflow: "hidden" }}>
+                <div
+                  style={{
+                    height: 10,
+                    borderRadius: 999,
+                    background: "#e5e7eb",
+                    overflow: "hidden",
+                  }}
+                >
                   <div
                     style={{
                       width: `${entry.percent}%`,
@@ -655,23 +670,18 @@ export default function Page() {
         <section className="cardsGrid">
           {filteredCards.map((item) => {
             const rarity = rarityTheme(item.rarity);
-            const subtleOverlay =
-              item.qty > 0
-                ? "linear-gradient(rgba(34,197,94,0.08), rgba(34,197,94,0.08))"
-                : "linear-gradient(rgba(168,85,247,0.08), rgba(168,85,247,0.08))";
 
             return (
               <div
                 key={item.id}
                 className="floatCard"
                 style={{
-                  background: `${subtleOverlay}, linear-gradient(rgba(0,0,0,0.08), rgba(0,0,0,0.08)), ${rarity.bg}`,
+                  background: `linear-gradient(rgba(0,0,0,0.08), rgba(0,0,0,0.08)), ${rarity.bg}`,
                   color: rarity.text,
                   borderRadius: 22,
                   padding: 12,
                   border: `5px solid ${rarity.border}`,
                   boxShadow: `0 12px 28px rgba(0,0,0,0.14), 0 0 18px ${rarity.glow}`,
-                  filter: item.qty > 0 ? "saturate(1.02)" : "saturate(0.98)",
                 }}
               >
                 <div
@@ -688,7 +698,11 @@ export default function Page() {
                   }}
                 >
                   {item.image ? (
-                    <img src={item.image} alt={item.name} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+                    />
                   ) : (
                     <div>No Image</div>
                   )}
@@ -758,15 +772,17 @@ export default function Page() {
                   </button>
                 </div>
 
-                <div style={{ marginTop: 8, marginBottom: 8, fontWeight: 800, color: item.qty > 0 ? "#166534" : "#7c3aed" }}>
-                  {savingId === item.id ? "Saving..." : item.qty > 0 ? "Have" : "Need"}
+                <div style={{ marginTop: 8, marginBottom: 8, fontWeight: 800, color: item.qty > 0 ? "#166534" : "#b91c1c" }}>
+                  {savingId === item.id ? "Saving..." : item.qty > 0 ? "Owned" : "Need"}
                 </div>
 
                 <textarea
                   value={item.note}
                   onChange={(e) => {
                     const value = e.target.value;
-                    setCards((prev) => prev.map((c) => (c.id === item.id ? { ...c, note: value } : c)));
+                    setCards((prev) =>
+                      prev.map((c) => (c.id === item.id ? { ...c, note: value } : c))
+                    );
                   }}
                   placeholder="Notes..."
                   style={{

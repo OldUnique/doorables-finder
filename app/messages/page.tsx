@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
+import AppHeader from "../../components/AppHeader";
 import { getSupabase } from "../../lib/supabase";
 
 type Conversation = {
@@ -11,6 +11,7 @@ type Conversation = {
   seller_id: string;
   created_at: string | null;
   listing_title: string | null;
+  seller_name: string | null;
 };
 
 type Message = {
@@ -18,11 +19,13 @@ type Message = {
   conversation_id: string;
   sender_id: string;
   body: string;
+  read_at: string | null;
   created_at: string | null;
 };
 
 export default function MessagesPage() {
   const supabase = useMemo(() => getSupabase(), []);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const [userId, setUserId] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -30,23 +33,48 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     void initialize();
   }, []);
 
+  useEffect(() => {
+    if (!selectedConversationId) return;
+
+    const channel = supabase
+      .channel(`messages-live-${selectedConversationId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "marketplace_messages",
+          filter: `conversation_id=eq.${selectedConversationId}`,
+        },
+        async () => {
+          await loadMessages(selectedConversationId);
+          await markConversationRead(selectedConversationId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedConversationId, supabase]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   async function initialize() {
     try {
       setLoading(true);
       setError("");
 
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
         setError(authError?.message || "Auth session missing!");
         setLoading(false);
@@ -75,7 +103,7 @@ export default function MessagesPage() {
   async function ensureConversation(currentUserId: string, listingId: string) {
     const { data: listing, error: listingError } = await supabase
       .from("marketplace_listings")
-      .select("id, user_id, title")
+      .select("id, user_id, title, seller_name")
       .eq("id", listingId)
       .single();
 
@@ -84,17 +112,17 @@ export default function MessagesPage() {
 
     const { data: existing } = await supabase
       .from("marketplace_conversations")
-      .select("*")
+      .select("id")
       .eq("listing_id", listingId)
       .eq("buyer_id", currentUserId)
       .maybeSingle();
 
-    if (existing) {
+    if (existing?.id) {
       setSelectedConversationId(String(existing.id));
       return;
     }
 
-    const { data: created, error: createError } = await supabase
+    const { data: created } = await supabase
       .from("marketplace_conversations")
       .insert([
         {
@@ -103,10 +131,10 @@ export default function MessagesPage() {
           seller_id: String(listing.user_id),
         },
       ])
-      .select()
+      .select("id")
       .single();
 
-    if (!createError && created) {
+    if (created?.id) {
       setSelectedConversationId(String(created.id));
     }
   }
@@ -115,9 +143,14 @@ export default function MessagesPage() {
     const { data, error } = await supabase
       .from("marketplace_conversations")
       .select(`
-        *,
+        id,
+        listing_id,
+        buyer_id,
+        seller_id,
+        created_at,
         marketplace_listings (
-          title
+          title,
+          seller_name
         )
       `)
       .or(`buyer_id.eq.${currentUserId},seller_id.eq.${currentUserId}`)
@@ -135,6 +168,7 @@ export default function MessagesPage() {
       seller_id: String(row.seller_id),
       created_at: row.created_at,
       listing_title: row.marketplace_listings?.title ?? "Listing",
+      seller_name: row.marketplace_listings?.seller_name ?? "Seller",
     })) as Conversation[];
 
     setConversations(mapped);
@@ -144,6 +178,7 @@ export default function MessagesPage() {
 
     if (firstId) {
       await loadMessages(firstId);
+      await markConversationRead(firstId);
     } else {
       setMessages([]);
     }
@@ -152,7 +187,7 @@ export default function MessagesPage() {
   async function loadMessages(conversationId: string) {
     const { data, error } = await supabase
       .from("marketplace_messages")
-      .select("*")
+      .select("id, conversation_id, sender_id, body, read_at, created_at")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true });
 
@@ -162,111 +197,73 @@ export default function MessagesPage() {
     }
 
     setMessages(
-      (data || []).map((row: any) => ({
+      ((data || []) as any[]).map((row) => ({
         id: String(row.id),
         conversation_id: String(row.conversation_id),
         sender_id: String(row.sender_id),
         body: String(row.body ?? ""),
+        read_at: row.read_at,
         created_at: row.created_at,
       }))
     );
   }
 
+  async function markConversationRead(conversationId: string) {
+    if (!userId) return;
+
+    await supabase
+      .from("marketplace_messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("conversation_id", conversationId)
+      .neq("sender_id", userId)
+      .is("read_at", null);
+  }
+
   async function sendMessage() {
-    if (!selectedConversationId || !draft.trim()) return;
+    if (!selectedConversationId || !draft.trim() || !userId) return;
 
     try {
-      setSaving(true);
+      setSending(true);
 
-      const { error } = await supabase
-        .from("marketplace_messages")
-        .insert([
-          {
-            conversation_id: selectedConversationId,
-            sender_id: userId,
-            body: draft.trim(),
-          },
-        ]);
+      const { error } = await supabase.from("marketplace_messages").insert([
+        {
+          conversation_id: selectedConversationId,
+          sender_id: userId,
+          body: draft.trim(),
+          read_at: null,
+        },
+      ]);
 
       if (error) {
         setError(error.message);
-        setSaving(false);
+        setSending(false);
         return;
       }
 
       setDraft("");
-      setSaving(false);
+      setSending(false);
       await loadMessages(selectedConversationId);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Could not send message.");
-      setSaving(false);
+      setSending(false);
     }
   }
+
+  const activeConversation =
+    conversations.find((item) => item.id === selectedConversationId) ?? null;
 
   return (
     <main
       style={{
         minHeight: "100vh",
-        padding: 24,
-        color: "white",
         background:
           "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
       }}
     >
-      <style jsx>{`
-        .shell {
-          max-width: 1280px;
-          margin: 0 auto;
-        }
-        .nav {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 18px;
-        }
-        .navLinks {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-        .navButton {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 12px 18px;
-          border-radius: 16px;
-          text-decoration: none;
-          color: white;
-          font-weight: 800;
-          background: rgba(255,255,255,0.08);
-          border: 1px solid rgba(255,255,255,0.1);
-          backdrop-filter: blur(8px);
-        }
-        .navButton:hover {
-          background: rgba(255,255,255,0.14);
-        }
-      `}</style>
+      <AppHeader />
 
-      <div className="shell">
-        <nav className="nav">
-          <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -1 }}>
-            Doorables Finder
-          </div>
-
-          <div className="navLinks">
-            <Link href="/" className="navButton">🏠 Home</Link>
-            <Link href="/collection" className="navButton">Collection</Link>
-            <Link href="/marketplace" className="navButton">Marketplace</Link>
-            <Link href="/messages" className="navButton">Messages</Link>
-            <Link href="/sell" className="navButton">Sell</Link>
-            <Link href="/subscription" className="navButton">Subscription</Link>
-            <Link href="/feedback" className="navButton">💙 Feedback</Link>
-          </div>
-        </nav>
-
-        <div
+      <div style={{ maxWidth: 1320, margin: "0 auto", padding: 24, color: "white" }}>
+        <section
           style={{
             background: "linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88))",
             borderRadius: 28,
@@ -279,13 +276,15 @@ export default function MessagesPage() {
             Messages 💬
           </div>
           <div style={{ marginTop: 8, opacity: 0.92 }}>
-            Talk to buyers and sellers without posting contact info.
+            Live chat for buyers and sellers.
           </div>
-          {!!error && <div style={{ marginTop: 10, color: "#fecaca", fontWeight: 700 }}>{error}</div>}
-        </div>
+          {!!error && (
+            <div style={{ marginTop: 10, color: "#fecaca", fontWeight: 700 }}>{error}</div>
+          )}
+        </section>
 
         {loading ? (
-          <div style={{ padding: 20 }}>Loading messages...</div>
+          <div style={{ color: "white", padding: 20 }}>Loading messages...</div>
         ) : (
           <div
             style={{
@@ -294,13 +293,14 @@ export default function MessagesPage() {
               gap: 16,
             }}
           >
-            <div
+            <aside
               style={{
                 background: "rgba(255,255,255,0.96)",
                 color: "#111827",
                 borderRadius: 22,
                 padding: 14,
                 boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
+                minHeight: 640,
               }}
             >
               <div style={{ fontWeight: 900, marginBottom: 10 }}>Conversations</div>
@@ -315,6 +315,7 @@ export default function MessagesPage() {
                       onClick={() => {
                         setSelectedConversationId(item.id);
                         void loadMessages(item.id);
+                        void markConversationRead(item.id);
                       }}
                       style={{
                         textAlign: "left",
@@ -325,7 +326,9 @@ export default function MessagesPage() {
                         cursor: "pointer",
                       }}
                     >
-                      <div style={{ fontWeight: 800 }}>{item.listing_title || "Listing"}</div>
+                      <div style={{ fontWeight: 800 }}>
+                        {item.seller_name || "Seller"} — {item.listing_title || "Listing"}
+                      </div>
                       <div style={{ fontSize: 12, color: "#6b7280" }}>
                         {item.created_at ? new Date(item.created_at).toLocaleString() : ""}
                       </div>
@@ -333,21 +336,25 @@ export default function MessagesPage() {
                   ))}
                 </div>
               )}
-            </div>
+            </aside>
 
-            <div
+            <section
               style={{
                 background: "rgba(255,255,255,0.96)",
                 color: "#111827",
                 borderRadius: 22,
                 padding: 14,
                 boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
-                minHeight: 520,
+                minHeight: 640,
                 display: "flex",
                 flexDirection: "column",
               }}
             >
-              <div style={{ fontWeight: 900, marginBottom: 10 }}>Conversation</div>
+              <div style={{ fontWeight: 900, marginBottom: 10 }}>
+                {activeConversation
+                  ? `${activeConversation.seller_name || "Seller"} — ${activeConversation.listing_title || "Listing"}`
+                  : "Conversation"}
+              </div>
 
               <div
                 style={{
@@ -358,7 +365,9 @@ export default function MessagesPage() {
                   background: "#fafafa",
                   overflow: "auto",
                   display: "grid",
-                  gap: 8,
+                  gap: 10,
+                  minHeight: 420,
+                  maxHeight: 420,
                 }}
               >
                 {messages.length === 0 ? (
@@ -371,22 +380,27 @@ export default function MessagesPage() {
                         key={msg.id}
                         style={{
                           justifySelf: mine ? "end" : "start",
-                          maxWidth: "75%",
+                          maxWidth: "76%",
                           padding: "10px 12px",
-                          borderRadius: 14,
-                          background: mine ? "#4f46e5" : "white",
+                          borderRadius: 16,
+                          background: mine ? "#2563eb" : "white",
                           color: mine ? "white" : "#111827",
                           border: mine ? "none" : "1px solid #e5e7eb",
+                          boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
                         }}
                       >
+                        <div style={{ fontSize: 12, fontWeight: 900, opacity: 0.86, marginBottom: 4 }}>
+                          {mine ? "You" : activeConversation?.seller_name || "Them"}
+                        </div>
                         <div>{msg.body}</div>
-                        <div style={{ fontSize: 11, opacity: 0.8, marginTop: 4 }}>
+                        <div style={{ fontSize: 11, opacity: 0.78, marginTop: 4 }}>
                           {msg.created_at ? new Date(msg.created_at).toLocaleString() : ""}
                         </div>
                       </div>
                     );
                   })
                 )}
+                <div ref={bottomRef} />
               </div>
 
               <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
@@ -396,19 +410,20 @@ export default function MessagesPage() {
                   placeholder="Type a message..."
                   style={{
                     flex: 1,
-                    minHeight: 90,
+                    minHeight: 92,
                     border: "1px solid #d1d5db",
                     borderRadius: 14,
                     padding: 12,
                     boxSizing: "border-box",
+                    resize: "vertical",
                   }}
                 />
                 <button
                   onClick={() => void sendMessage()}
-                  disabled={saving || !selectedConversationId}
+                  disabled={sending || !selectedConversationId}
                   style={{
                     alignSelf: "end",
-                    padding: "12px 16px",
+                    padding: "12px 18px",
                     borderRadius: 14,
                     border: "none",
                     background: "#4f46e5",
@@ -418,10 +433,10 @@ export default function MessagesPage() {
                     minWidth: 120,
                   }}
                 >
-                  {saving ? "Sending..." : "Send"}
+                  {sending ? "Sending..." : "Send"}
                 </button>
               </div>
-            </div>
+            </section>
           </div>
         )}
       </div>

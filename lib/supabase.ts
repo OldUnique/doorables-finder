@@ -1,16 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
+
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabasePublishableKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
+const supabaseAnonKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
 export function getSupabase() {
-  if (!supabaseUrl || !supabasePublishableKey) {
+  if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Supabase public env vars are missing.");
   }
 
-  return createClient(supabaseUrl, supabasePublishableKey);
+  return createClient(supabaseUrl, supabaseAnonKey);
 }
 
 export function getSupabaseAdmin() {

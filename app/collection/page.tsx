@@ -54,6 +54,18 @@ function rarityTheme(rarity: string) {
   };
 }
 
+function collectionLabel(qty: number) {
+  if (qty > 1) return "Extra";
+  if (qty > 0) return "Have";
+  return "Need";
+}
+
+function collectionColor(qty: number) {
+  if (qty > 1) return "#2563eb";
+  if (qty > 0) return "#16a34a";
+  return "#dc2626";
+}
+
 export default function CollectionPage() {
   const supabase = useMemo(() => getSupabase(), []);
 
@@ -221,8 +233,10 @@ export default function CollectionPage() {
       collectionFilter === "all"
         ? true
         : collectionFilter === "have"
-          ? card.qty > 0
-          : card.qty <= 0;
+          ? card.qty === 1
+          : collectionFilter === "need"
+            ? card.qty <= 0
+            : card.qty > 1;
 
     return (
       matchesSearch &&
@@ -418,6 +432,7 @@ export default function CollectionPage() {
               <option value="all">All</option>
               <option value="have">Have</option>
               <option value="need">Need</option>
+              <option value="extra">+Extra</option>
             </select>
           </div>
         </section>
@@ -488,7 +503,7 @@ export default function CollectionPage() {
                 >
                   <div
                     style={{
-                      width: ${series.percent}%,
+                      width: `${series.percent}%`,
                       height: "100%",
                       borderRadius: 999,
                       background: "linear-gradient(90deg, #60a5fa, #8b5cf6)",
@@ -530,7 +545,8 @@ export default function CollectionPage() {
           >
             {filteredCards.map((card) => {
               const rarity = rarityTheme(card.rarity);
-              const haveIt = card.qty > 0;
+              const qtyLabel = collectionLabel(card.qty);
+              const qtyColor = collectionColor(card.qty);
 
               return (
                 <div
@@ -542,7 +558,7 @@ export default function CollectionPage() {
                     padding: 14,
                     border: `4px solid ${rarity.border}`,
                     boxShadow: "0 14px 30px rgba(0,0,0,0.14)",
-                    opacity: haveIt ? 1 : 0.94,
+                    opacity: card.qty > 0 ? 1 : 0.94,
                   }}
                 >
                   <div
@@ -620,12 +636,12 @@ export default function CollectionPage() {
                       <div style={{ fontSize: 38, fontWeight: 900 }}>{card.qty}</div>
                       <div
                         style={{
-                          color: haveIt ? "#16a34a" : "#dc2626",
+                          color: qtyColor,
                           fontWeight: 900,
                           fontSize: 15,
                         }}
                       >
-                        {haveIt ? "Have" : "Need"}
+                        {qtyLabel}
                       </div>
                     </div>
 

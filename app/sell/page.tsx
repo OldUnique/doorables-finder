@@ -44,6 +44,9 @@ export default function SellPage() {
       setUploading(true);
       setError("");
 
+      const previewUrl = URL.createObjectURL(file);
+      setImageUrl(previewUrl);
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -103,8 +106,7 @@ export default function SellPage() {
       return;
     }
 
-    const numericPrice =
-      price.trim() === "" ? null : Number(price.trim());
+    const numericPrice = price.trim() === "" ? null : Number(price.trim());
 
     if (price.trim() !== "" && Number.isNaN(numericPrice)) {
       setError("Please enter a valid price.");
@@ -275,6 +277,7 @@ export default function SellPage() {
             <Link href="/" className="navButton">🏠 Home</Link>
             <Link href="/collection" className="navButton">Collection</Link>
             <Link href="/marketplace" className="navButton">Marketplace</Link>
+            <Link href="/messages" className="navButton">Messages</Link>
             <Link href="/sell" className="navButton">Sell</Link>
             <Link href="/subscription" className="navButton">Subscription</Link>
             <Link href="/feedback" className="navButton">💙 Feedback</Link>

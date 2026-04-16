@@ -39,7 +39,7 @@ export default function MarketplacePage() {
 
   const [search, setSearch] = useState("");
   const [deliveryFilter, setDeliveryFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("active");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     void loadPage();

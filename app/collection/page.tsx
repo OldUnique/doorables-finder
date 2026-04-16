@@ -244,6 +244,18 @@ export default function Page() {
           setSavingId("");
           return;
         }
+
+        setCards((prev) =>
+          prev.map((c) =>
+            c.id === card.id
+              ? {
+                  ...c,
+                  qty,
+                  note,
+                }
+              : c
+          )
+        );
       } else {
         const { data, error } = await supabase
           .from("user_doorables")
@@ -257,11 +269,23 @@ export default function Page() {
           return;
         }
 
-        card.rowId = data?.id ? String(data.id) : null;
+        const newRowId = data?.id ? String(data.id) : null;
+
+        setCards((prev) =>
+          prev.map((c) =>
+            c.id === card.id
+              ? {
+                  ...c,
+                  qty,
+                  note,
+                  rowId: newRowId,
+                }
+              : c
+          )
+        );
       }
 
       setSavingId("");
-      await load();
     } catch (err) {
       setSavingId("");
       alert("Save failed: " + (err instanceof Error ? err.message : "Unknown error"));
@@ -309,7 +333,7 @@ export default function Page() {
         collectionFilter === "all"
           ? true
           : collectionFilter === "have"
-            ? card.qty === 1
+            ? card.qty > 0
             : collectionFilter === "need"
               ? card.qty <= 0
               : card.qty > 1;

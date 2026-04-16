@@ -145,39 +145,6 @@ export default function HomePage() {
           z-index: 1;
         }
 
-        .nav {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 18px;
-        }
-
-        .navLinks {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .navButton {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 12px 18px;
-          border-radius: 16px;
-          text-decoration: none;
-          color: white;
-          font-weight: 800;
-          background: rgba(255,255,255,0.08);
-          border: 1px solid rgba(255,255,255,0.1);
-          backdrop-filter: blur(8px);
-        }
-
-        .navButton:hover {
-          background: rgba(255,255,255,0.14);
-        }
-
         .hero {
           background: linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
           border-radius: 30px;
@@ -193,6 +160,12 @@ export default function HomePage() {
           gap: 14px;
         }
 
+        .cardLink {
+          text-decoration: none;
+          color: inherit;
+          display: block;
+        }
+
         .card {
           background: rgba(255,255,255,0.94);
           color: #111827;
@@ -200,6 +173,12 @@ export default function HomePage() {
           padding: 18px;
           border: 1px solid rgba(255,255,255,0.35);
           box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          transition: transform 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .cardLink:hover .card {
+          transform: translateY(-3px);
+          box-shadow: 0 14px 28px rgba(0,0,0,0.22);
         }
 
         .announcementCard {
@@ -253,22 +232,6 @@ export default function HomePage() {
       `}</style>
 
       <div className="shell">
-        <nav className="nav">
-          <div>
-            <div style={{ fontSize: 42, fontWeight: 900, letterSpacing: -1 }}>Doorables Finder</div>
-            <div style={{ opacity: 0.82 }}>collect • browse • sell</div>
-          </div>
-
-          <div className="navLinks">
-            <Link href="/" className="navButton">🏠 Home</Link>
-            <Link href="/collection" className="navButton">Collection</Link>
-            <Link href="/marketplace" className="navButton">Marketplace</Link>
-            <Link href="/sell" className="navButton">Sell</Link>
-            <Link href="/subscription" className="navButton">Subscription</Link>
-            <Link href="/feedback" className="navButton">💙 Feedback</Link>
-          </div>
-        </nav>
-
         <section className="hero">
           <div style={{ fontSize: "clamp(2rem, 5vw, 3.2rem)", fontWeight: 900, lineHeight: 1 }}>
             Welcome back 💜
@@ -353,29 +316,35 @@ export default function HomePage() {
         </section>
 
         <section className="cards">
-          <div className="card">
-            <div style={{ fontSize: 14, color: "#6b7280" }}>Quick Link</div>
-            <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>My Collection</div>
-            <div style={{ marginTop: 8, color: "#4b5563" }}>
-              Keep up with your Doorables and see what you still need.
+          <Link href="/collection" className="cardLink">
+            <div className="card">
+              <div style={{ fontSize: 14, color: "#6b7280" }}>Quick Link</div>
+              <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>My Collection</div>
+              <div style={{ marginTop: 8, color: "#4b5563" }}>
+                Keep up with your Doorables and see what you still need.
+              </div>
             </div>
-          </div>
+          </Link>
 
-          <div className="card">
-            <div style={{ fontSize: 14, color: "#6b7280" }}>Quick Link</div>
-            <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>Marketplace</div>
-            <div style={{ marginTop: 8, color: "#4b5563" }}>
-              Browse listings, watch for updates, and catch live offers.
+          <Link href="/marketplace" className="cardLink">
+            <div className="card">
+              <div style={{ fontSize: 14, color: "#6b7280" }}>Quick Link</div>
+              <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>Marketplace</div>
+              <div style={{ marginTop: 8, color: "#4b5563" }}>
+                Browse listings, watch for updates, and catch live offers.
+              </div>
             </div>
-          </div>
+          </Link>
 
-          <div className="card">
-            <div style={{ fontSize: 14, color: "#6b7280" }}>Quick Link</div>
-            <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>Sell</div>
-            <div style={{ marginTop: 8, color: "#4b5563" }}>
-              Post extras, move duplicates, and keep your list fresh.
+          <Link href="/sell" className="cardLink">
+            <div className="card">
+              <div style={{ fontSize: 14, color: "#6b7280" }}>Quick Link</div>
+              <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>Sell</div>
+              <div style={{ marginTop: 8, color: "#4b5563" }}>
+                Post extras, move duplicates, and keep your list fresh.
+              </div>
             </div>
-          </div>
+          </Link>
         </section>
       </div>
     </main>

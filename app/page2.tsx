@@ -1,226 +1,383 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { getSupabase } from "../lib/supabase";
 
+type Announcement = {
+  id: number;
+  title: string;
+  body: string;
+  is_active: boolean;
+  updated_by: string | null;
+  updated_at: string | null;
+};
+
+const ADMIN_EMAILS = [
+  "riffeljosh80@gmail.com",
+];
+
 export default function HomePage() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const [title, setTitle] = useState("This Week’s Updates");
+  const [body, setBody] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const isAdmin = useMemo(() => {
+    return ADMIN_EMAILS.includes(userEmail.toLowerCase());
+  }, [userEmail]);
 
   useEffect(() => {
-    const checkUser = async () => {
-      const supabase = getSupabase();
-      const { data } = await supabase.auth.getUser();
-      setIsLoggedIn(!!data?.user);
-    };
-
-    checkUser();
+    void loadPage();
   }, []);
 
+  async function loadPage() {
+    try {
+      setLoading(true);
+      setMessage("");
+
+      const supabase = getSupabase();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      setUserEmail(String(user?.email ?? "").toLowerCase());
+
+      const { data, error } = await supabase
+        .from("site_announcements")
+        .select("*")
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error && !String(error.message).toLowerCase().includes("no rows")) {
+        setMessage(error.message);
+      }
+
+      if (data) {
+        const row = data as Announcement;
+        setAnnouncement(row);
+        setTitle(String(row.title ?? "This Week’s Updates"));
+        setBody(String(row.body ?? ""));
+      }
+
+      setLoading(false);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not load homepage.");
+      setLoading(false);
+    }
+  }
+
+  async function saveAnnouncement() {
+    try {
+      setSaving(true);
+      setMessage("");
+
+      const supabase = getSupabase();
+
+      const payload = {
+        title: title.trim() || "This Week’s Updates",
+        body: body.trim(),
+        is_active: true,
+        updated_by: userEmail || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (announcement?.id) {
+        const { data, error } = await supabase
+          .from("site_announcements")
+          .update(payload)
+          .eq("id", announcement.id)
+          .select()
+          .single();
+
+        if (error) {
+          setMessage(error.message);
+          setSaving(false);
+          return;
+        }
+
+        setAnnouncement(data as Announcement);
+      } else {
+        const { data, error } = await supabase
+          .from("site_announcements")
+          .insert([payload])
+          .select()
+          .single();
+
+        if (error) {
+          setMessage(error.message);
+          setSaving(false);
+          return;
+        }
+
+        setAnnouncement(data as Announcement);
+      }
+
+      setMessage("Announcement saved.");
+      setSaving(false);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not save announcement.");
+      setSaving(false);
+    }
+  }
+
   return (
-    <>
+    <main
+      style={{
+        minHeight: "100vh",
+        padding: 24,
+        color: "white",
+        background:
+          "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), radial-gradient(circle at 70% 70%, rgba(236,72,153,0.18) 0%, rgba(236,72,153,0) 20%), linear-gradient(180deg, #09090f 0%, #111827 38%, #0f172a 65%, #020617 100%)",
+      }}
+    >
       <style jsx>{`
-        .page {
-          min-height: 100vh;
-          background:
-            radial-gradient(circle at top right, rgba(250, 204, 21, 0.12), transparent 22%),
-            linear-gradient(135deg, #0f172a, #1d4ed8);
-          color: white;
-        }
-
-        .container {
-          max-width: 1200px;
+        .shell {
+          max-width: 1280px;
           margin: 0 auto;
-          padding: 20px;
+          position: relative;
+          z-index: 1;
         }
 
-        .hero {
-          margin-top: 20px;
-          background: linear-gradient(135deg, #5b21b6, #2563eb);
-          padding: 32px;
-          border-radius: 28px;
-          text-align: center;
-          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-        }
-
-        .title {
-          margin: 0;
-          font-size: clamp(2.3rem, 7vw, 3.5rem);
-          font-weight: 900;
-          line-height: 1.05;
-        }
-
-        .subtitle {
-          margin: 14px auto 0;
-          font-size: clamp(1rem, 2.2vw, 1.125rem);
-          opacity: 0.92;
-          max-width: 720px;
-          line-height: 1.65;
-        }
-
-        .ctaRow {
-          margin-top: 24px;
+        .nav {
           display: flex;
-          justify-content: center;
+          gap: 12px;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 18px;
+        }
+
+        .navLinks {
+          display: flex;
           gap: 12px;
           flex-wrap: wrap;
         }
 
-        .promo {
-          margin-top: 18px;
-          opacity: 0.9;
-          font-size: 15px;
-          line-height: 1.6;
-        }
-
-        .tagline {
-          opacity: 0.88;
-          margin-top: 12px;
-          font-weight: 600;
-          font-size: 15px;
-        }
-
-        .featureGrid {
-          margin-top: 24px;
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 16px;
-        }
-
-        .card {
-          background: rgba(255, 255, 255, 0.96);
-          color: #111827;
-          padding: 20px;
-          border-radius: 18px;
-          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
-        }
-
-        .card h3 {
-          margin-top: 0;
-          margin-bottom: 10px;
-          font-size: 1.1rem;
-        }
-
-        .card p {
-          margin: 0;
-          color: #374151;
-          line-height: 1.6;
-        }
-
-        .btn {
-          padding: 14px 22px;
-          border-radius: 14px;
-          font-weight: 900;
-          text-decoration: none;
+        .navButton {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-width: 180px;
-          text-align: center;
-          transition: transform 0.18s ease, opacity 0.18s ease;
+          padding: 12px 18px;
+          border-radius: 16px;
+          text-decoration: none;
+          color: white;
+          font-weight: 800;
+          background: rgba(255,255,255,0.08);
+          border: 1px solid rgba(255,255,255,0.1);
+          backdrop-filter: blur(8px);
         }
 
-        .btn:hover {
-          transform: translateY(-1px);
+        .navButton:hover {
+          background: rgba(255,255,255,0.14);
         }
 
-        .primaryBtn {
-          background: #facc15;
+        .hero {
+          background: linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
+          border-radius: 30px;
+          padding: 28px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.30);
+          border: 1px solid rgba(255,255,255,0.08);
+          margin-bottom: 18px;
+        }
+
+        .cards {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 14px;
+        }
+
+        .card {
+          background: rgba(255,255,255,0.94);
           color: #111827;
+          border-radius: 22px;
+          padding: 18px;
+          border: 1px solid rgba(255,255,255,0.35);
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
         }
 
-        .secondaryBtn {
-          background: #2563eb;
+        .announcementCard {
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          border-radius: 24px;
+          padding: 18px;
+          border: 1px solid rgba(255,255,255,0.35);
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          margin-bottom: 18px;
+        }
+
+        .adminBox {
+          margin-top: 16px;
+          padding-top: 16px;
+          border-top: 1px solid #e5e7eb;
+        }
+
+        .field {
+          width: 100%;
+          border: 1px solid #d1d5db;
+          border-radius: 14px;
+          padding: 12px 14px;
+          font-size: 15px;
+          color: #111827;
+          background: white;
+          box-sizing: border-box;
+        }
+
+        .textarea {
+          min-height: 140px;
+          resize: vertical;
+          white-space: pre-wrap;
+        }
+
+        .saveButton {
+          margin-top: 10px;
+          padding: 12px 16px;
+          border-radius: 14px;
+          border: none;
+          cursor: pointer;
+          font-weight: 800;
           color: white;
+          background: linear-gradient(90deg, #4f46e5, #7c3aed);
         }
 
-        .ghostBtn {
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          color: white;
-          background: rgba(255, 255, 255, 0.05);
-        }
-
-        @media (max-width: 700px) {
-          .container {
-            padding: 14px;
-          }
-
-          .hero {
-            margin-top: 12px;
-            padding: 22px 16px;
-            border-radius: 22px;
-          }
-
-          .ctaRow {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .btn {
-            width: 100%;
-            min-width: 0;
-          }
-
-          .featureGrid {
-            grid-template-columns: 1fr;
-          }
+        .tiny {
+          font-size: 13px;
+          color: #6b7280;
         }
       `}</style>
 
-      <main className="page">
-        <div className="container">
-          <div className="hero">
-            <h1 className="title">Doorables Finder 💜</h1>
-
-            <p className="subtitle">
-              Track your collection, find what you need, and buy &amp; sell Doorables
-              all in one place.
-            </p>
-
-            <div className="ctaRow">
-              <Link href={isLoggedIn ? "/collection" : "/login"} className="btn primaryBtn">
-                {isLoggedIn ? "Go to Collection 🚀" : "Start Collecting ✨"}
-              </Link>
-
-              <Link href="/marketplace" className="btn secondaryBtn">
-                Browse Marketplace 🛒
-              </Link>
-
-              <Link href="/feedback" className="btn ghostBtn">
-                💜 Feedback
-              </Link>
-            </div>
-
-            <div className="promo">
-              💡 First month FREE with code <b>FIRSTMONTHFREE</b>
-            </div>
-
-            <p className="tagline">💜 Built by collectors, for collectors like you</p>
+      <div className="shell">
+        <nav className="nav">
+          <div>
+            <div style={{ fontSize: 42, fontWeight: 900, letterSpacing: -1 }}>Doorables Finder</div>
+            <div style={{ opacity: 0.82 }}>collect • browse • sell</div>
           </div>
 
-          <div className="featureGrid">
-            <div className="card">
-              <h3>📦 Track Collection</h3>
-              <p>Keep track of what you own and what you still need.</p>
-            </div>
+          <div className="navLinks">
+            <Link href="/" className="navButton">🏠 Home</Link>
+            <Link href="/collection" className="navButton">Collection</Link>
+            <Link href="/marketplace" className="navButton">Marketplace</Link>
+            <Link href="/sell" className="navButton">Sell</Link>
+            <Link href="/subscription" className="navButton">Subscription</Link>
+            <Link href="/feedback" className="navButton">💙 Feedback</Link>
+          </div>
+        </nav>
 
-            <div className="card">
-              <h3>🛒 Marketplace</h3>
-              <p>Buy and sell Doorables with other collectors.</p>
-            </div>
+        <section className="hero">
+          <div style={{ fontSize: "clamp(2rem, 5vw, 3.2rem)", fontWeight: 900, lineHeight: 1 }}>
+            Welcome back 💜
+          </div>
+          <div style={{ marginTop: 10, fontSize: 17, opacity: 0.92 }}>
+            Track your collection, spot what you still need, and keep your community updated.
+          </div>
+        </section>
 
-            <div className="card">
-              <h3>📸 Upload Photos</h3>
-              <p>Share your finds and listings easily from your phone.</p>
-            </div>
-
-            <div className="card">
-              <h3>💬 Community Feedback</h3>
-              <p>Suggest features and help shape the app.</p>
+        <section className="announcementCard">
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start", flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 900 }}>
+                {announcement?.title || "This Week’s Updates"}
+              </div>
+              <div className="tiny" style={{ marginTop: 6 }}>
+                {announcement?.updated_at
+                  ? `Last updated: ${new Date(announcement.updated_at).toLocaleString()}`
+                  : "Add your first homepage update below."}
+              </div>
             </div>
           </div>
-        </div>
-      </main>
-    </>
+
+          <div
+            style={{
+              marginTop: 14,
+              padding: 16,
+              borderRadius: 18,
+              background: "#ffffff",
+              border: "1px solid #e5e7eb",
+              whiteSpace: "pre-wrap",
+              minHeight: 90,
+            }}
+          >
+            {loading ? "Loading updates..." : announcement?.body || "No updates posted yet."}
+          </div>
+
+          {isAdmin && (
+            <div className="adminBox">
+              <div style={{ fontWeight: 900, marginBottom: 10 }}>Admin-only editor</div>
+
+              <input
+                className="field"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Announcement title"
+              />
+
+              <textarea
+                className="field textarea"
+                style={{ marginTop: 10 }}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder={"Example:\nCoupon code: SPRING10\nFriday claim sale at 7 PM\nNew Disney stock this Sunday"}
+              />
+
+              <button
+                className="saveButton"
+                onClick={() => void saveAnnouncement()}
+                disabled={saving}
+              >
+                {saving ? "Saving..." : "Save Announcement"}
+              </button>
+
+              <div className="tiny" style={{ marginTop: 8 }}>
+                Only admin emails in this page file can edit this box.
+              </div>
+            </div>
+          )}
+
+          {!isAdmin && !!userEmail && (
+            <div className="tiny" style={{ marginTop: 10 }}>
+              Signed in as {userEmail}
+            </div>
+          )}
+
+          {!!message && (
+            <div style={{ marginTop: 10, fontSize: 14, color: message.includes("saved") ? "#166534" : "#b91c1c" }}>
+              {message}
+            </div>
+          )}
+        </section>
+
+        <section className="cards">
+          <div className="card">
+            <div style={{ fontSize: 14, color: "#6b7280" }}>Quick Link</div>
+            <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>My Collection</div>
+            <div style={{ marginTop: 8, color: "#4b5563" }}>
+              Keep up with your Doorables and see what you still need.
+            </div>
+          </div>
+
+          <div className="card">
+            <div style={{ fontSize: 14, color: "#6b7280" }}>Quick Link</div>
+            <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>Marketplace</div>
+            <div style={{ marginTop: 8, color: "#4b5563" }}>
+              Browse listings, watch for updates, and catch live offers.
+            </div>
+          </div>
+
+          <div className="card">
+            <div style={{ fontSize: 14, color: "#6b7280" }}>Quick Link</div>
+            <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>Sell</div>
+            <div style={{ marginTop: 8, color: "#4b5563" }}>
+              Post extras, move duplicates, and keep your list fresh.
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }

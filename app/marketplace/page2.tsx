@@ -1,10 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
 
-type Listing = Record<string, any>;
+type Listing = {
+  id: string;
+  user_id: string | null;
+  title: string | null;
+  description: string | null;
+  price: number | null;
+  image_url: string | null;
+  seller_name: string | null;
+  status: string | null;
+  sold_at: string | null;
+  created_at: string | null;
+};
 
 type EditState = {
   id: string;
@@ -13,13 +25,19 @@ type EditState = {
   price: string;
   image_url: string;
   seller_name: string;
-  contact_info: string;
-  hasContactColumn: boolean;
 };
 
-function formatPrice(value: any) {
-  const num = Number(value);
-  return Number.isFinite(num) ? `$${num.toFixed(2)}` : "Offer";
+function formatPrice(value: number | null) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? `$${value.toFixed(2)}`
+    : "Offer";
+}
+
+function daysSince(dateString: string | null) {
+  if (!dateString) return 0;
+  const then = new Date(dateString).getTime();
+  if (!Number.isFinite(then)) return 0;
+  return (Date.now() - then) / (1000 * 60 * 60 * 24);
 }
 
 export default function MarketplacePage() {
@@ -27,13 +45,11 @@ export default function MarketplacePage() {
   const router = useRouter();
 
   const [userId, setUserId] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const [listings, setListings] = useState<Listing[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [expandedContactId, setExpandedContactId] = useState<string | null>(null);
   const [editItem, setEditItem] = useState<EditState | null>(null);
 
   useEffect(() => {
@@ -62,12 +78,10 @@ export default function MarketplacePage() {
       }
 
       setUserId(String(user.id));
-      setUserEmail(String(user.email ?? ""));
 
       const { data, error } = await supabase
         .from("marketplace_listings")
         .select("*")
-        .eq("status", "active")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -76,7 +90,12 @@ export default function MarketplacePage() {
         return;
       }
 
-      setListings(data || []);
+      const visibleListings = ((data || []) as Listing[]).filter((item) => {
+        if (item.status !== "sold") return true;
+        return daysSince(item.sold_at) <= 3;
+      });
+
+      setListings(visibleListings);
       setLoading(false);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Could not load marketplace.");
@@ -92,8 +111,6 @@ export default function MarketplacePage() {
       price: item.price == null ? "" : String(item.price),
       image_url: String(item.image_url ?? ""),
       seller_name: String(item.seller_name ?? ""),
-      contact_info: String(item.contact_info ?? ""),
-      hasContactColumn: Object.prototype.hasOwnProperty.call(item, "contact_info"),
     });
   }
 
@@ -102,18 +119,15 @@ export default function MarketplacePage() {
 
     try {
       setSaving(true);
+      setLoadError("");
 
-      const payload: Record<string, any> = {
+      const payload = {
         title: editItem.title.trim(),
-        description: editItem.description.trim(),
+        description: editItem.description.trim() || null,
         price: editItem.price.trim() === "" ? null : Number(editItem.price),
         image_url: editItem.image_url.trim() || null,
         seller_name: editItem.seller_name.trim() || null,
       };
-
-      if (editItem.hasContactColumn) {
-        payload.contact_info = editItem.contact_info.trim() || null;
-      }
 
       const { error } = await supabase
         .from("marketplace_listings")
@@ -154,12 +168,32 @@ export default function MarketplacePage() {
     setListings((prev) => prev.filter((item) => String(item.id) !== id));
   }
 
-  const filtered = useMemo(() => {
+  async function setListingStatus(item: Listing, nextStatus: "active" | "pending" | "sold") {
+    const payload: Record<string, string | null> = {
+      status: nextStatus,
+      sold_at: nextStatus === "sold" ? new Date().toISOString() : null,
+    };
+
+    const { error } = await supabase
+      .from("marketplace_listings")
+      .update(payload)
+      .eq("id", item.id)
+      .eq("user_id", userId);
+
+    if (error) {
+      setLoadError(error.message);
+      return;
+    }
+
+    await loadPage();
+  }
+
+  const filteredListings = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return listings;
 
     return listings.filter((item) =>
-      [item.title, item.description, item.seller_name, item.contact_info]
+      [item.title, item.description, item.seller_name]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
@@ -183,6 +217,39 @@ export default function MarketplacePage() {
           margin: 0 auto;
         }
 
+        .nav {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 18px;
+        }
+
+        .navLinks {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .navButton {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 12px 18px;
+          border-radius: 16px;
+          text-decoration: none;
+          color: white;
+          font-weight: 800;
+          background: rgba(255,255,255,0.08);
+          border: 1px solid rgba(255,255,255,0.1);
+          backdrop-filter: blur(8px);
+        }
+
+        .navButton:hover {
+          background: rgba(255,255,255,0.14);
+        }
+
         .hero {
           background: linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
           border-radius: 28px;
@@ -192,18 +259,11 @@ export default function MarketplacePage() {
           margin-bottom: 18px;
         }
 
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
-          gap: 16px;
-        }
-
-        .card {
-          background: rgba(255,255,255,0.96);
-          color: #111827;
-          border-radius: 22px;
-          padding: 14px;
-          box-shadow: 0 12px 28px rgba(0,0,0,0.14);
+        .toolbar {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 14px;
         }
 
         .field {
@@ -213,6 +273,33 @@ export default function MarketplacePage() {
           padding: 12px;
           font-size: 15px;
           box-sizing: border-box;
+        }
+
+        .grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 16px;
+        }
+
+        .card {
+          background: rgba(255,255,255,0.96);
+          color: #111827;
+          border-radius: 22px;
+          padding: 14px;
+          box-shadow: 0 12px 28px rgba(0,0,0,0.14);
+          transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 18px 34px rgba(0,0,0,0.18);
+        }
+
+        .badge {
+          padding: 6px 10px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-weight: 900;
         }
 
         .modalBackdrop {
@@ -237,43 +324,65 @@ export default function MarketplacePage() {
           padding: 20px;
           box-shadow: 0 30px 60px rgba(0,0,0,0.26);
         }
+
+        .primaryButton {
+          padding: 12px 16px;
+          border-radius: 14px;
+          border: none;
+          background: #4f46e5;
+          color: white;
+          font-weight: 900;
+          cursor: pointer;
+        }
       `}</style>
 
       <div className="shell">
-        <section className="hero">
-          <div style={{ display: "flex", gap: 14, justifyContent: "space-between", flexWrap: "wrap", alignItems: "center" }}>
-            <div>
-              <div style={{ fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 900, letterSpacing: -1 }}>
-                Marketplace 🛒
-              </div>
-              <div style={{ marginTop: 8, opacity: 0.92 }}>
-                Browse listings, edit your own posts, and contact sellers.
-              </div>
-            </div>
+        <nav className="nav">
+          <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -1 }}>
+            Doorables Finder
+          </div>
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <input
-                className="field"
-                placeholder="Search listings..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{ minWidth: 260 }}
-              />
-              <button
-                onClick={() => router.push("/sell")}
-                style={{
-                  padding: "12px 16px",
-                  borderRadius: 14,
-                  border: "none",
-                  background: "#f59e0b",
-                  color: "white",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
-                + Create Listing
-              </button>
-            </div>
+          <div className="navLinks">
+            <Link href="/" className="navButton">🏠 Home</Link>
+            <Link href="/collection" className="navButton">Collection</Link>
+            <Link href="/marketplace" className="navButton">Marketplace</Link>
+            <Link href="/sell" className="navButton">Sell</Link>
+            <Link href="/subscription" className="navButton">Subscription</Link>
+            <Link href="/feedback" className="navButton">💙 Feedback</Link>
+          </div>
+        </nav>
+
+        <section className="hero">
+          <div style={{ fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 900, letterSpacing: -1 }}>
+            Marketplace 🛒
+          </div>
+          <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
+            Search listings, message sellers, and manage your own items.
+          </div>
+
+          <div className="toolbar">
+            <input
+              className="field"
+              placeholder="Search by Doorable title..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ minWidth: 260, flex: "1 1 280px" }}
+            />
+
+            <button
+              onClick={() => router.push("/sell")}
+              className="primaryButton"
+            >
+              + Create Listing
+            </button>
+
+            <button
+              onClick={() => router.push("/messages")}
+              className="primaryButton"
+              style={{ background: "#7c3aed" }}
+            >
+              Messages
+            </button>
           </div>
 
           {!!loadError && (
@@ -285,18 +394,31 @@ export default function MarketplacePage() {
 
         {loading ? (
           <div style={{ padding: 20 }}>Loading marketplace...</div>
-        ) : filtered.length === 0 ? (
-          <div className="card">No active listings yet.</div>
+        ) : filteredListings.length === 0 ? (
+          <div
+            className="card"
+            style={{ textAlign: "center", padding: 28 }}
+          >
+            No listings found.
+          </div>
         ) : (
           <section className="grid">
-            {filtered.map((item) => {
+            {filteredListings.map((item) => {
               const isOwner = String(item.user_id ?? "") === userId;
+              const status = String(item.status ?? "active");
+
+              const badgeStyles =
+                status === "sold"
+                  ? { background: "#fee2e2", color: "#991b1b" }
+                  : status === "pending"
+                  ? { background: "#fef3c7", color: "#92400e" }
+                  : { background: "#dcfce7", color: "#166534" };
 
               return (
                 <div key={String(item.id)} className="card">
                   <div
                     style={{
-                      height: 170,
+                      height: 180,
                       borderRadius: 16,
                       background: "#f3f4f6",
                       display: "flex",
@@ -317,10 +439,20 @@ export default function MarketplacePage() {
                     )}
                   </div>
 
-                  <div style={{ fontSize: 20, fontWeight: 900 }}>{String(item.title ?? "Untitled")}</div>
-                  <div style={{ marginTop: 6, color: "#4b5563", minHeight: 42 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "start" }}>
+                    <div style={{ fontSize: 20, fontWeight: 900 }}>
+                      {String(item.title ?? "Untitled")}
+                    </div>
+
+                    <div className="badge" style={badgeStyles}>
+                      {status.toUpperCase()}
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 6, color: "#4b5563", minHeight: 46 }}>
                     {String(item.description ?? "No description provided.")}
                   </div>
+
                   <div style={{ marginTop: 10, fontWeight: 900, fontSize: 24 }}>
                     {formatPrice(item.price)}
                   </div>
@@ -329,103 +461,79 @@ export default function MarketplacePage() {
                     Seller: {String(item.seller_name || "Unknown")}
                   </div>
 
-                  <div
-                    style={{
-                      marginTop: 12,
-                      borderRadius: 14,
-                      border: "1px solid #e5e7eb",
-                      background: "#fafafa",
-                      padding: 12,
-                    }}
-                  >
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Contact Seller</div>
-
-                    {item.contact_info ? (
-                      <div style={{ color: "#374151", whiteSpace: "pre-wrap" }}>
-                        {String(item.contact_info)}
-                      </div>
-                    ) : (
-                      <div style={{ color: "#6b7280" }}>
-                        Contact details not added yet.
-                      </div>
-                    )}
-
-                    <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-                      <button
-                        onClick={() =>
-                          setExpandedContactId((prev) =>
-                            prev === String(item.id) ? null : String(item.id)
-                          )
-                        }
-                        style={{
-                          padding: "8px 10px",
-                          borderRadius: 10,
-                          border: "1px solid #d1d5db",
-                          background: "white",
-                          cursor: "pointer",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {expandedContactId === String(item.id) ? "Hide Contact Help" : "Show Contact Help"}
-                      </button>
-
-                      {userEmail && item.contact_info && String(item.contact_info).includes("@") && (
-                        <a
-                          href={`mailto:${String(item.contact_info).trim()}`}
-                          style={{
-                            padding: "8px 10px",
-                            borderRadius: 10,
-                            background: "#4f46e5",
-                            color: "white",
-                            textDecoration: "none",
-                            fontWeight: 800,
-                          }}
-                        >
-                          Email Seller
-                        </a>
-                      )}
-                    </div>
-
-                    {expandedContactId === String(item.id) && (
-                      <div style={{ marginTop: 10, color: "#6b7280", fontSize: 14 }}>
-                        Use the seller's posted contact info to coordinate payment, shipping, or pickup.
-                      </div>
-                    )}
-                  </div>
+                  {!isOwner && (
+                    <button
+                      onClick={() => router.push(`/messages?listing=${item.id}`)}
+                      className="primaryButton"
+                      style={{ marginTop: 12, width: "100%" }}
+                    >
+                      Message Seller
+                    </button>
+                  )}
 
                   {isOwner && (
-                    <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                      <button
-                        onClick={() => openEditor(item)}
-                        style={{
-                          flex: 1,
-                          padding: "10px 12px",
-                          borderRadius: 12,
-                          border: "none",
-                          background: "#2563eb",
-                          color: "white",
-                          fontWeight: 800,
-                          cursor: "pointer",
-                        }}
-                      >
-                        Edit
-                      </button>
+                    <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          onClick={() => openEditor(item)}
+                          className="primaryButton"
+                          style={{ flex: 1, background: "#2563eb" }}
+                        >
+                          Edit
+                        </button>
 
-                      <button
-                        onClick={() => void deleteListing(String(item.id))}
-                        style={{
-                          flex: 1,
-                          padding: "10px 12px",
-                          borderRadius: 12,
-                          border: "none",
-                          background: "#ef4444",
-                          color: "white",
-                          fontWeight: 800,
-                          cursor: "pointer",
-                        }}
-                      >
-                        Delete
-                      </button>
+                        <button
+                          onClick={() => void deleteListing(String(item.id))}
+                          className="primaryButton"
+                          style={{ flex: 1, background: "#ef4444" }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          onClick={() => void setListingStatus(item, "active")}
+                          className="primaryButton"
+                          style={{
+                            flex: 1,
+                            background: status === "active" ? "#10b981" : "#d1d5db",
+                            color: status === "active" ? "white" : "#111827",
+                          }}
+                        >
+                          Active
+                        </button>
+
+                        <button
+                          onClick={() => void setListingStatus(item, "pending")}
+                          className="primaryButton"
+                          style={{
+                            flex: 1,
+                            background: status === "pending" ? "#f59e0b" : "#d1d5db",
+                            color: status === "pending" ? "white" : "#111827",
+                          }}
+                        >
+                          Pending
+                        </button>
+
+                        <button
+                          onClick={() => void setListingStatus(item, "sold")}
+                          className="primaryButton"
+                          style={{
+                            flex: 1,
+                            background: status === "sold" ? "#ef4444" : "#d1d5db",
+                            color: status === "sold" ? "white" : "#111827",
+                          }}
+                        >
+                          Sold
+                        </button>
+                      </div>
+
+                      {status === "sold" && item.sold_at && (
+                        <div style={{ fontSize: 12, color: "#6b7280" }}>
+                          Sold listings stay visible for up to 3 days.
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -440,6 +548,7 @@ export default function MarketplacePage() {
           <div className="modalCard">
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
               <div style={{ fontSize: 24, fontWeight: 900 }}>Edit Listing</div>
+
               <button
                 onClick={() => setEditItem(null)}
                 style={{
@@ -459,7 +568,14 @@ export default function MarketplacePage() {
                 className="field"
                 value={editItem.title}
                 onChange={(e) => setEditItem({ ...editItem, title: e.target.value })}
-                placeholder="Title"
+                placeholder="Doorable title"
+              />
+
+              <input
+                className="field"
+                value={editItem.seller_name}
+                onChange={(e) => setEditItem({ ...editItem, seller_name: e.target.value })}
+                placeholder="Seller name"
               />
 
               <textarea
@@ -479,27 +595,10 @@ export default function MarketplacePage() {
 
               <input
                 className="field"
-                value={editItem.seller_name}
-                onChange={(e) => setEditItem({ ...editItem, seller_name: e.target.value })}
-                placeholder="Seller name"
-              />
-
-              <input
-                className="field"
                 value={editItem.image_url}
                 onChange={(e) => setEditItem({ ...editItem, image_url: e.target.value })}
                 placeholder="Image URL"
               />
-
-              {editItem.hasContactColumn && (
-                <textarea
-                  className="field"
-                  style={{ minHeight: 90 }}
-                  value={editItem.contact_info}
-                  onChange={(e) => setEditItem({ ...editItem, contact_info: e.target.value })}
-                  placeholder="Contact info (email, Instagram, Whatnot name, pickup notes, etc.)"
-                />
-              )}
 
               <div style={{ display: "flex", gap: 10, justifyContent: "end", marginTop: 6 }}>
                 <button
@@ -519,15 +618,7 @@ export default function MarketplacePage() {
                 <button
                   onClick={() => void saveEdit()}
                   disabled={saving}
-                  style={{
-                    padding: "12px 16px",
-                    borderRadius: 12,
-                    border: "none",
-                    background: "#4f46e5",
-                    color: "white",
-                    cursor: "pointer",
-                    fontWeight: 900,
-                  }}
+                  className="primaryButton"
                 >
                   {saving ? "Saving..." : "Save Changes"}
                 </button>

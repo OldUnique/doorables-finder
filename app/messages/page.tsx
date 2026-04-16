@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import AppHeader from "../../components/AppHeader";
 import { getSupabase } from "../../lib/supabase";
 
 type Conversation = {
   id: string;
-  listing_id: string;
+  listing_id: string | null;
   buyer_id: string;
   seller_id: string;
   created_at: string | null;
   listing_title: string | null;
   seller_name: string | null;
+  conversation_type: string | null;
+  collector_name: string | null;
 };
 
 type Message = {
@@ -28,6 +29,7 @@ export default function MessagesPage() {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const [userId, setUserId] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -36,6 +38,9 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [showConversationList, setShowConversationList] = useState(true);
+
+  const [newCollectorEmail, setNewCollectorEmail] = useState("");
+  const [creatingCollectorChat, setCreatingCollectorChat] = useState(false);
 
   useEffect(() => {
     void initialize();
@@ -88,6 +93,7 @@ export default function MessagesPage() {
 
       const currentUserId = String(user.id);
       setUserId(currentUserId);
+      setUserEmail(String(user.email ?? ""));
 
       const params =
         typeof window !== "undefined"
@@ -98,7 +104,7 @@ export default function MessagesPage() {
       const conversationIdFromUrl = params?.get("conversation") || "";
 
       if (listingId) {
-        await ensureConversation(currentUserId, listingId);
+        await ensureMarketplaceConversation(currentUserId, listingId);
       }
 
       await loadConversations(currentUserId, conversationIdFromUrl);
@@ -109,7 +115,7 @@ export default function MessagesPage() {
     }
   }
 
-  async function ensureConversation(currentUserId: string, listingId: string) {
+  async function ensureMarketplaceConversation(currentUserId: string, listingId: string) {
     const { data: listing, error: listingError } = await supabase
       .from("marketplace_listings")
       .select("id, user_id, title, seller_name")
@@ -122,6 +128,7 @@ export default function MessagesPage() {
     const { data: existing } = await supabase
       .from("marketplace_conversations")
       .select("id")
+      .eq("conversation_type", "marketplace")
       .eq("listing_id", listingId)
       .eq("buyer_id", currentUserId)
       .eq("seller_id", String(listing.user_id))
@@ -140,6 +147,8 @@ export default function MessagesPage() {
           buyer_id: currentUserId,
           seller_id: String(listing.user_id),
           listing_title: String(listing.title ?? "Listing"),
+          conversation_type: "marketplace",
+          collector_name: String(listing.seller_name ?? "Collector"),
         },
       ])
       .select("id")
@@ -160,6 +169,8 @@ export default function MessagesPage() {
         seller_id,
         created_at,
         listing_title,
+        conversation_type,
+        collector_name,
         marketplace_listings (
           title,
           seller_name
@@ -175,15 +186,17 @@ export default function MessagesPage() {
 
     const mapped = ((data || []) as any[]).map((row) => ({
       id: String(row.id),
-      listing_id: String(row.listing_id ?? ""),
+      listing_id: row.listing_id ? String(row.listing_id) : null,
       buyer_id: String(row.buyer_id),
       seller_id: String(row.seller_id),
       created_at: row.created_at,
       listing_title:
         row.listing_title ??
         row.marketplace_listings?.title ??
-        "Listing",
-      seller_name: row.marketplace_listings?.seller_name ?? "Seller",
+        null,
+      seller_name: row.marketplace_listings?.seller_name ?? "Collector",
+      conversation_type: row.conversation_type ?? "marketplace",
+      collector_name: row.collector_name ?? null,
     })) as Conversation[];
 
     setConversations(mapped);
@@ -277,8 +290,111 @@ export default function MessagesPage() {
     }
   }
 
-  const activeConversation =
-    conversations.find((item) => item.id === selectedConversationId) ?? null;
+  async function startCollectorChat() {
+    try {
+      setError("");
+
+      if (!newCollectorEmail.trim()) {
+        setError("Enter an email first.");
+        return;
+      }
+
+      if (!userId) {
+        setError("Please sign in first.");
+        return;
+      }
+
+      if (newCollectorEmail.trim().toLowerCase() === userEmail.trim().toLowerCase()) {
+        setError("You cannot start a collector chat with yourself.");
+        return;
+      }
+
+      setCreatingCollectorChat(true);
+
+      const { data: userRow, error: userRowError } = await supabase
+        .from("users")
+        .select("id, email")
+        .ilike("email", newCollectorEmail.trim())
+        .maybeSingle();
+
+      if (userRowError) {
+        setError(userRowError.message);
+        setCreatingCollectorChat(false);
+        return;
+      }
+
+      if (!userRow?.id) {
+        setError("No collector account found with that email.");
+        setCreatingCollectorChat(false);
+        return;
+      }
+
+      const otherUserId = String(userRow.id);
+      const otherEmail = String(userRow.email ?? newCollectorEmail.trim());
+
+      const { data: existing, error: existingError } = await supabase
+        .from("marketplace_conversations")
+        .select("id")
+        .eq("conversation_type", "collector")
+        .or(
+          `and(buyer_id.eq.${userId},seller_id.eq.${otherUserId}),and(buyer_id.eq.${otherUserId},seller_id.eq.${userId})`
+        )
+        .maybeSingle();
+
+      if (existingError) {
+        setError(existingError.message);
+        setCreatingCollectorChat(false);
+        return;
+      }
+
+      let conversationId = "";
+
+      if (existing?.id) {
+        conversationId = String(existing.id);
+      } else {
+        const { data: created, error: createError } = await supabase
+          .from("marketplace_conversations")
+          .insert([
+            {
+              listing_id: null,
+              buyer_id: userId,
+              seller_id: otherUserId,
+              listing_title: null,
+              conversation_type: "collector",
+              collector_name: otherEmail,
+            },
+          ])
+          .select("id")
+          .single();
+
+        if (createError) {
+          setError(createError.message);
+          setCreatingCollectorChat(false);
+          return;
+        }
+
+        conversationId = String(created.id);
+      }
+
+      setNewCollectorEmail("");
+      setCreatingCollectorChat(false);
+      await loadConversations(userId, conversationId);
+      setShowConversationList(false);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not start collector chat.");
+      setCreatingCollectorChat(false);
+    }
+  }
+
+  function getConversationTitle(conversation: Conversation | null) {
+    if (!conversation) return "Conversation";
+
+    if (conversation.conversation_type === "collector") {
+      return conversation.collector_name || conversation.seller_name || "Collector Chat";
+    }
+
+    return `${conversation.seller_name || "Seller"} — ${conversation.listing_title || "Listing"}`;
+  }
 
   return (
     <main
@@ -288,8 +404,6 @@ export default function MessagesPage() {
           "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
       }}
     >
-      <AppHeader />
-
       <style jsx>{`
         .messagesLayout {
           display: grid;
@@ -322,7 +436,7 @@ export default function MessagesPage() {
             Messages 💬
           </div>
           <div style={{ marginTop: 8, opacity: 0.92 }}>
-            Message buyers and sellers directly about marketplace listings.
+            Marketplace chats and collector-to-collector chats all in one place.
           </div>
           {!!error && (
             <div style={{ marginTop: 10, color: "#fecaca", fontWeight: 700 }}>{error}</div>
@@ -345,6 +459,48 @@ export default function MessagesPage() {
               }}
             >
               <div style={{ fontWeight: 900, marginBottom: 10 }}>Conversations</div>
+
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 16,
+                  padding: 12,
+                  marginBottom: 12,
+                }}
+              >
+                <div style={{ fontWeight: 800, marginBottom: 8 }}>Start Collector Chat</div>
+                <input
+                  value={newCollectorEmail}
+                  onChange={(e) => setNewCollectorEmail(e.target.value)}
+                  placeholder="Collector email"
+                  style={{
+                    width: "100%",
+                    padding: 12,
+                    borderRadius: 12,
+                    border: "1px solid #d1d5db",
+                    boxSizing: "border-box",
+                    marginBottom: 8,
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => void startCollectorChat()}
+                  disabled={creatingCollectorChat}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    border: "none",
+                    background: "#4f46e5",
+                    color: "white",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                  }}
+                >
+                  {creatingCollectorChat ? "Starting..." : "Start Chat"}
+                </button>
+              </div>
 
               {conversations.length === 0 ? (
                 <div style={{ color: "#6b7280" }}>No conversations yet.</div>
@@ -371,10 +527,12 @@ export default function MessagesPage() {
                       }}
                     >
                       <div style={{ fontWeight: 800 }}>
-                        {item.seller_name || "Seller"} — {item.listing_title || "Listing"}
+                        {item.conversation_type === "collector"
+                          ? item.collector_name || item.seller_name || "Collector Chat"
+                          : `${item.seller_name || "Seller"} — ${item.listing_title || "Listing"}`}
                       </div>
                       <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
-                        {item.created_at ? new Date(item.created_at).toLocaleString() : ""}
+                        {item.conversation_type === "collector" ? "Collector Chat" : "Marketplace Chat"}
                       </div>
                     </button>
                   ))}
@@ -406,48 +564,24 @@ export default function MessagesPage() {
                 }}
               >
                 <div style={{ fontWeight: 900 }}>
-                  {activeConversation
-                    ? `${activeConversation.seller_name || "Seller"} — ${activeConversation.listing_title || "Listing"}`
-                    : "Conversation"}
+                  {getConversationTitle(activeConversation)}
                 </div>
 
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowConversationList(true)}
-                    style={{
-                      padding: "10px 14px",
-                      borderRadius: 12,
-                      border: "1px solid #d1d5db",
-                      background: "#f8fafc",
-                      color: "#111827",
-                      fontWeight: 800,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Back to Conversations
-                  </button>
-
-                  {activeConversation?.listing_id ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        window.location.href = "/marketplace";
-                      }}
-                      style={{
-                        padding: "10px 14px",
-                        borderRadius: 12,
-                        border: "1px solid #d1d5db",
-                        background: "#f8fafc",
-                        color: "#111827",
-                        fontWeight: 800,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Marketplace
-                    </button>
-                  ) : null}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowConversationList(true)}
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    border: "1px solid #d1d5db",
+                    background: "#f8fafc",
+                    color: "#111827",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  Back to Conversations
+                </button>
               </div>
 
               <div
@@ -484,7 +618,7 @@ export default function MessagesPage() {
                         }}
                       >
                         <div style={{ fontSize: 12, fontWeight: 900, opacity: 0.86, marginBottom: 4 }}>
-                          {mine ? "You" : activeConversation?.seller_name || "Them"}
+                          {mine ? "You" : activeConversation?.collector_name || activeConversation?.seller_name || "Them"}
                         </div>
                         <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{msg.body}</div>
                         <div style={{ fontSize: 11, opacity: 0.78, marginTop: 4 }}>

@@ -35,6 +35,7 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [showConversationList, setShowConversationList] = useState(true);
 
   useEffect(() => {
     void initialize();
@@ -80,7 +81,7 @@ export default function MessagesPage() {
       } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        setError(authError?.message || "Auth session missing!");
+        setError(authError?.message || "Please sign in first.");
         setLoading(false);
         return;
       }
@@ -88,16 +89,19 @@ export default function MessagesPage() {
       const currentUserId = String(user.id);
       setUserId(currentUserId);
 
-      const listingId =
+      const params =
         typeof window !== "undefined"
-          ? new URLSearchParams(window.location.search).get("listing")
+          ? new URLSearchParams(window.location.search)
           : null;
+
+      const listingId = params?.get("listing") || "";
+      const conversationIdFromUrl = params?.get("conversation") || "";
 
       if (listingId) {
         await ensureConversation(currentUserId, listingId);
       }
 
-      await loadConversations(currentUserId);
+      await loadConversations(currentUserId, conversationIdFromUrl);
       setLoading(false);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Could not load messages.");
@@ -120,6 +124,7 @@ export default function MessagesPage() {
       .select("id")
       .eq("listing_id", listingId)
       .eq("buyer_id", currentUserId)
+      .eq("seller_id", String(listing.user_id))
       .maybeSingle();
 
     if (existing?.id) {
@@ -134,6 +139,7 @@ export default function MessagesPage() {
           listing_id: listingId,
           buyer_id: currentUserId,
           seller_id: String(listing.user_id),
+          listing_title: String(listing.title ?? "Listing"),
         },
       ])
       .select("id")
@@ -144,7 +150,7 @@ export default function MessagesPage() {
     }
   }
 
-  async function loadConversations(currentUserId: string) {
+  async function loadConversations(currentUserId: string, conversationIdFromUrl?: string) {
     const { data, error } = await supabase
       .from("marketplace_conversations")
       .select(`
@@ -153,6 +159,7 @@ export default function MessagesPage() {
         buyer_id,
         seller_id,
         created_at,
+        listing_title,
         marketplace_listings (
           title,
           seller_name
@@ -168,24 +175,35 @@ export default function MessagesPage() {
 
     const mapped = ((data || []) as any[]).map((row) => ({
       id: String(row.id),
-      listing_id: String(row.listing_id),
+      listing_id: String(row.listing_id ?? ""),
       buyer_id: String(row.buyer_id),
       seller_id: String(row.seller_id),
       created_at: row.created_at,
-      listing_title: row.marketplace_listings?.title ?? "Listing",
+      listing_title:
+        row.listing_title ??
+        row.marketplace_listings?.title ??
+        "Listing",
       seller_name: row.marketplace_listings?.seller_name ?? "Seller",
     })) as Conversation[];
 
     setConversations(mapped);
 
-    const firstId = selectedConversationId || (mapped[0] ? mapped[0].id : "");
-    setSelectedConversationId(firstId);
+    const preferredId =
+      conversationIdFromUrl ||
+      selectedConversationId ||
+      (mapped[0] ? mapped[0].id : "");
 
-    if (firstId) {
-      await loadMessages(firstId);
-      await markConversationRead(firstId, currentUserId);
+    setSelectedConversationId(preferredId);
+
+    if (preferredId) {
+      await loadMessages(preferredId);
+      await markConversationRead(preferredId, currentUserId);
+      if (typeof window !== "undefined" && window.innerWidth <= 920) {
+        setShowConversationList(false);
+      }
     } else {
       setMessages([]);
+      setShowConversationList(true);
     }
   }
 
@@ -223,6 +241,10 @@ export default function MessagesPage() {
       .eq("conversation_id", conversationId)
       .neq("sender_id", activeUserId)
       .is("read_at", null);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("messages-read-updated"));
+    }
   }
 
   async function sendMessage() {
@@ -268,6 +290,24 @@ export default function MessagesPage() {
     >
       <AppHeader />
 
+      <style jsx>{`
+        .messagesLayout {
+          display: grid;
+          grid-template-columns: 320px 1fr;
+          gap: 16px;
+        }
+
+        @media (max-width: 920px) {
+          .messagesLayout {
+            display: block;
+          }
+
+          .mobileHidden {
+            display: none !important;
+          }
+        }
+      `}</style>
+
       <div style={{ maxWidth: 1320, margin: "0 auto", padding: 24, color: "white" }}>
         <section
           style={{
@@ -282,7 +322,7 @@ export default function MessagesPage() {
             Messages 💬
           </div>
           <div style={{ marginTop: 8, opacity: 0.92 }}>
-            Live chat for buyers and sellers.
+            Message buyers and sellers directly about marketplace listings.
           </div>
           {!!error && (
             <div style={{ marginTop: 10, color: "#fecaca", fontWeight: 700 }}>{error}</div>
@@ -292,14 +332,9 @@ export default function MessagesPage() {
         {loading ? (
           <div style={{ color: "white", padding: 20 }}>Loading messages...</div>
         ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "320px 1fr",
-              gap: 16,
-            }}
-          >
+          <div className="messagesLayout">
             <aside
+              className={!showConversationList ? "mobileHidden" : ""}
               style={{
                 background: "rgba(255,255,255,0.96)",
                 color: "#111827",
@@ -322,6 +357,9 @@ export default function MessagesPage() {
                         setSelectedConversationId(item.id);
                         void loadMessages(item.id);
                         void markConversationRead(item.id, userId);
+                        if (typeof window !== "undefined" && window.innerWidth <= 920) {
+                          setShowConversationList(false);
+                        }
                       }}
                       style={{
                         textAlign: "left",
@@ -335,7 +373,7 @@ export default function MessagesPage() {
                       <div style={{ fontWeight: 800 }}>
                         {item.seller_name || "Seller"} — {item.listing_title || "Listing"}
                       </div>
-                      <div style={{ fontSize: 12, color: "#6b7280" }}>
+                      <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
                         {item.created_at ? new Date(item.created_at).toLocaleString() : ""}
                       </div>
                     </button>
@@ -345,6 +383,7 @@ export default function MessagesPage() {
             </aside>
 
             <section
+              className={showConversationList && conversations.length > 0 ? "mobileHidden" : ""}
               style={{
                 background: "rgba(255,255,255,0.96)",
                 color: "#111827",
@@ -356,10 +395,59 @@ export default function MessagesPage() {
                 flexDirection: "column",
               }}
             >
-              <div style={{ fontWeight: 900, marginBottom: 10 }}>
-                {activeConversation
-                  ? `${activeConversation.seller_name || "Seller"} — ${activeConversation.listing_title || "Listing"}`
-                  : "Conversation"}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  alignItems: "center",
+                  marginBottom: 10,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ fontWeight: 900 }}>
+                  {activeConversation
+                    ? `${activeConversation.seller_name || "Seller"} — ${activeConversation.listing_title || "Listing"}`
+                    : "Conversation"}
+                </div>
+
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowConversationList(true)}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 12,
+                      border: "1px solid #d1d5db",
+                      background: "#f8fafc",
+                      color: "#111827",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Back to Conversations
+                  </button>
+
+                  {activeConversation?.listing_id ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.location.href = "/marketplace";
+                      }}
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: 12,
+                        border: "1px solid #d1d5db",
+                        background: "#f8fafc",
+                        color: "#111827",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Marketplace
+                    </button>
+                  ) : null}
+                </div>
               </div>
 
               <div
@@ -386,7 +474,7 @@ export default function MessagesPage() {
                         key={msg.id}
                         style={{
                           justifySelf: mine ? "end" : "start",
-                          maxWidth: "76%",
+                          maxWidth: "85%",
                           padding: "10px 12px",
                           borderRadius: 16,
                           background: mine ? "#2563eb" : "white",
@@ -398,7 +486,7 @@ export default function MessagesPage() {
                         <div style={{ fontSize: 12, fontWeight: 900, opacity: 0.86, marginBottom: 4 }}>
                           {mine ? "You" : activeConversation?.seller_name || "Them"}
                         </div>
-                        <div>{msg.body}</div>
+                        <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{msg.body}</div>
                         <div style={{ fontSize: 11, opacity: 0.78, marginTop: 4 }}>
                           {msg.created_at ? new Date(msg.created_at).toLocaleString() : ""}
                         </div>
@@ -409,7 +497,7 @@ export default function MessagesPage() {
                 <div ref={bottomRef} />
               </div>
 
-              <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+              <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
                 <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}

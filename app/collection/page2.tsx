@@ -111,6 +111,12 @@ function seriesSort(a: string, b: string) {
   });
 }
 
+function collectionStatus(qty: number) {
+  if (qty > 1) return "Extra";
+  if (qty > 0) return "Have";
+  return "Need";
+}
+
 export default function Page() {
   const [cards, setCards] = useState<Card[]>([]);
   const [userId, setUserId] = useState("");
@@ -300,7 +306,13 @@ export default function Page() {
       const matchesRarity = rarityFilter === "all" || card.rarity === rarityFilter;
       const matchesMovie = movieFilter === "all" || card.movie === movieFilter;
       const matchesCollection =
-        collectionFilter === "all" ? true : collectionFilter === "have" ? card.qty > 0 : card.qty <= 0;
+        collectionFilter === "all"
+          ? true
+          : collectionFilter === "have"
+            ? card.qty === 1
+            : collectionFilter === "need"
+              ? card.qty <= 0
+              : card.qty > 1;
 
       return (
         matchesSearch &&
@@ -348,6 +360,16 @@ export default function Page() {
       }))
       .sort((a, b) => seriesSort(a.series, b.series));
   }, [cards]);
+
+  function jumpToSeries(seriesName: string) {
+    setSeriesFilter(seriesName);
+    requestAnimationFrame(() => {
+      document.getElementById("cards-grid")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }
 
   if (loading) {
     return (
@@ -525,6 +547,7 @@ export default function Page() {
                 { value: "all", label: "All" },
                 { value: "have", label: "Have" },
                 { value: "need", label: "Need" },
+                { value: "extra", label: "+Extra" },
               ].map((option) => {
                 const active = collectionFilter === option.value;
                 return (
@@ -546,7 +569,6 @@ export default function Page() {
                 );
               })}
             </div>
-
 
             <select value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}>
               {seriesOptions.map((series) => (
@@ -605,32 +627,30 @@ export default function Page() {
             }}
           >
             {seriesProgress.map((entry) => (
-              <div
+              <button
                 key={entry.series}
+                onClick={() => jumpToSeries(entry.series)}
                 style={{
                   borderRadius: 18,
                   border: "1px solid #e5e7eb",
                   padding: 14,
                   background: "#ffffff",
+                  textAlign: "left",
+                  cursor: "pointer",
                 }}
               >
                 <div style={{ fontWeight: 800, marginBottom: 6 }}>
                   {entry.series}
                   {entry.subcategoryLabel && (
-                    <button
-                      onClick={() => setSubcategoryFilter(entry.subcategoryLabel.split(", ")[0])}
+                    <span
                       style={{
                         marginLeft: 8,
-                        background: "none",
-                        border: "none",
                         color: "#6366f1",
                         fontWeight: 700,
-                        cursor: "pointer",
-                        padding: 0,
                       }}
                     >
                       • {entry.subcategoryLabel}
-                    </button>
+                    </span>
                   )}
                 </div>
 
@@ -647,18 +667,20 @@ export default function Page() {
                     }}
                   />
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </section>
 
-        <section className="cardsGrid">
+        <section id="cards-grid" className="cardsGrid">
           {filteredCards.map((item) => {
             const rarity = rarityTheme(item.rarity);
             const subtleOverlay =
               item.qty > 0
                 ? "linear-gradient(rgba(34,197,94,0.08), rgba(34,197,94,0.08))"
                 : "linear-gradient(rgba(168,85,247,0.08), rgba(168,85,247,0.08))";
+
+            const statusText = collectionStatus(item.qty);
 
             return (
               <div
@@ -758,8 +780,20 @@ export default function Page() {
                   </button>
                 </div>
 
-                <div style={{ marginTop: 8, marginBottom: 8, fontWeight: 800, color: item.qty > 0 ? "#166534" : "#7c3aed" }}>
-                  {savingId === item.id ? "Saving..." : item.qty > 0 ? "Have" : "Need"}
+                <div
+                  style={{
+                    marginTop: 8,
+                    marginBottom: 8,
+                    fontWeight: 800,
+                    color:
+                      statusText === "Need"
+                        ? "#7c3aed"
+                        : statusText === "Extra"
+                          ? "#2563eb"
+                          : "#166534",
+                  }}
+                >
+                  {savingId === item.id ? "Saving..." : statusText}
                 </div>
 
                 <textarea

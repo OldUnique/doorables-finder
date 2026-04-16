@@ -496,12 +496,20 @@ export default function Page() {
           }}
         >
           {[
-            { label: "Total Doorables", value: totalCount },
-            { label: "Owned", value: ownedCount },
-            { label: "Still Need", value: needCount },
+            { label: "Total Doorables", value: totalCount, action: "all" },
+            { label: "Owned", value: ownedCount, action: "have" },
+            { label: "Still Need", value: needCount, action: "need" },
           ].map((stat) => (
-            <div
+            <button
               key={stat.label}
+              type="button"
+              onClick={() => {
+                setCollectionFilter(stat.action);
+                document.getElementById("cards-grid")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+              }}
               style={{
                 background: "rgba(255,255,255,0.94)",
                 color: "#111827",
@@ -509,11 +517,22 @@ export default function Page() {
                 padding: 18,
                 boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
                 border: "1px solid rgba(255,255,255,0.35)",
+                cursor: "pointer",
+                textAlign: "left",
+                transition: "transform 0.15s ease, box-shadow 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 14px 28px rgba(0,0,0,0.22)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 10px 24px rgba(0,0,0,0.18)";
               }}
             >
               <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>{stat.label}</div>
               <div style={{ fontSize: 30, fontWeight: 900 }}>{stat.value}</div>
-            </div>
+            </button>
           ))}
         </section>
 

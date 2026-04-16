@@ -35,9 +35,11 @@ export default function MarketplacePage() {
   const [userId, setUserId] = useState("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [busyId, setBusyId] = useState("");
 
   const [search, setSearch] = useState("");
   const [deliveryFilter, setDeliveryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("active");
 
   useEffect(() => {
     void loadPage();
@@ -72,7 +74,6 @@ export default function MarketplacePage() {
           pickup_location,
           created_at
         `)
-        .eq("status", "active")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -93,6 +94,8 @@ export default function MarketplacePage() {
     const q = search.trim().toLowerCase();
 
     return listings.filter((item) => {
+      const isMine = !!userId && item.user_id === userId;
+
       const matchesSearch =
         !q ||
         [
@@ -115,9 +118,16 @@ export default function MarketplacePage() {
               ? !!item.local_pickup_available
               : !!item.shipping_available && !!item.local_pickup_available;
 
-      return matchesSearch && matchesDelivery;
+      const matchesStatus =
+        statusFilter === "all"
+          ? true
+          : isMine
+            ? (item.status || "active") === statusFilter
+            : (item.status || "active") === "active";
+
+      return matchesSearch && matchesDelivery && matchesStatus;
     });
-  }, [listings, search, deliveryFilter]);
+  }, [listings, search, deliveryFilter, statusFilter, userId]);
 
   async function handleStartConversation(listing: Listing) {
     try {
@@ -138,11 +148,11 @@ export default function MarketplacePage() {
       }
 
       if (listing.user_id === user.id) {
-        setMessage("This is your own listing.");
+        router.push("/messages");
         return;
       }
 
-      let existingConversationId = "";
+      let conversationId = "";
 
       const { data: existing, error: existingError } = await supabase
         .from("marketplace_conversations")
@@ -158,7 +168,7 @@ export default function MarketplacePage() {
       }
 
       if (existing?.id) {
-        existingConversationId = String(existing.id);
+        conversationId = String(existing.id);
       } else {
         const { data: created, error: createError } = await supabase
           .from("marketplace_conversations")
@@ -170,7 +180,7 @@ export default function MarketplacePage() {
               listing_title: listing.title,
             },
           ])
-          .select()
+          .select("id")
           .single();
 
         if (createError) {
@@ -178,12 +188,81 @@ export default function MarketplacePage() {
           return;
         }
 
-        existingConversationId = String(created.id);
+        conversationId = String(created.id);
       }
 
-      router.push(`/messages?conversation=${existingConversationId}&listing=${listing.id}`);
+      router.push(`/messages?conversation=${conversationId}&listing=${listing.id}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not open messages.");
+    }
+  }
+
+  async function updateListingStatus(listingId: string, nextStatus: "active" | "pending" | "sold") {
+    try {
+      setBusyId(listingId);
+      setMessage("");
+
+      const payload: any = {
+        status: nextStatus,
+        sold_at: nextStatus === "sold" ? new Date().toISOString() : null,
+      };
+
+      const { error } = await supabase
+        .from("marketplace_listings")
+        .update(payload)
+        .eq("id", listingId)
+        .eq("user_id", userId);
+
+      if (error) {
+        setMessage(error.message);
+        setBusyId("");
+        return;
+      }
+
+      setListings((prev) =>
+        prev.map((item) =>
+          item.id === listingId
+            ? {
+                ...item,
+                status: nextStatus,
+                sold_at: nextStatus === "sold" ? new Date().toISOString() : null,
+              }
+            : item
+        )
+      );
+
+      setBusyId("");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not update listing.");
+      setBusyId("");
+    }
+  }
+
+  async function deleteListing(listingId: string) {
+    const confirmed = typeof window === "undefined" ? True : window.confirm("Delete this listing?");
+    if (!confirmed) return;
+
+    try {
+      setBusyId(listingId);
+      setMessage("");
+
+      const { error } = await supabase
+        .from("marketplace_listings")
+        .delete()
+        .eq("id", listingId)
+        .eq("user_id", userId);
+
+      if (error) {
+        setMessage(error.message);
+        setBusyId("");
+        return;
+      }
+
+      setListings((prev) => prev.filter((item) => item.id !== listingId));
+      setBusyId("");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not delete listing.");
+      setBusyId("");
     }
   }
 
@@ -293,6 +372,16 @@ export default function MarketplacePage() {
           font-weight: 800;
         }
 
+        .dangerButton {
+          padding: 12px 16px;
+          border-radius: 14px;
+          border: 1px solid #fecaca;
+          background: #fef2f2;
+          color: #b91c1c;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
         .pillRow {
           display: flex;
           gap: 8px;
@@ -332,6 +421,12 @@ export default function MarketplacePage() {
           color: white;
           border-color: transparent;
         }
+
+        .ownerActions {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
       `}</style>
 
       <div className="shell">
@@ -353,7 +448,7 @@ export default function MarketplacePage() {
 
             <div className="toggleWrap">
               {[
-                { value: "all", label: "All" },
+                { value: "all", label: "All Delivery" },
                 { value: "shipping", label: "Shipping" },
                 { value: "pickup", label: "Local Pickup" },
                 { value: "both", label: "Both" },
@@ -368,6 +463,26 @@ export default function MarketplacePage() {
                 </button>
               ))}
             </div>
+
+            {!!userId && (
+              <div className="toggleWrap">
+                {[
+                  { value: "active", label: "Active" },
+                  { value: "pending", label: "Pending" },
+                  { value: "sold", label: "Sold" },
+                  { value: "all", label: "All Statuses" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setStatusFilter(option.value)}
+                    className={`toggleButton ${statusFilter === option.value ? "toggleButtonActive" : ""}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <Link href="/sell" className="secondaryButton">
@@ -415,6 +530,7 @@ export default function MarketplacePage() {
           <section className="listingGrid">
             {filteredListings.map((listing) => {
               const isOwnListing = !!userId && listing.user_id === userId;
+              const listingStatus = listing.status || "active";
 
               return (
                 <article key={listing.id} className="card">
@@ -438,6 +554,10 @@ export default function MarketplacePage() {
                   </div>
 
                   <div className="pillRow">
+                    <span className="pill">
+                      {listingStatus === "sold" ? "✅ Sold" : listingStatus === "pending" ? "⏳ Pending" : "🟢 Active"}
+                    </span>
+
                     {listing.shipping_available ? (
                       <span className="pill">
                         🚚 Shipping {listing.shipping_price !== null ? `• ${formatMoney(listing.shipping_price)}` : ""}
@@ -459,16 +579,60 @@ export default function MarketplacePage() {
                     Seller: <strong>{listing.seller_name || "Unknown seller"}</strong>
                   </div>
 
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: "auto" }}>
-                    {isOwnListing ? (
-                      <button
-                        type="button"
-                        className="primaryButton"
-                        onClick={() => router.push("/messages")}
-                      >
-                        Open Messages
-                      </button>
-                    ) : (
+                  {isOwnListing ? (
+                    <div style={{ display: "grid", gap: 10, marginTop: "auto" }}>
+                      <div className="ownerActions">
+                        <button
+                          type="button"
+                          className="primaryButton"
+                          disabled={busyId === listing.id}
+                          onClick={() => void updateListingStatus(listing.id, "active")}
+                        >
+                          Active
+                        </button>
+
+                        <button
+                          type="button"
+                          className="secondaryButton"
+                          style={{ cursor: "pointer" }}
+                          disabled={busyId === listing.id}
+                          onClick={() => void updateListingStatus(listing.id, "pending")}
+                        >
+                          Pending
+                        </button>
+
+                        <button
+                          type="button"
+                          className="secondaryButton"
+                          style={{ cursor: "pointer" }}
+                          disabled={busyId === listing.id}
+                          onClick={() => void updateListingStatus(listing.id, "sold")}
+                        >
+                          Sold
+                        </button>
+
+                        <button
+                          type="button"
+                          className="dangerButton"
+                          disabled={busyId === listing.id}
+                          onClick={() => void deleteListing(listing.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                        <Link href="/messages" className="secondaryButton">
+                          Open Messages
+                        </Link>
+
+                        <Link href="/sell" className="secondaryButton">
+                          New Listing
+                        </Link>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: "auto" }}>
                       <button
                         type="button"
                         className="primaryButton"
@@ -476,12 +640,12 @@ export default function MarketplacePage() {
                       >
                         Message Seller
                       </button>
-                    )}
 
-                    <Link href="/sell" className="secondaryButton">
-                      Sell Similar
-                    </Link>
-                  </div>
+                      <Link href="/sell" className="secondaryButton">
+                        Sell Similar
+                      </Link>
+                    </div>
+                  )}
                 </article>
               );
             })}

@@ -290,6 +290,10 @@ export default function MessagesPage() {
     }
   }
 
+  const activeConversation =
+    conversations.find((item) => item.id === selectedConversationId) ?? null;
+
+
   async function startCollectorChat() {
     try {
       setError("");

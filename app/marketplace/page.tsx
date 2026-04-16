@@ -19,7 +19,7 @@ type Listing = {
   shipping_price: number | null;
   local_pickup_available: boolean | null;
   pickup_location: string | null;
-  created_at?: string | null;
+  created_at: string | null;
 };
 
 function formatMoney(value: number | null) {
@@ -40,10 +40,23 @@ export default function MarketplacePage() {
   const [search, setSearch] = useState("");
   const [deliveryFilter, setDeliveryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     void loadPage();
   }, []);
+
+  useEffect(() => {
+    const updateMobile = () => setIsMobile(window.innerWidth <= 920);
+    updateMobile();
+    window.addEventListener("resize", updateMobile);
+    return () => window.removeEventListener("resize", updateMobile);
+  }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, deliveryFilter, statusFilter, isMobile]);
 
   async function loadPage() {
     try {
@@ -98,12 +111,7 @@ export default function MarketplacePage() {
 
       const matchesSearch =
         !q ||
-        [
-          item.title,
-          item.description,
-          item.seller_name,
-          item.pickup_location,
-        ]
+        [item.title, item.description, item.seller_name, item.pickup_location]
           .filter(Boolean)
           .join(" ")
           .toLowerCase()
@@ -128,6 +136,14 @@ export default function MarketplacePage() {
       return matchesSearch && matchesDelivery && matchesStatus;
     });
   }, [listings, search, deliveryFilter, statusFilter, userId]);
+
+  const cardsPerPage = isMobile ? 8 : 12;
+  const totalPages = Math.max(1, Math.ceil(filteredListings.length / cardsPerPage));
+  const safePage = Math.min(page, totalPages);
+  const pagedListings = filteredListings.slice(
+    (safePage - 1) * cardsPerPage,
+    safePage * cardsPerPage
+  );
 
   async function handleStartConversation(listing: Listing) {
     try {
@@ -178,6 +194,7 @@ export default function MarketplacePage() {
               buyer_id: user.id,
               seller_id: listing.user_id,
               listing_title: listing.title,
+              conversation_type: "marketplace",
             },
           ])
           .select("id")
@@ -202,7 +219,7 @@ export default function MarketplacePage() {
       setBusyId(listingId);
       setMessage("");
 
-      const payload: any = {
+      const payload = {
         status: nextStatus,
         sold_at: nextStatus === "sold" ? new Date().toISOString() : null,
       };
@@ -239,7 +256,8 @@ export default function MarketplacePage() {
   }
 
   async function deleteListing(listingId: string) {
-    const confirmed = typeof window === "undefined" ? True : window.confirm("Delete this listing?");
+    const confirmed =
+      typeof window === "undefined" ? true : window.confirm("Delete this listing?");
     if (!confirmed) return;
 
     try {
@@ -349,6 +367,17 @@ export default function MarketplacePage() {
           overflow: hidden;
         }
 
+        .listingImage {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          transition: transform 0.2s ease;
+        }
+
+        .imageBox:hover .listingImage {
+          transform: scale(1.08);
+        }
+
         .primaryButton {
           padding: 12px 16px;
           border-radius: 14px;
@@ -427,11 +456,73 @@ export default function MarketplacePage() {
           grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 8px;
         }
+
+        .pager {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-top: 18px;
+        }
+
+        .pagerButton {
+          padding: 10px 14px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.16);
+          background: rgba(255,255,255,0.08);
+          color: white;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .pagerButton:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+
+        @media (max-width: 920px) {
+          main {
+            padding: 16px !important;
+          }
+
+          .hero {
+            padding: 18px;
+            border-radius: 22px;
+          }
+
+          .filterCard {
+            padding: 14px;
+            border-radius: 20px;
+          }
+
+          .card {
+            padding: 14px;
+            border-radius: 20px;
+          }
+
+          .imageBox {
+            height: 210px;
+          }
+
+          .ownerActions {
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+          }
+
+          .toggleButton,
+          .primaryButton,
+          .secondaryButton,
+          .dangerButton {
+            width: 100%;
+          }
+        }
       `}</style>
 
       <div className="shell">
         <section className="hero">
-          <h1 style={{ margin: 0, fontSize: 46, fontWeight: 900 }}>Marketplace</h1>
+          <h1 style={{ margin: 0, fontSize: "clamp(2rem, 6vw, 2.9rem)", fontWeight: 900 }}>
+            Marketplace
+          </h1>
           <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
             Browse listings, check shipping or pickup options, and message sellers directly.
           </div>
@@ -494,6 +585,10 @@ export default function MarketplacePage() {
                 </Link>
               ) : null}
             </div>
+
+            <div style={{ fontSize: 14, color: "#4b5563", fontWeight: 700 }}>
+              Showing {pagedListings.length} of {filteredListings.length} listings
+            </div>
           </div>
         </section>
 
@@ -527,129 +622,159 @@ export default function MarketplacePage() {
             No listings found yet.
           </div>
         ) : (
-          <section className="listingGrid">
-            {filteredListings.map((listing) => {
-              const isOwnListing = !!userId && listing.user_id === userId;
-              const listingStatus = listing.status || "active";
+          <>
+            <section className="listingGrid">
+              {pagedListings.map((listing) => {
+                const isOwnListing = !!userId && listing.user_id === userId;
+                const listingStatus = listing.status || "active";
 
-              return (
-                <article key={listing.id} className="card">
-                  <div className="imageBox">
-                    {listing.image_url ? (
-                      <img
-                        src={listing.image_url}
-                        alt={listing.title}
-                        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
-                      />
-                    ) : (
-                      <div style={{ color: "#6b7280", fontWeight: 700 }}>No image</div>
-                    )}
-                  </div>
-
-                  <div>
-                    <div style={{ fontSize: 24, fontWeight: 900 }}>{listing.title}</div>
-                    <div style={{ marginTop: 4, fontSize: 20, fontWeight: 800, color: "#1d4ed8" }}>
-                      {formatMoney(listing.price)}
+                return (
+                  <article key={listing.id} className="card">
+                    <div className="imageBox">
+                      {listing.image_url ? (
+                        <img
+                          src={listing.image_url}
+                          alt={listing.title}
+                          loading="lazy"
+                          decoding="async"
+                          className="listingImage"
+                        />
+                      ) : (
+                        <div style={{ color: "#6b7280", fontWeight: 700 }}>No image</div>
+                      )}
                     </div>
-                  </div>
 
-                  <div className="pillRow">
-                    <span className="pill">
-                      {listingStatus === "sold" ? "✅ Sold" : listingStatus === "pending" ? "⏳ Pending" : "🟢 Active"}
-                    </span>
+                    <div>
+                      <div style={{ fontSize: 24, fontWeight: 900 }}>{listing.title}</div>
+                      <div style={{ marginTop: 4, fontSize: 20, fontWeight: 800, color: "#1d4ed8" }}>
+                        {formatMoney(listing.price)}
+                      </div>
+                    </div>
 
-                    {listing.shipping_available ? (
+                    <div className="pillRow">
                       <span className="pill">
-                        🚚 Shipping {listing.shipping_price !== null ? `• ${formatMoney(listing.shipping_price)}` : ""}
+                        {listingStatus === "sold" ? "✅ Sold" : listingStatus === "pending" ? "⏳ Pending" : "🟢 Active"}
                       </span>
+
+                      {listing.shipping_available ? (
+                        <span className="pill">
+                          🚚 Shipping {listing.shipping_price !== null ? `• ${formatMoney(listing.shipping_price)}` : ""}
+                        </span>
+                      ) : null}
+
+                      {listing.local_pickup_available ? (
+                        <span className="pill">
+                          📍 Pickup{listing.pickup_location ? ` • ${listing.pickup_location}` : ""}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {listing.description ? (
+                      <div style={{ color: "#4b5563", lineHeight: 1.5 }}>{listing.description}</div>
                     ) : null}
 
-                    {listing.local_pickup_available ? (
-                      <span className="pill">
-                        📍 Pickup{listing.pickup_location ? ` • ${listing.pickup_location}` : ""}
-                      </span>
-                    ) : null}
-                  </div>
+                    <div style={{ color: "#6b7280", fontSize: 14 }}>
+                      Seller: <strong>{listing.seller_name || "Unknown seller"}</strong>
+                    </div>
 
-                  {listing.description ? (
-                    <div style={{ color: "#4b5563", lineHeight: 1.5 }}>{listing.description}</div>
-                  ) : null}
+                    {isOwnListing ? (
+                      <div style={{ display: "grid", gap: 10, marginTop: "auto" }}>
+                        <div className="ownerActions">
+                          <button
+                            type="button"
+                            className="primaryButton"
+                            disabled={busyId === listing.id}
+                            onClick={() => void updateListingStatus(listing.id, "active")}
+                          >
+                            Active
+                          </button>
 
-                  <div style={{ color: "#6b7280", fontSize: 14 }}>
-                    Seller: <strong>{listing.seller_name || "Unknown seller"}</strong>
-                  </div>
+                          <button
+                            type="button"
+                            className="secondaryButton"
+                            style={{ cursor: "pointer" }}
+                            disabled={busyId === listing.id}
+                            onClick={() => void updateListingStatus(listing.id, "pending")}
+                          >
+                            Pending
+                          </button>
 
-                  {isOwnListing ? (
-                    <div style={{ display: "grid", gap: 10, marginTop: "auto" }}>
-                      <div className="ownerActions">
+                          <button
+                            type="button"
+                            className="secondaryButton"
+                            style={{ cursor: "pointer" }}
+                            disabled={busyId === listing.id}
+                            onClick={() => void updateListingStatus(listing.id, "sold")}
+                          >
+                            Sold
+                          </button>
+
+                          <button
+                            type="button"
+                            className="dangerButton"
+                            disabled={busyId === listing.id}
+                            onClick={() => void deleteListing(listing.id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                          <Link href="/messages" className="secondaryButton">
+                            Open Messages
+                          </Link>
+
+                          <Link href="/sell" className="secondaryButton">
+                            New Listing
+                          </Link>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: "auto" }}>
                         <button
                           type="button"
                           className="primaryButton"
-                          disabled={busyId === listing.id}
-                          onClick={() => void updateListingStatus(listing.id, "active")}
+                          onClick={() => void handleStartConversation(listing)}
                         >
-                          Active
+                          Message Seller
                         </button>
-
-                        <button
-                          type="button"
-                          className="secondaryButton"
-                          style={{ cursor: "pointer" }}
-                          disabled={busyId === listing.id}
-                          onClick={() => void updateListingStatus(listing.id, "pending")}
-                        >
-                          Pending
-                        </button>
-
-                        <button
-                          type="button"
-                          className="secondaryButton"
-                          style={{ cursor: "pointer" }}
-                          disabled={busyId === listing.id}
-                          onClick={() => void updateListingStatus(listing.id, "sold")}
-                        >
-                          Sold
-                        </button>
-
-                        <button
-                          type="button"
-                          className="dangerButton"
-                          disabled={busyId === listing.id}
-                          onClick={() => void deleteListing(listing.id)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-
-                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                        <Link href="/messages" className="secondaryButton">
-                          Open Messages
-                        </Link>
 
                         <Link href="/sell" className="secondaryButton">
-                          New Listing
+                          Sell Similar
                         </Link>
                       </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: "auto" }}>
-                      <button
-                        type="button"
-                        className="primaryButton"
-                        onClick={() => void handleStartConversation(listing)}
-                      >
-                        Message Seller
-                      </button>
+                    )}
+                  </article>
+                );
+              })}
+            </section>
 
-                      <Link href="/sell" className="secondaryButton">
-                        Sell Similar
-                      </Link>
-                    </div>
-                  )}
-                </article>
-              );
-            })}
-          </section>
+            {totalPages > 1 && (
+              <div className="pager">
+                <button
+                  type="button"
+                  className="pagerButton"
+                  disabled={safePage <= 1}
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                >
+                  Previous
+                </button>
+
+                <div style={{ fontWeight: 800 }}>
+                  Page {safePage} of {totalPages}
+                </div>
+
+                <button
+                  type="button"
+                  className="pagerButton"
+                  disabled={safePage >= totalPages}
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>

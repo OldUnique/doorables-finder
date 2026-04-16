@@ -130,10 +130,23 @@ export default function Page() {
   const [rarityFilter, setRarityFilter] = useState("all");
   const [movieFilter, setMovieFilter] = useState("all");
   const [collectionFilter, setCollectionFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    const updateMobile = () => setIsMobile(window.innerWidth <= 920);
+    updateMobile();
+    window.addEventListener("resize", updateMobile);
+    return () => window.removeEventListener("resize", updateMobile);
+  }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, seriesFilter, subcategoryFilter, rarityFilter, movieFilter, collectionFilter, isMobile]);
 
   async function load() {
     try {
@@ -395,6 +408,14 @@ export default function Page() {
     });
   }
 
+  const cardsPerPage = isMobile ? 12 : 24;
+  const totalPages = Math.max(1, Math.ceil(filteredCards.length / cardsPerPage));
+  const safePage = Math.min(page, totalPages);
+  const pagedCards = filteredCards.slice(
+    (safePage - 1) * cardsPerPage,
+    safePage * cardsPerPage
+  );
+
   if (loading) {
     return (
       <div style={{ padding: 24, minHeight: "100vh", background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)", color: "white" }}>
@@ -462,6 +483,80 @@ export default function Page() {
             radial-gradient(1.5px 1.5px at 92% 25%, rgba(255,255,255,0.85) 40%, transparent 41%);
           opacity: 0.65;
           z-index: 0;
+        }
+
+        .cardImageWrap {
+          height: 170px;
+          background: rgba(255,255,255,0.92);
+          border-radius: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 12px;
+          overflow: hidden;
+          padding: 14px;
+        }
+
+        .cardImage {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          transition: transform 0.2s ease;
+        }
+
+        .cardImageWrap:hover .cardImage {
+          transform: scale(1.08);
+        }
+
+        .pager {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-top: 18px;
+        }
+
+        .pagerButton {
+          padding: 10px 14px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.16);
+          background: rgba(255,255,255,0.08);
+          color: white;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .pagerButton:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+
+        @media (max-width: 920px) {
+          main {
+            padding: 16px !important;
+          }
+
+          .cardsGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+          }
+
+          .cardImageWrap {
+            height: 138px;
+            padding: 10px;
+          }
+
+          .floatCard {
+            border-radius: 18px !important;
+            padding: 10px !important;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .cardsGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
         }
       `}</style>
 
@@ -545,14 +640,6 @@ export default function Page() {
                 textAlign: "left",
                 transition: "transform 0.15s ease, box-shadow 0.15s ease",
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 14px 28px rgba(0,0,0,0.22)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 10px 24px rgba(0,0,0,0.18)";
-              }}
             >
               <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>{stat.label}</div>
               <div style={{ fontSize: 30, fontWeight: 900 }}>{stat.value}</div>
@@ -585,7 +672,7 @@ export default function Page() {
               }}
             />
 
-            <div style={{ display: "flex", gap: 8, alignItems: "center", padding: 6, borderRadius: 14, background: "#eef2ff", border: "1px solid #c7d2fe" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", padding: 6, borderRadius: 14, background: "#eef2ff", border: "1px solid #c7d2fe", flexWrap: "wrap" }}>
               {[
                 { value: "all", label: "All" },
                 { value: "have", label: "Have" },
@@ -644,6 +731,10 @@ export default function Page() {
                 </option>
               ))}
             </select>
+
+            <div style={{ fontSize: 14, color: "#4b5563", fontWeight: 700 }}>
+              Showing {pagedCards.length} of {filteredCards.length}
+            </div>
           </div>
         </section>
 
@@ -716,7 +807,7 @@ export default function Page() {
         </section>
 
         <section id="cards-grid" className="cardsGrid">
-          {filteredCards.map((item) => {
+          {pagedCards.map((item) => {
             const rarity = rarityTheme(item.rarity);
             const subtleOverlay =
               item.qty > 0
@@ -739,21 +830,15 @@ export default function Page() {
                   filter: item.qty > 0 ? "saturate(1.02)" : "saturate(0.98)",
                 }}
               >
-                <div
-                  style={{
-                    height: 170,
-                    background: "rgba(255,255,255,0.92)",
-                    borderRadius: 18,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 12,
-                    overflow: "hidden",
-                    padding: 14,
-                  }}
-                >
+                <div className="cardImageWrap">
                   {item.image ? (
-                    <img src={item.image} alt={item.name} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      loading="lazy"
+                      decoding="async"
+                      className="cardImage"
+                    />
                   ) : (
                     <div>No Image</div>
                   )}
@@ -880,6 +965,32 @@ export default function Page() {
             );
           })}
         </section>
+
+        {totalPages > 1 && (
+          <div className="pager">
+            <button
+              type="button"
+              className="pagerButton"
+              disabled={safePage <= 1}
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+            >
+              Previous
+            </button>
+
+            <div style={{ fontWeight: 800 }}>
+              Page {safePage} of {totalPages}
+            </div>
+
+            <button
+              type="button"
+              className="pagerButton"
+              disabled={safePage >= totalPages}
+              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
     </main>
   );

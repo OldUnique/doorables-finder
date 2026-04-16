@@ -15,6 +15,11 @@ export default function SellPage() {
   const [price, setPrice] = useState("");
   const [imageUrl, setImageUrl] = useState("");
 
+  const [shippingEnabled, setShippingEnabled] = useState(false);
+  const [localPickupEnabled, setLocalPickupEnabled] = useState(false);
+  const [shippingPrice, setShippingPrice] = useState("");
+  const [pickupLocation, setPickupLocation] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -34,6 +39,10 @@ export default function SellPage() {
       return;
     }
 
+    if (!seller && user.email) {
+      setSeller(user.email);
+    }
+
     setCheckingAuth(false);
   }
 
@@ -43,6 +52,9 @@ export default function SellPage() {
     try {
       setUploading(true);
       setError("");
+
+      const previewUrl = URL.createObjectURL(file);
+      setImageUrl(previewUrl);
 
       const {
         data: { user },
@@ -103,11 +115,37 @@ export default function SellPage() {
       return;
     }
 
-    const numericPrice =
-      price.trim() === "" ? null : Number(price.trim());
+    if (!shippingEnabled && !localPickupEnabled) {
+      setError("Please choose shipping, local pickup, or both.");
+      setLoading(false);
+      return;
+    }
+
+    const numericPrice = price.trim() === "" ? null : Number(price.trim());
 
     if (price.trim() !== "" && Number.isNaN(numericPrice)) {
       setError("Please enter a valid price.");
+      setLoading(false);
+      return;
+    }
+
+    const numericShippingPrice =
+      shippingPrice.trim() === "" ? null : Number(shippingPrice.trim());
+
+    if (shippingEnabled && shippingPrice.trim() !== "" && Number.isNaN(numericShippingPrice)) {
+      setError("Please enter a valid shipping price.");
+      setLoading(false);
+      return;
+    }
+
+    if (shippingEnabled && shippingPrice.trim() === "") {
+      setError("Please add a shipping price or 0 for free shipping.");
+      setLoading(false);
+      return;
+    }
+
+    if (localPickupEnabled && !pickupLocation.trim()) {
+      setError("Please add a city and state for local pickup.");
       setLoading(false);
       return;
     }
@@ -121,6 +159,10 @@ export default function SellPage() {
       status: "active",
       sold_at: null,
       user_id: user.id,
+      shipping_available: shippingEnabled,
+      shipping_price: shippingEnabled ? numericShippingPrice : null,
+      local_pickup_available: localPickupEnabled,
+      pickup_location: localPickupEnabled ? pickupLocation.trim() : null,
     };
 
     const { error: insertError } = await supabase
@@ -170,39 +212,6 @@ export default function SellPage() {
           margin: 0 auto;
         }
 
-        .nav {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 18px;
-        }
-
-        .navLinks {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .navButton {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 12px 18px;
-          border-radius: 16px;
-          text-decoration: none;
-          color: white;
-          font-weight: 800;
-          background: rgba(255,255,255,0.08);
-          border: 1px solid rgba(255,255,255,0.1);
-          backdrop-filter: blur(8px);
-        }
-
-        .navButton:hover {
-          background: rgba(255,255,255,0.14);
-        }
-
         .hero {
           background: linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
           border-radius: 28px;
@@ -244,6 +253,19 @@ export default function SellPage() {
           cursor: wait;
         }
 
+        .secondaryButton {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 12px 16px;
+          border-radius: 14px;
+          text-decoration: none;
+          color: #111827;
+          font-weight: 800;
+          background: #f3f4f6;
+          border: 1px solid #d1d5db;
+        }
+
         .uploadBox {
           border: 2px dashed #c7d2fe;
           background: #eef2ff;
@@ -263,28 +285,42 @@ export default function SellPage() {
           min-height: 220px;
           overflow: hidden;
         }
+
+        .toggleWrap {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .toggleButton {
+          padding: 12px 16px;
+          border-radius: 14px;
+          border: 1px solid #c7d2fe;
+          background: #eef2ff;
+          color: #3730a3;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .toggleButtonActive {
+          background: linear-gradient(135deg, #60a5fa, #8b5cf6);
+          color: white;
+          border-color: transparent;
+        }
+
+        .noteBox {
+          margin-top: 8px;
+          font-size: 14px;
+          color: #4b5563;
+          line-height: 1.5;
+        }
       `}</style>
 
       <div className="shell">
-        <nav className="nav">
-          <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -1 }}>
-            Doorables Finder
-          </div>
-
-          <div className="navLinks">
-            <Link href="/" className="navButton">🏠 Home</Link>
-            <Link href="/collection" className="navButton">Collection</Link>
-            <Link href="/marketplace" className="navButton">Marketplace</Link>
-            <Link href="/sell" className="navButton">Sell</Link>
-            <Link href="/subscription" className="navButton">Subscription</Link>
-            <Link href="/feedback" className="navButton">💙 Feedback</Link>
-          </div>
-        </nav>
-
         <section className="hero">
           <h1 style={{ margin: 0, fontSize: 46, fontWeight: 900 }}>Create Listing</h1>
           <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
-            Add your Doorable here. Buyers will message you through the site.
+            Add your Doorable here. Buyers can message you right through the site.
           </div>
         </section>
 
@@ -319,6 +355,58 @@ export default function SellPage() {
               onChange={(e) => setPrice(e.target.value)}
             />
 
+            <div
+              style={{
+                background: "#f8fafc",
+                border: "1px solid #e5e7eb",
+                borderRadius: 18,
+                padding: 16,
+              }}
+            >
+              <div style={{ fontWeight: 900, marginBottom: 10 }}>Delivery options</div>
+
+              <div className="toggleWrap">
+                <button
+                  type="button"
+                  onClick={() => setShippingEnabled((prev) => !prev)}
+                  className={`toggleButton ${shippingEnabled ? "toggleButtonActive" : ""}`}
+                >
+                  Shipping
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLocalPickupEnabled((prev) => !prev)}
+                  className={`toggleButton ${localPickupEnabled ? "toggleButtonActive" : ""}`}
+                >
+                  Local Pickup
+                </button>
+              </div>
+
+              {shippingEnabled && (
+                <div style={{ marginTop: 12 }}>
+                  <input
+                    className="field"
+                    placeholder="Shipping price"
+                    value={shippingPrice}
+                    onChange={(e) => setShippingPrice(e.target.value)}
+                  />
+                  <div className="noteBox">Put 0 if shipping is free.</div>
+                </div>
+              )}
+
+              {localPickupEnabled && (
+                <div style={{ marginTop: 12 }}>
+                  <input
+                    className="field"
+                    placeholder="Local pickup city, state"
+                    value={pickupLocation}
+                    onChange={(e) => setPickupLocation(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+
             <div className="uploadBox">
               <div style={{ fontWeight: 900, marginBottom: 8 }}>Upload picture</div>
 
@@ -336,7 +424,7 @@ export default function SellPage() {
                 onChange={(e) => setImageUrl(e.target.value)}
               />
 
-              <div style={{ marginTop: 8, fontSize: 14, color: "#4b5563" }}>
+              <div className="noteBox">
                 {uploading ? "Uploading image..." : "You can upload from your device or paste an image link."}
               </div>
 
@@ -353,11 +441,7 @@ export default function SellPage() {
               </div>
             </div>
 
-            {!!error && (
-              <div style={{ color: "#b91c1c", fontWeight: 700 }}>
-                {error}
-              </div>
-            )}
+            {!!error && <div style={{ color: "#b91c1c", fontWeight: 700 }}>{error}</div>}
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <button
@@ -368,11 +452,7 @@ export default function SellPage() {
                 {loading ? "Posting..." : "Post Listing"}
               </button>
 
-              <Link
-                href="/marketplace"
-                className="navButton"
-                style={{ color: "#111827", background: "#f3f4f6", borderColor: "#d1d5db" }}
-              >
+              <Link href="/marketplace" className="secondaryButton">
                 Back to Marketplace
               </Link>
             </div>

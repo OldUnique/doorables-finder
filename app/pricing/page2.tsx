@@ -44,38 +44,10 @@ export default function PricingPage() {
         minHeight: "100vh",
         padding: "48px 20px 64px",
         color: "white",
-        background:
-          "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
       }}
     >
-      <style jsx>{`
-        .topGrid {
-          display: grid;
-          grid-template-columns: 1.15fr 0.85fr;
-          gap: 24px;
-          margin-bottom: 24px;
-        }
-
-        .planGrid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-          gap: 24px;
-          align-items: stretch;
-        }
-
-        @media (max-width: 920px) {
-          .topGrid {
-            grid-template-columns: 1fr;
-          }
-
-          main {
-            padding: 24px 16px 40px !important;
-          }
-        }
-      `}</style>
-
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 30 }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div
             style={{
               display: "inline-block",
@@ -94,13 +66,13 @@ export default function PricingPage() {
 
           <h1
             style={{
-              fontSize: "clamp(2.2rem, 6vw, 3.2rem)",
+              fontSize: 48,
               fontWeight: 900,
               margin: 0,
               lineHeight: 1.05,
             }}
           >
-            Start free, upgrade when you want more
+            Pick your Doorables vibe
           </h1>
 
           <p
@@ -108,73 +80,15 @@ export default function PricingPage() {
               marginTop: 16,
               fontSize: 18,
               color: "rgba(255,255,255,0.85)",
-              maxWidth: 760,
+              maxWidth: 700,
               marginLeft: "auto",
               marginRight: "auto",
             }}
           >
-            Free accounts can save up to <strong style={{ color: "white" }}>50 Doorables</strong>.
-            Upgrade to unlock unlimited collection, Marketplace, and selling.
+            Unlock the full collector experience. Use code{" "}
+            <strong style={{ color: "white" }}>FIRSTMONTHFREE</strong> at
+            checkout for your monthly plan.
           </p>
-        </div>
-
-        <div className="topGrid">
-          <section
-            style={{
-              background: "rgba(255,255,255,0.96)",
-              color: "#0f172a",
-              borderRadius: 28,
-              padding: 26,
-              boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
-            }}
-          >
-            <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 14 }}>
-              What free includes 💜
-            </div>
-
-            <ul
-              style={{
-                margin: 0,
-                paddingLeft: 20,
-                color: "#334155",
-                lineHeight: 1.9,
-                fontSize: 16,
-              }}
-            >
-              <li>Save up to 50 Doorables in your collection</li>
-              <li>Track have, need, and extras</li>
-              <li>Use collection filters and progress tracking</li>
-            </ul>
-          </section>
-
-          <section
-            style={{
-              background: "rgba(255,255,255,0.96)",
-              color: "#0f172a",
-              borderRadius: 28,
-              padding: 26,
-              boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
-            }}
-          >
-            <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 14 }}>
-              What upgrade unlocks 🚀
-            </div>
-
-            <ul
-              style={{
-                margin: 0,
-                paddingLeft: 20,
-                color: "#334155",
-                lineHeight: 1.9,
-                fontSize: 16,
-              }}
-            >
-              <li>Unlimited saved Doorables</li>
-              <li>Marketplace access</li>
-              <li>Create listings and sell</li>
-              <li>Full collector experience</li>
-            </ul>
-          </section>
         </div>
 
         {error ? (
@@ -193,7 +107,14 @@ export default function PricingPage() {
           </div>
         ) : null}
 
-        <div className="planGrid">
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gap: 24,
+            alignItems: "stretch",
+          }}
+        >
           <section
             style={{
               background: "white",
@@ -238,7 +159,7 @@ export default function PricingPage() {
             </div>
 
             <p style={{ marginTop: 0, color: "#475569", fontSize: 15 }}>
-              A simple way to unlock everything without a big commitment.
+              First month FREE with code FIRSTMONTHFREE
             </p>
 
             <ul
@@ -251,9 +172,9 @@ export default function PricingPage() {
                 fontSize: 16,
               }}
             >
-              <li>Unlimited collection saves</li>
-              <li>Marketplace access</li>
-              <li>Create and manage listings</li>
+              <li>✨ Easy way to start</li>
+              <li>💜 Full collector access</li>
+              <li>📦 Browse, collect, and sell</li>
             </ul>
 
             <button
@@ -339,7 +260,7 @@ export default function PricingPage() {
             </div>
 
             <p style={{ marginTop: 0, color: "#475569", fontSize: 15 }}>
-              The best deal for collectors who want everything unlocked all year.
+              Save money and keep everything unlocked all year.
             </p>
 
             <ul
@@ -352,9 +273,9 @@ export default function PricingPage() {
                 fontSize: 16,
               }}
             >
-              <li>Lowest overall cost</li>
-              <li>Unlimited collection saves</li>
-              <li>Marketplace and selling unlocked</li>
+              <li>🚀 Lowest overall cost</li>
+              <li>🎉 Perfect for active collectors</li>
+              <li>⭐ Best deal for long-term use</li>
             </ul>
 
             <button

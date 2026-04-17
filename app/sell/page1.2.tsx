@@ -5,6 +5,62 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
 
+async function compressImage(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    img.onload = () => {
+      const MAX_WIDTH = 900;
+      const MAX_HEIGHT = 900;
+
+      let width = img.width;
+      let height = img.height;
+
+      if (width > MAX_WIDTH) {
+        height = (height * MAX_WIDTH) / width;
+        width = MAX_WIDTH;
+      }
+
+      if (height > MAX_HEIGHT) {
+        width = (width * MAX_HEIGHT) / height;
+        height = MAX_HEIGHT;
+      }
+
+      canvas.width = Math.round(width);
+      canvas.height = Math.round(height);
+
+      if (!ctx) {
+        reject(new Error("Could not prepare image compression."));
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error("Could not compress image."));
+            return;
+          }
+
+          resolve(
+            new File([blob], "compressed.jpg", {
+              type: "image/jpeg",
+            })
+          );
+        },
+        "image/jpeg",
+        0.72
+      );
+    };
+
+    img.onerror = () => reject(new Error("Could not load image for compression."));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 export default function SellPage() {
   const supabase = useMemo(() => getSupabase(), []);
   const router = useRouter();
@@ -14,6 +70,11 @@ export default function SellPage() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+
+  const [shippingEnabled, setShippingEnabled] = useState(false);
+  const [localPickupEnabled, setLocalPickupEnabled] = useState(false);
+  const [shippingPrice, setShippingPrice] = useState("");
+  const [pickupLocation, setPickupLocation] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -34,6 +95,10 @@ export default function SellPage() {
       return;
     }
 
+    if (!seller && user.email) {
+      setSeller(user.email);
+    }
+
     setCheckingAuth(false);
   }
 
@@ -44,7 +109,8 @@ export default function SellPage() {
       setUploading(true);
       setError("");
 
-      const previewUrl = URL.createObjectURL(file);
+      const compressedFile = await compressImage(file);
+      const previewUrl = URL.createObjectURL(compressedFile);
       setImageUrl(previewUrl);
 
       const {
@@ -57,12 +123,11 @@ export default function SellPage() {
         return;
       }
 
-      const fileExt = file.name.split(".").pop() || "jpg";
-      const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+      const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from("marketplace-images")
-        .upload(fileName, file, {
+        .upload(fileName, compressedFile, {
           cacheControl: "3600",
           upsert: false,
         });
@@ -106,10 +171,37 @@ export default function SellPage() {
       return;
     }
 
+    if (!shippingEnabled && !localPickupEnabled) {
+      setError("Please choose shipping, local pickup, or both.");
+      setLoading(false);
+      return;
+    }
+
     const numericPrice = price.trim() === "" ? null : Number(price.trim());
 
     if (price.trim() !== "" && Number.isNaN(numericPrice)) {
       setError("Please enter a valid price.");
+      setLoading(false);
+      return;
+    }
+
+    const numericShippingPrice =
+      shippingPrice.trim() === "" ? null : Number(shippingPrice.trim());
+
+    if (shippingEnabled && shippingPrice.trim() !== "" && Number.isNaN(numericShippingPrice)) {
+      setError("Please enter a valid shipping price.");
+      setLoading(false);
+      return;
+    }
+
+    if (shippingEnabled && shippingPrice.trim() === "") {
+      setError("Please add a shipping price or 0 for free shipping.");
+      setLoading(false);
+      return;
+    }
+
+    if (localPickupEnabled && !pickupLocation.trim()) {
+      setError("Please add a city and state for local pickup.");
       setLoading(false);
       return;
     }
@@ -123,6 +215,10 @@ export default function SellPage() {
       status: "active",
       sold_at: null,
       user_id: user.id,
+      shipping_available: shippingEnabled,
+      shipping_price: shippingEnabled ? numericShippingPrice : null,
+      local_pickup_available: localPickupEnabled,
+      pickup_location: localPickupEnabled ? pickupLocation.trim() : null,
     };
 
     const { error: insertError } = await supabase
@@ -172,39 +268,6 @@ export default function SellPage() {
           margin: 0 auto;
         }
 
-        .nav {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 18px;
-        }
-
-        .navLinks {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .navButton {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 12px 18px;
-          border-radius: 16px;
-          text-decoration: none;
-          color: white;
-          font-weight: 800;
-          background: rgba(255,255,255,0.08);
-          border: 1px solid rgba(255,255,255,0.1);
-          backdrop-filter: blur(8px);
-        }
-
-        .navButton:hover {
-          background: rgba(255,255,255,0.14);
-        }
-
         .hero {
           background: linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
           border-radius: 28px;
@@ -246,6 +309,19 @@ export default function SellPage() {
           cursor: wait;
         }
 
+        .secondaryButton {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 12px 16px;
+          border-radius: 14px;
+          text-decoration: none;
+          color: #111827;
+          font-weight: 800;
+          background: #f3f4f6;
+          border: 1px solid #d1d5db;
+        }
+
         .uploadBox {
           border: 2px dashed #c7d2fe;
           background: #eef2ff;
@@ -265,29 +341,71 @@ export default function SellPage() {
           min-height: 220px;
           overflow: hidden;
         }
+
+        .toggleWrap {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .toggleButton {
+          padding: 12px 16px;
+          border-radius: 14px;
+          border: 1px solid #c7d2fe;
+          background: #eef2ff;
+          color: #3730a3;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .toggleButtonActive {
+          background: linear-gradient(135deg, #60a5fa, #8b5cf6);
+          color: white;
+          border-color: transparent;
+        }
+
+        .noteBox {
+          margin-top: 8px;
+          font-size: 14px;
+          color: #4b5563;
+          line-height: 1.5;
+        }
+
+        @media (max-width: 920px) {
+          main {
+            padding: 16px !important;
+          }
+
+          .hero {
+            padding: 18px;
+            border-radius: 22px;
+          }
+
+          .formCard {
+            padding: 16px;
+            border-radius: 20px;
+          }
+
+          .toggleButton,
+          .submitButton,
+          .secondaryButton {
+            width: 100%;
+          }
+
+          .previewBox {
+            min-height: 180px;
+          }
+        }
       `}</style>
 
       <div className="shell">
-        <nav className="nav">
-          <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -1 }}>
-            Doorables Finder
-          </div>
-
-          <div className="navLinks">
-            <Link href="/" className="navButton">🏠 Home</Link>
-            <Link href="/collection" className="navButton">Collection</Link>
-            <Link href="/marketplace" className="navButton">Marketplace</Link>
-            <Link href="/messages" className="navButton">Messages</Link>
-            <Link href="/sell" className="navButton">Sell</Link>
-            <Link href="/subscription" className="navButton">Subscription</Link>
-            <Link href="/feedback" className="navButton">💙 Feedback</Link>
-          </div>
-        </nav>
-
         <section className="hero">
-          <h1 style={{ margin: 0, fontSize: 46, fontWeight: 900 }}>Create Listing</h1>
+          <h1 style={{ margin: 0, fontSize: "clamp(2rem, 6vw, 2.9rem)", fontWeight: 900 }}>
+            Create Listing
+          </h1>
+
           <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
-            Add your Doorable here. Buyers will message you through the site.
+            Add your Doorable here. Buyers can message you right through the site.
           </div>
         </section>
 
@@ -322,6 +440,58 @@ export default function SellPage() {
               onChange={(e) => setPrice(e.target.value)}
             />
 
+            <div
+              style={{
+                background: "#f8fafc",
+                border: "1px solid #e5e7eb",
+                borderRadius: 18,
+                padding: 16,
+              }}
+            >
+              <div style={{ fontWeight: 900, marginBottom: 10 }}>Delivery options</div>
+
+              <div className="toggleWrap">
+                <button
+                  type="button"
+                  onClick={() => setShippingEnabled((prev) => !prev)}
+                  className={`toggleButton ${shippingEnabled ? "toggleButtonActive" : ""}`}
+                >
+                  Shipping
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLocalPickupEnabled((prev) => !prev)}
+                  className={`toggleButton ${localPickupEnabled ? "toggleButtonActive" : ""}`}
+                >
+                  Local Pickup
+                </button>
+              </div>
+
+              {shippingEnabled && (
+                <div style={{ marginTop: 12 }}>
+                  <input
+                    className="field"
+                    placeholder="Shipping price"
+                    value={shippingPrice}
+                    onChange={(e) => setShippingPrice(e.target.value)}
+                  />
+                  <div className="noteBox">Put 0 if shipping is free.</div>
+                </div>
+              )}
+
+              {localPickupEnabled && (
+                <div style={{ marginTop: 12 }}>
+                  <input
+                    className="field"
+                    placeholder="Local pickup city, state"
+                    value={pickupLocation}
+                    onChange={(e) => setPickupLocation(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+
             <div className="uploadBox">
               <div style={{ fontWeight: 900, marginBottom: 8 }}>Upload picture</div>
 
@@ -339,8 +509,10 @@ export default function SellPage() {
                 onChange={(e) => setImageUrl(e.target.value)}
               />
 
-              <div style={{ marginTop: 8, fontSize: 14, color: "#4b5563" }}>
-                {uploading ? "Uploading image..." : "You can upload from your device or paste an image link."}
+              <div className="noteBox">
+                {uploading
+                  ? "Compressing and uploading image..."
+                  : "Images are automatically compressed before upload to save bandwidth."}
               </div>
 
               <div className="previewBox">
@@ -348,6 +520,8 @@ export default function SellPage() {
                   <img
                     src={imageUrl}
                     alt="Preview"
+                    loading="lazy"
+                    decoding="async"
                     style={{ maxWidth: "100%", maxHeight: 320, objectFit: "contain" }}
                   />
                 ) : (
@@ -356,11 +530,7 @@ export default function SellPage() {
               </div>
             </div>
 
-            {!!error && (
-              <div style={{ color: "#b91c1c", fontWeight: 700 }}>
-                {error}
-              </div>
-            )}
+            {!!error && <div style={{ color: "#b91c1c", fontWeight: 700 }}>{error}</div>}
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <button
@@ -371,11 +541,7 @@ export default function SellPage() {
                 {loading ? "Posting..." : "Post Listing"}
               </button>
 
-              <Link
-                href="/marketplace"
-                className="navButton"
-                style={{ color: "#111827", background: "#f3f4f6", borderColor: "#d1d5db" }}
-              >
+              <Link href="/marketplace" className="secondaryButton">
                 Back to Marketplace
               </Link>
             </div>

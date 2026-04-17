@@ -33,7 +33,6 @@ export default function MarketplacePage() {
 
   const [listings, setListings] = useState<Listing[]>([]);
   const [userId, setUserId] = useState("");
-  const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [busyId, setBusyId] = useState("");
@@ -69,18 +68,6 @@ export default function MarketplacePage() {
       } = await supabase.auth.getUser();
 
       setUserId(user?.id ?? "");
-
-      if (user?.id) {
-        const { data: profile } = await supabase
-          .from("users")
-          .select("is_subscribed")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        setIsSubscribed(!!profile?.is_subscribed);
-      } else {
-        setIsSubscribed(false);
-      }
 
       const { data, error } = await supabase
         .from("marketplace_listings")
@@ -295,89 +282,6 @@ export default function MarketplacePage() {
       setMessage(error instanceof Error ? error.message : "Could not delete listing.");
       setBusyId("");
     }
-  }
-
-  if (loading) {
-    return (
-      <main
-        style={{
-          minHeight: "100vh",
-          padding: 24,
-          color: "white",
-          background:
-            "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
-        }}
-      >
-        Loading marketplace...
-      </main>
-    );
-  }
-
-  if (!isSubscribed) {
-    return (
-      <main
-        style={{
-          minHeight: "100vh",
-          padding: 24,
-          color: "white",
-          background:
-            "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
-        }}
-      >
-        <div style={{ maxWidth: 900, margin: "0 auto" }}>
-          <section
-            style={{
-              background: "linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88))",
-              borderRadius: 28,
-              padding: 24,
-              boxShadow: "0 20px 40px rgba(0,0,0,0.30)",
-              marginBottom: 18,
-            }}
-          >
-            <h1 style={{ margin: 0, fontSize: "clamp(2rem, 6vw, 2.9rem)", fontWeight: 900 }}>
-              Marketplace
-            </h1>
-            <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
-              Marketplace access is included with the paid plan.
-            </div>
-          </section>
-
-          <section
-            style={{
-              background: "rgba(255,255,255,0.96)",
-              color: "#111827",
-              borderRadius: 24,
-              padding: 22,
-              boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
-            }}
-          >
-            <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 8 }}>
-              Upgrade to unlock Marketplace 💜
-            </div>
-            <div style={{ color: "#4b5563", lineHeight: 1.6, marginBottom: 14 }}>
-              Free accounts can save up to 50 Doorables in collection. Upgrade to browse Marketplace, message through listings, and unlock selling.
-            </div>
-
-            <Link
-              href="/pricing"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "12px 16px",
-                borderRadius: 14,
-                background: "#4f46e5",
-                color: "white",
-                textDecoration: "none",
-                fontWeight: 900,
-              }}
-            >
-              Upgrade Now
-            </Link>
-          </section>
-        </div>
-      </main>
-    );
   }
 
   return (
@@ -703,7 +607,9 @@ export default function MarketplacePage() {
           </div>
         )}
 
-        {filteredListings.length === 0 ? (
+        {loading ? (
+          <div style={{ fontWeight: 800 }}>Loading marketplace...</div>
+        ) : filteredListings.length === 0 ? (
           <div
             style={{
               background: "rgba(255,255,255,0.96)",

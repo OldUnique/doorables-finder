@@ -316,10 +316,10 @@ export default function LoginPage() {
         return;
       }
 
-      const redirectTo =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/login`
-          : "https://www.mydoorables.com/login";
+const redirectTo =
+  typeof window !== "undefined"
+    ? `${window.location.origin}/reset-password`
+    : "https://www.mydoorables.com/reset-password";
 
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo,

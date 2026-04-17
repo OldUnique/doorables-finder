@@ -37,10 +37,10 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [showConversationList, setShowConversationList] = useState(true);
 
   const [newCollectorUsername, setNewCollectorUsername] = useState("");
   const [creatingCollectorChat, setCreatingCollectorChat] = useState(false);
-  const [showConversationList, setShowConversationList] = useState(true);
 
   useEffect(() => {
     void initialize();
@@ -62,13 +62,12 @@ export default function MessagesPage() {
         async () => {
           await loadMessages(selectedConversationId);
           await markConversationRead(selectedConversationId, userId);
-          await refreshConversationsQuietly();
         }
       )
       .subscribe();
 
     return () => {
-      void supabase.removeChannel(channel);
+      supabase.removeChannel(channel);
     };
   }, [selectedConversationId, supabase, userId]);
 
@@ -95,17 +94,13 @@ export default function MessagesPage() {
       const currentUserId = String(user.id);
       setUserId(currentUserId);
 
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile } = await supabase
         .from("users")
         .select("username")
         .eq("id", currentUserId)
         .maybeSingle();
 
-      if (profileError) {
-        setError(profileError.message);
-      }
-
-      setUsername(String(profile?.username ?? "").toLowerCase());
+      setUsername(String(profile?.username ?? ""));
 
       const params =
         typeof window !== "undefined"
@@ -125,11 +120,6 @@ export default function MessagesPage() {
       setError(error instanceof Error ? error.message : "Could not load messages.");
       setLoading(false);
     }
-  }
-
-  async function refreshConversationsQuietly() {
-    if (!userId) return;
-    await loadConversations(userId, selectedConversationId, true);
   }
 
   async function ensureMarketplaceConversation(currentUserId: string, listingId: string) {
@@ -186,11 +176,7 @@ export default function MessagesPage() {
     }
   }
 
-  async function loadConversations(
-    currentUserId: string,
-    conversationIdFromUrl?: string,
-    keepCurrentView?: boolean
-  ) {
+  async function loadConversations(currentUserId: string, conversationIdFromUrl?: string) {
     const { data, error } = await supabase
       .from("marketplace_conversations")
       .select(`
@@ -242,8 +228,7 @@ export default function MessagesPage() {
     if (preferredId) {
       await loadMessages(preferredId);
       await markConversationRead(preferredId, currentUserId);
-
-      if (!keepCurrentView && typeof window !== "undefined" && window.innerWidth <= 920) {
+      if (typeof window !== "undefined" && window.innerWidth <= 920) {
         setShowConversationList(false);
       }
     } else {
@@ -297,7 +282,6 @@ export default function MessagesPage() {
 
     try {
       setSending(true);
-      setError("");
 
       const { error } = await supabase.from("marketplace_messages").insert([
         {
@@ -317,7 +301,6 @@ export default function MessagesPage() {
       setDraft("");
       setSending(false);
       await loadMessages(selectedConversationId);
-      await refreshConversationsQuietly();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Could not send message.");
       setSending(false);
@@ -350,7 +333,7 @@ export default function MessagesPage() {
       const { data: userRow, error: userRowError } = await supabase
         .from("users")
         .select("id, username")
-        .ilike("username", cleanUsername)
+        .eq("username", cleanUsername)
         .maybeSingle();
 
       if (userRowError) {
@@ -441,41 +424,14 @@ export default function MessagesPage() {
         minHeight: "100vh",
         background:
           "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
-        padding: 16,
+        padding: 24,
       }}
     >
       <style jsx>{`
         .messagesLayout {
           display: grid;
-          grid-template-columns: 340px 1fr;
+          grid-template-columns: 320px 1fr;
           gap: 16px;
-        }
-
-        .conversationSidebar,
-        .messagePanel {
-          background: rgba(255,255,255,0.96);
-          color: #111827;
-          border-radius: 22px;
-          padding: 14px;
-          box-shadow: 0 12px 28px rgba(0,0,0,0.14);
-          min-height: 640px;
-        }
-
-        .messageList {
-          flex: 1;
-          border: 1px solid #e5e7eb;
-          border-radius: 16px;
-          padding: 12px;
-          background: #fafafa;
-          overflow: auto;
-          display: grid;
-          gap: 10px;
-          min-height: 420px;
-          max-height: 420px;
-        }
-
-        .mobileBackButton {
-          display: none;
         }
 
         @media (max-width: 920px) {
@@ -485,22 +441,6 @@ export default function MessagesPage() {
 
           .mobileHidden {
             display: none !important;
-          }
-
-          .conversationSidebar,
-          .messagePanel {
-            min-height: auto;
-            padding: 12px;
-            border-radius: 18px;
-          }
-
-          .messageList {
-            min-height: 50vh;
-            max-height: 50vh;
-          }
-
-          .mobileBackButton {
-            display: inline-flex;
           }
         }
       `}</style>
@@ -531,7 +471,15 @@ export default function MessagesPage() {
         ) : (
           <div className="messagesLayout">
             <aside
-              className={`conversationSidebar ${!showConversationList ? "mobileHidden" : ""}`}
+              className={!showConversationList ? "mobileHidden" : ""}
+              style={{
+                background: "rgba(255,255,255,0.96)",
+                color: "#111827",
+                borderRadius: 22,
+                padding: 14,
+                boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
+                minHeight: 640,
+              }}
             >
               <div style={{ fontWeight: 900, marginBottom: 10 }}>Conversations</div>
 
@@ -547,7 +495,7 @@ export default function MessagesPage() {
                 <div style={{ fontWeight: 800, marginBottom: 8 }}>Start Collector Chat</div>
                 <input
                   value={newCollectorUsername}
-                  onChange={(e) => setNewCollectorUsername(e.target.value)}
+                  onChange={(e) => setNewCollectorUsername(e.target.value.toLowerCase())}
                   placeholder="Collector username"
                   style={{
                     width: "100%",
@@ -616,8 +564,14 @@ export default function MessagesPage() {
             </aside>
 
             <section
-              className={`messagePanel ${showConversationList && conversations.length > 0 ? "mobileHidden" : ""}`}
+              className={showConversationList && conversations.length > 0 ? "mobileHidden" : ""}
               style={{
+                background: "rgba(255,255,255,0.96)",
+                color: "#111827",
+                borderRadius: 22,
+                padding: 14,
+                boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
+                minHeight: 640,
                 display: "flex",
                 flexDirection: "column",
               }}
@@ -639,7 +593,6 @@ export default function MessagesPage() {
                 <button
                   type="button"
                   onClick={() => setShowConversationList(true)}
-                  className="mobileBackButton"
                   style={{
                     padding: "10px 14px",
                     borderRadius: 12,
@@ -650,11 +603,24 @@ export default function MessagesPage() {
                     cursor: "pointer",
                   }}
                 >
-                  Back
+                  Back to Conversations
                 </button>
               </div>
 
-              <div className="messageList">
+              <div
+                style={{
+                  flex: 1,
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 16,
+                  padding: 12,
+                  background: "#fafafa",
+                  overflow: "auto",
+                  display: "grid",
+                  gap: 10,
+                  minHeight: 420,
+                  maxHeight: 420,
+                }}
+              >
                 {messages.length === 0 ? (
                   <div style={{ color: "#6b7280" }}>No messages yet.</div>
                 ) : (
@@ -688,14 +654,7 @@ export default function MessagesPage() {
                 <div ref={bottomRef} />
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: 10,
-                  marginTop: 12,
-                  flexWrap: "wrap",
-                }}
-              >
+              <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
                 <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}

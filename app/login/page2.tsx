@@ -3,25 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
-import AppHeader from "../../components/AppHeader";
-
-async function ensureUserExists(user: { id: string; email?: string | null }) {
-  const supabase = getSupabase();
-
-  const { data: existing } = await supabase
-    .from("users")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!existing) {
-    await supabase.from("users").insert({
-      id: user.id,
-      email: user.email ?? null,
-      is_subscribed: false,
-    });
-  }
-}
 
 export default function LoginPage() {
   const supabase = useMemo(() => getSupabase(), []);
@@ -29,129 +10,209 @@ export default function LoginPage() {
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data?.user) {
-        await ensureUserExists(data.user);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        router.replace("/");
       }
     };
 
     void checkUser();
-  }, [supabase]);
+  }, [router, supabase]);
+
+  function normalizeUsername(value: string) {
+    return value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+  }
+
+  async function ensureUserProfile(
+    user: { id: string; email?: string | null },
+    desiredUsername?: string
+  ) {
+    const { data: existing, error: readError } = await supabase
+      .from("users")
+      .select("id, username")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (readError) {
+      setMessage(readError.message);
+      return false;
+    }
+
+    const cleanUsername = normalizeUsername(desiredUsername || "");
+
+    if (!existing) {
+      const payload = {
+        id: user.id,
+        email: user.email ?? null,
+        username: cleanUsername || null,
+        is_subscribed: false,
+      };
+
+      const { error: insertError } = await supabase.from("users").insert(payload);
+      if (insertError) {
+        setMessage(insertError.message);
+        return false;
+      }
+      return true;
+    }
+
+    if (!existing.username && cleanUsername) {
+      const { error: updateError } = await supabase
+        .from("users")
+        .update({ username: cleanUsername })
+        .eq("id", user.id);
+
+      if (updateError) {
+        setMessage(updateError.message);
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   async function handleSubmit() {
-    setMessage("");
+    try {
+      setLoading(true);
+      setMessage("");
 
-    if (!email.trim()) {
-      setMessage("Please enter your email.");
-      return;
-    }
-
-    if (!password.trim()) {
-      setMessage("Please enter your password.");
-      return;
-    }
-
-    if (mode === "signup") {
-      if (password.length < 6) {
-        setMessage("Password must be at least 6 characters.");
+      if (!email.trim()) {
+        setMessage("Please enter your email.");
+        setLoading(false);
         return;
       }
 
-      if (password !== confirmPassword) {
-        setMessage("Passwords do not match.");
+      if (!password.trim()) {
+        setMessage("Please enter your password.");
+        setLoading(false);
         return;
       }
-    }
 
-    setLoading(true);
+      if (mode === "signup") {
+        const cleanUsername = normalizeUsername(username);
 
-    if (mode === "signin") {
+        if (!cleanUsername) {
+          setMessage("Please choose a username using letters, numbers, or underscores.");
+          setLoading(false);
+          return;
+        }
+
+        const { data: usernameTaken, error: usernameCheckError } = await supabase
+          .from("users")
+          .select("id")
+          .eq("username", cleanUsername)
+          .maybeSingle();
+
+        if (usernameCheckError) {
+          setMessage(usernameCheckError.message);
+          setLoading(false);
+          return;
+        }
+
+        if (usernameTaken) {
+          setMessage("That username is already taken.");
+          setLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password: password.trim(),
+        });
+
+        if (error) {
+          setMessage(error.message);
+          setLoading(false);
+          return;
+        }
+
+        if (data.user) {
+          const ok = await ensureUserProfile(
+            { id: data.user.id, email: data.user.email },
+            cleanUsername
+          );
+
+          if (!ok) {
+            setLoading(false);
+            return;
+          }
+        }
+
+        setMessage("Account created! You can sign in now.");
+        setMode("signin");
+        setPassword("");
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
-        password,
+        password: password.trim(),
       });
 
+      if (error) {
+        setMessage(error.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data.user) {
+        const ok = await ensureUserProfile({
+          id: data.user.id,
+          email: data.user.email,
+        });
+
+        if (!ok) {
+          setLoading(false);
+          return;
+        }
+      }
+
       setLoading(false);
+      router.push("/");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not continue.");
+      setLoading(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    try {
+      setMessage("");
+
+      if (!email.trim()) {
+        setMessage("Enter your email first.");
+        return;
+      }
+
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/login`
+          : "https://www.mydoorables.com/login";
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo,
+      });
 
       if (error) {
         setMessage(error.message);
         return;
       }
 
-      if (data?.user) {
-        await ensureUserExists(data.user);
-      }
-
-      router.push("/collection");
-      return;
+      setMessage("Password reset email sent. Check your inbox.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not send reset email.");
     }
-
-    const redirectTo =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/collection`
-        : "https://www.mydoorables.com/collection";
-
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        emailRedirectTo: redirectTo,
-      },
-    });
-
-    setLoading(false);
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    if (data?.user) {
-      await ensureUserExists(data.user);
-    }
-
-    setMessage(
-      "Account created. If email confirmation is enabled in Supabase, check your inbox before signing in."
-    );
-    setMode("signin");
-    setPassword("");
-    setConfirmPassword("");
-  }
-
-  async function handleForgotPassword() {
-    setMessage("");
-
-    if (!email.trim()) {
-      setMessage("Enter your email first.");
-      return;
-    }
-
-    setLoading(true);
-
-    const redirectTo =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/login`
-        : "https://www.mydoorables.com/login";
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo,
-    });
-
-    setLoading(false);
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    setMessage("Password reset email sent. Check your inbox.");
   }
 
   return (
@@ -159,40 +220,29 @@ export default function LoginPage() {
       style={{
         minHeight: "100vh",
         background:
-          "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), radial-gradient(circle at 70% 70%, rgba(236,72,153,0.18) 0%, rgba(236,72,153,0) 20%), linear-gradient(180deg, #09090f 0%, #111827 38%, #0f172a 65%, #020617 100%)",
+          "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
+        padding: 24,
+        color: "white",
       }}
     >
-
-      <div
-        style={{
-          maxWidth: 980,
-          margin: "0 auto",
-          padding: 24,
-        }}
-      >
+      <div style={{ maxWidth: 980, margin: "0 auto" }}>
         <section
           style={{
-            background: "linear-gradient(135deg, rgba(17,24,39,0.92), rgba(37,99,235,0.88))",
-            padding: 24,
+            background: "linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88))",
             borderRadius: 28,
-            marginBottom: 18,
-            color: "white",
+            padding: 24,
             boxShadow: "0 20px 40px rgba(0,0,0,0.30)",
+            marginBottom: 18,
             border: "1px solid rgba(255,255,255,0.08)",
           }}
         >
-          <h1
-            style={{
-              margin: 0,
-              fontSize: "clamp(2rem, 5vw, 3rem)",
-              fontWeight: 900,
-              letterSpacing: -1,
-            }}
-          >
+          <h1 style={{ margin: 0, fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 900 }}>
             {mode === "signin" ? "Sign In 🔐" : "Create Account ✨"}
           </h1>
-          <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
-            Use your email and password to access your collection, marketplace, and messages.
+          <div style={{ marginTop: 8, opacity: 0.92 }}>
+            {mode === "signin"
+              ? "Sign in with your email and password."
+              : "Choose your email, username, and password to start collecting."}
           </div>
         </section>
 
@@ -200,32 +250,28 @@ export default function LoginPage() {
           style={{
             background: "rgba(255,255,255,0.96)",
             color: "#111827",
-            padding: 24,
             borderRadius: 24,
-            maxWidth: 560,
-            boxShadow: "0 16px 34px rgba(0,0,0,0.18)",
-            border: "1px solid rgba(255,255,255,0.35)",
+            padding: 20,
+            boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
+            maxWidth: 620,
           }}
         >
           <div
             style={{
               display: "inline-flex",
+              gap: 8,
+              padding: 6,
+              borderRadius: 14,
               background: "#eef2ff",
               border: "1px solid #c7d2fe",
-              borderRadius: 14,
-              padding: 6,
-              gap: 6,
-              marginBottom: 18,
+              marginBottom: 16,
             }}
           >
             <button
               type="button"
-              onClick={() => {
-                setMode("signin");
-                setMessage("");
-              }}
+              onClick={() => setMode("signin")}
               style={{
-                padding: "10px 16px",
+                padding: "10px 14px",
                 borderRadius: 10,
                 border: "none",
                 cursor: "pointer",
@@ -236,15 +282,11 @@ export default function LoginPage() {
             >
               Sign In
             </button>
-
             <button
               type="button"
-              onClick={() => {
-                setMode("signup");
-                setMessage("");
-              }}
+              onClick={() => setMode("signup")}
               style={{
-                padding: "10px 16px",
+                padding: "10px 14px",
                 borderRadius: 10,
                 border: "none",
                 cursor: "pointer",
@@ -257,131 +299,116 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 10 }}>
-            {mode === "signin" ? "Welcome back" : "Make your account"}
-          </div>
-
-          <div style={{ color: "#6b7280", marginBottom: 16 }}>
-            {mode === "signin"
-              ? "Sign in with your email and password."
-              : "Create your own account with an email and password."}
-          </div>
-
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            type="email"
-            autoComplete="email"
-            style={{
-              width: "100%",
-              padding: 14,
-              borderRadius: 14,
-              border: "1px solid #d1d5db",
-              boxSizing: "border-box",
-              marginBottom: 14,
-              fontSize: 15,
-            }}
-          />
-
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            type="password"
-            autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            style={{
-              width: "100%",
-              padding: 14,
-              borderRadius: 14,
-              border: "1px solid #d1d5db",
-              boxSizing: "border-box",
-              marginBottom: 14,
-              fontSize: 15,
-            }}
-          />
-
-          {mode === "signup" && (
+          <div style={{ display: "grid", gap: 12 }}>
             <input
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm password"
-              type="password"
-              autoComplete="new-password"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               style={{
                 width: "100%",
                 padding: 14,
                 borderRadius: 14,
                 border: "1px solid #d1d5db",
                 boxSizing: "border-box",
-                marginBottom: 14,
                 fontSize: 15,
               }}
             />
-          )}
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button
-              onClick={() => void handleSubmit()}
-              disabled={loading}
-              style={{
-                padding: "12px 16px",
-                borderRadius: 14,
-                border: "none",
-                background: "linear-gradient(135deg, #60a5fa, #8b5cf6)",
-                color: "white",
-                fontWeight: 800,
-                cursor: "pointer",
-                minWidth: 150,
-              }}
-            >
-              {loading
-                ? mode === "signin"
-                  ? "Signing In..."
-                  : "Creating..."
-                : mode === "signin"
-                  ? "Sign In"
-                  : "Create Account"}
-            </button>
+            {mode === "signup" && (
+              <div>
+                <input
+                  value={username}
+                  onChange={(e) => setUsername(normalizeUsername(e.target.value))}
+                  placeholder="username"
+                  style={{
+                    width: "100%",
+                    padding: 14,
+                    borderRadius: 14,
+                    border: "1px solid #d1d5db",
+                    boxSizing: "border-box",
+                    fontSize: 15,
+                  }}
+                />
+                <div style={{ marginTop: 6, fontSize: 13, color: "#6b7280" }}>
+                  Letters, numbers, and underscores only.
+                </div>
+              </div>
+            )}
 
-            <button
-              type="button"
-              onClick={() => void handleForgotPassword()}
-              disabled={loading}
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
               style={{
-                padding: "12px 16px",
+                width: "100%",
+                padding: 14,
                 borderRadius: 14,
-                border: "1px solid #c7d2fe",
-                background: "#eef2ff",
-                color: "#3730a3",
-                fontWeight: 700,
-                cursor: "pointer",
+                border: "1px solid #d1d5db",
+                boxSizing: "border-box",
+                fontSize: 15,
               }}
-            >
-              Forgot Password?
-            </button>
-          </div>
+            />
 
-          {message ? (
-            <div
-              style={{
-                marginTop: 14,
-                padding: 12,
-                borderRadius: 14,
-                background: "#f8fafc",
-                border: "1px solid #e5e7eb",
-                color: "#334155",
-                fontWeight: 600,
-              }}
-            >
-              {message}
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => void handleSubmit()}
+                disabled={loading}
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: 14,
+                  border: "none",
+                  background: "#4f46e5",
+                  color: "white",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                }}
+              >
+                {loading
+                  ? mode === "signin"
+                    ? "Signing In..."
+                    : "Creating Account..."
+                  : mode === "signin"
+                    ? "Sign In"
+                    : "Create Account"}
+              </button>
+
+              {mode === "signin" && (
+                <button
+                  type="button"
+                  onClick={() => void handleForgotPassword()}
+                  style={{
+                    padding: "12px 16px",
+                    borderRadius: 14,
+                    border: "1px solid #d1d5db",
+                    background: "#f3f4f6",
+                    color: "#111827",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  Forgot Password
+                </button>
+              )}
             </div>
-          ) : null}
 
-          <div style={{ marginTop: 18, fontSize: 14, color: "#6b7280" }}>
-            {mode === "signup"
-              ? "After sign up, you can log in and keep your own collection, marketplace listings, and messages."
-              : "Use the same email and password each time to access your account."}
+            {!!message && (
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: 14,
+                  color:
+                    message.toLowerCase().includes("created") ||
+                    message.toLowerCase().includes("sent")
+                      ? "#166534"
+                      : "#b91c1c",
+                  fontWeight: 700,
+                }}
+              >
+                {message}
+              </div>
+            )}
           </div>
         </section>
       </div>

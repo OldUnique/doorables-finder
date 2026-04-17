@@ -68,9 +68,11 @@ export default function ResetPasswordPage() {
       setMessage("Password updated! Redirecting to sign in...");
       setLoading(false);
 
+      await supabase.auth.signOut();
+
       setTimeout(() => {
         router.push("/login");
-      }, 1500);
+      }, 1200);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not reset password.");
       setLoading(false);
@@ -144,26 +146,6 @@ export default function ResetPasswordPage() {
           padding: 8px 10px;
           font-weight: 700;
           cursor: pointer;
-        }
-
-        @media (max-width: 920px) {
-          main {
-            padding: 16px !important;
-          }
-
-          .hero {
-            padding: 18px;
-            border-radius: 22px;
-          }
-
-          .card {
-            padding: 16px;
-            border-radius: 20px;
-          }
-
-          .primaryButton {
-            width: 100%;
-          }
         }
       `}</style>
 

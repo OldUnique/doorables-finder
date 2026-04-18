@@ -16,6 +16,7 @@ type PublicCard = {
 };
 
 type VisibilityMode = "private" | "extras_only" | "full";
+type ViewFilter = "all" | "owned" | "extras" | "wishlist";
 
 type Theme = {
   bg: string;
@@ -104,6 +105,9 @@ export default function PublicCollectorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [displayName, setDisplayName] = useState(username);
+  const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
+  const [collectorUserId, setCollectorUserId] = useState("");
+  const [startingChatId, setStartingChatId] = useState("");
 
   useEffect(() => {
     void loadPage();
@@ -137,6 +141,7 @@ export default function PublicCollectorPage() {
       const mode = (userRow.collection_visibility || "private") as VisibilityMode;
       setVisibility(mode);
       setDisplayName(String(userRow.username || username));
+      setCollectorUserId(String(userRow.id));
 
       if (mode === "private") {
         setCards([]);
@@ -144,52 +149,162 @@ export default function PublicCollectorPage() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("user_doorables")
-        .select(`
-          qty_owned,
-          custom_tag,
-          wanted,
-          doorables (
-            id,
-            name,
-            series,
-            rarity,
-            image_url
-          )
-        `)
-        .eq("user_id", userRow.id);
+      const { data: doorables, error: doorablesError } = await supabase
+        .from("doorables")
+        .select("id, name, series, rarity, image_url");
 
-      if (error) {
-        setError(error.message);
+      if (doorablesError) {
+        setError(doorablesError.message);
         setLoading(false);
         return;
       }
 
-      let mapped: PublicCard[] = ((data || []) as any[])
-        .map((row) => ({
-          id: String(row.doorables?.id ?? ""),
-          name: String(row.doorables?.name ?? "Unknown"),
-          series: String(row.doorables?.series ?? "Unknown Series"),
-          rarity: String(row.doorables?.rarity ?? "Common"),
-          image: String(row.doorables?.image_url ?? ""),
-          qty: Number(row.qty_owned ?? 0),
-          note: String(row.custom_tag ?? ""),
-          wanted: !!row.wanted,
-        }))
-        .filter((item) => item.id);
+      const { data: userDoorables, error: userDoorablesError } = await supabase
+        .from("user_doorables")
+        .select("doorable_id, qty_owned, custom_tag, wanted")
+        .eq("user_id", userRow.id);
 
-      if (mode === "extras_only") {
-        mapped = mapped.filter((item: any) => item.qty > 1 || item.qty <= 0 || item.wanted);
+      if (userDoorablesError) {
+        setError(userDoorablesError.message);
+        setLoading(false);
+        return;
       }
 
-      mapped.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+      const userMap = new Map<string, any>();
+      (userDoorables || []).forEach((row: any) => {
+        userMap.set(String(row.doorable_id), row);
+      });
 
-      setCards(mapped);
+      let merged: PublicCard[] = ((doorables || []) as any[]).map((d) => {
+        const row = userMap.get(String(d.id));
+        return {
+          id: String(d.id ?? ""),
+          name: String(d.name ?? "Unknown"),
+          series: String(d.series ?? "Unknown Series"),
+          rarity: String(d.rarity ?? "Common"),
+          image: String(d.image_url ?? ""),
+          qty: Number(row?.qty_owned ?? 0),
+          note: String(row?.custom_tag ?? ""),
+        };
+      });
+
+      if (mode === "extras_only") {
+        merged = merged.filter((item) => item.qty > 1 || item.qty <= 0);
+      }
+
+      merged.sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+      );
+
+      setCards(merged);
       setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load collection.");
       setLoading(false);
+    }
+  }
+
+  async function messageAboutDoorable(card: PublicCard) {
+    try {
+      setError("");
+      setStartingChatId(card.id);
+
+      const supabase = getSupabase();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        window.location.href = "/login";
+        return;
+      }
+
+      if (!collectorUserId) {
+        setError("Collector account could not be found.");
+        setStartingChatId("");
+        return;
+      }
+
+      if (String(user.id) === collectorUserId) {
+        setError("You cannot message yourself.");
+        setStartingChatId("");
+        return;
+      }
+
+      const { data: existing, error: existingError } = await supabase
+        .from("marketplace_conversations")
+        .select("id")
+        .eq("conversation_type", "collector")
+        .or(
+          `and(buyer_id.eq.${user.id},seller_id.eq.${collectorUserId}),and(buyer_id.eq.${collectorUserId},seller_id.eq.${user.id})`
+        )
+        .maybeSingle();
+
+      if (existingError) {
+        setError(existingError.message);
+        setStartingChatId("");
+        return;
+      }
+
+      let conversationId = "";
+
+      if (existing?.id) {
+        conversationId = String(existing.id);
+      } else {
+        const { data: created, error: createError } = await supabase
+          .from("marketplace_conversations")
+          .insert([
+            {
+              listing_id: null,
+              buyer_id: user.id,
+              seller_id: collectorUserId,
+              listing_title: null,
+              conversation_type: "collector",
+              collector_name: displayName,
+            },
+          ])
+          .select("id")
+          .single();
+
+        if (createError) {
+          setError(createError.message);
+          setStartingChatId("");
+          return;
+        }
+
+        conversationId = String(created.id);
+      }
+
+      let body = `Hi! I saw your collection and wanted to ask about ${card.name}.`;
+
+      if (card.qty > 1) {
+        body = `Hi! I saw that you have an extra of ${card.name} in your collection and wanted to ask about it.`;
+      } else if (card.qty <= 0) {
+        body = `Hi! I saw that ${card.name} is on your wishlist and wanted to message you about it.`;
+      }
+
+      const { error: messageError } = await supabase
+        .from("marketplace_messages")
+        .insert([
+          {
+            conversation_id: conversationId,
+            sender_id: user.id,
+            body,
+            read_at: null,
+          },
+        ]);
+
+      if (messageError) {
+        setError(messageError.message);
+        setStartingChatId("");
+        return;
+      }
+
+      window.location.href = `/messages?conversation=${conversationId}`;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start message.");
+      setStartingChatId("");
     }
   }
 
@@ -199,6 +314,19 @@ export default function PublicCollectorPage() {
     const owned = cards.filter((c) => c.qty > 0).length;
     return { extras, wishlist, owned, total: cards.length };
   }, [cards]);
+
+  const displayedCards = useMemo(() => {
+    if (viewFilter === "owned") {
+      return cards.filter((c) => c.qty > 0);
+    }
+    if (viewFilter === "extras") {
+      return cards.filter((c) => c.qty > 1);
+    }
+    if (viewFilter === "wishlist") {
+      return cards.filter((c) => c.qty <= 0);
+    }
+    return cards;
+  }, [cards, viewFilter]);
 
   function getStatusLabel(card: PublicCard) {
     if (card.qty > 1) return "Extra";
@@ -210,6 +338,13 @@ export default function PublicCollectorPage() {
     if (card.qty > 1) return "#2563eb";
     if (card.qty > 0) return "#166534";
     return "#7c3aed";
+  }
+
+  function getFilterTitle() {
+    if (viewFilter === "owned") return "Owned";
+    if (viewFilter === "extras") return "Extras";
+    if (viewFilter === "wishlist") return "Wishlist";
+    return visibility === "extras_only" ? "Wishlist + Extras" : "Full Collection";
   }
 
   if (loading) {
@@ -228,7 +363,7 @@ export default function PublicCollectorPage() {
     );
   }
 
-  if (error) {
+  if (error && !cards.length && visibility !== "private") {
     return (
       <main
         style={{
@@ -345,6 +480,18 @@ export default function PublicCollectorPage() {
           padding: 18px;
           box-shadow: 0 10px 24px rgba(0,0,0,0.18);
           border: 1px solid rgba(255,255,255,0.35);
+          cursor: pointer;
+          text-align: left;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .statCard:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 14px 28px rgba(0,0,0,0.22);
+        }
+
+        .statCardActive {
+          outline: 3px solid #4f46e5;
         }
 
         .collectionCard {
@@ -424,7 +571,15 @@ export default function PublicCollectorPage() {
 
       <div className="shell">
         <section className="hero">
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 14,
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
             <div>
               <h1 style={{ margin: 0, fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 900 }}>
                 @{displayName}'s Collection 💜
@@ -456,40 +611,67 @@ export default function PublicCollectorPage() {
           </div>
         </section>
 
+        {!!error && (
+          <div
+            style={{
+              marginBottom: 18,
+              background: "rgba(255,255,255,0.94)",
+              color: "#b91c1c",
+              borderRadius: 18,
+              padding: 14,
+              fontWeight: 700,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
         <section className="statsGrid">
-          <div className="statCard">
-            <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>Visible Items</div>
-            <div style={{ fontSize: 30, fontWeight: 900 }}>{stats.total}</div>
-          </div>
-
-          <div className="statCard">
-            <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>Owned</div>
-            <div style={{ fontSize: 30, fontWeight: 900 }}>{stats.owned}</div>
-          </div>
-
-          <div className="statCard">
-            <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>Extras</div>
-            <div style={{ fontSize: 30, fontWeight: 900 }}>{stats.extras}</div>
-          </div>
-
-          <div className="statCard">
-            <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>Wishlist</div>
-            <div style={{ fontSize: 30, fontWeight: 900 }}>{stats.wishlist}</div>
-          </div>
+          {[
+            { key: "all", label: "Visible Items", value: stats.total },
+            { key: "owned", label: "Owned", value: stats.owned },
+            { key: "extras", label: "Extras", value: stats.extras },
+            { key: "wishlist", label: "Wishlist", value: stats.wishlist },
+          ].map((stat) => {
+            const active = viewFilter === stat.key;
+            return (
+              <button
+                key={stat.key}
+                type="button"
+                onClick={() => setViewFilter(stat.key as ViewFilter)}
+                className={`statCard ${active ? "statCardActive" : ""}`}
+              >
+                <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>{stat.label}</div>
+                <div style={{ fontSize: 30, fontWeight: 900 }}>{stat.value}</div>
+              </button>
+            );
+          })}
         </section>
 
         <section className="collectionCard">
-          <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 12 }}>
-            {visibility === "extras_only" ? "Wishlist + Extras" : "Full Collection"}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              alignItems: "center",
+              flexWrap: "wrap",
+              marginBottom: 12,
+            }}
+          >
+            <div style={{ fontSize: 18, fontWeight: 900 }}>{getFilterTitle()}</div>
+            <div style={{ fontSize: 14, color: "#6b7280", fontWeight: 700 }}>
+              Showing {displayedCards.length} item{displayedCards.length === 1 ? "" : "s"}
+            </div>
           </div>
 
-          {cards.length === 0 ? (
+          {displayedCards.length === 0 ? (
             <div style={{ color: "#6b7280", padding: 10 }}>
-              Nothing public to show yet.
+              Nothing to show in this section yet.
             </div>
           ) : (
             <section className="cardsGrid">
-              {cards.map((item) => {
+              {displayedCards.map((item) => {
                 const rarity = rarityTheme(item.rarity);
                 const status = getStatusLabel(item);
                 const statusColor = getStatusColor(item);
@@ -521,7 +703,15 @@ export default function PublicCollectorPage() {
                       )}
                     </div>
 
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "start", marginBottom: 6 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 8,
+                        alignItems: "start",
+                        marginBottom: 6,
+                      }}
+                    >
                       <div>
                         <div style={{ fontWeight: 900, fontSize: 20 }}>{item.name}</div>
                         <div style={{ opacity: 0.8, fontSize: 14 }}>{item.series}</div>
@@ -572,6 +762,37 @@ export default function PublicCollectorPage() {
                         {item.note}
                       </div>
                     ) : null}
+
+                    <button
+                      type="button"
+                      onClick={() => void messageAboutDoorable(item)}
+                      disabled={startingChatId === item.id}
+                      style={{
+                        marginTop: 10,
+                        width: "100%",
+                        padding: "10px 12px",
+                        borderRadius: 12,
+                        border: "none",
+                        cursor: startingChatId === item.id ? "wait" : "pointer",
+                        fontWeight: 800,
+                        background:
+                          item.qty > 1
+                            ? "#2563eb"
+                            : item.qty <= 0
+                              ? "#7c3aed"
+                              : "#4f46e5",
+                        color: "white",
+                        opacity: startingChatId === item.id ? 0.7 : 1,
+                      }}
+                    >
+                      {startingChatId === item.id
+                        ? "Opening..."
+                        : item.qty > 1
+                          ? "Ask About Trade"
+                          : item.qty <= 0
+                            ? "I Have This"
+                            : "Send Message"}
+                    </button>
                   </div>
                 );
               })}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { getSupabase } from "../../lib/supabase";
 
 type Card = {
@@ -120,9 +121,13 @@ function collectionStatus(qty: number) {
 export default function Page() {
   const [cards, setCards] = useState<Card[]>([]);
   const [userId, setUserId] = useState("");
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
+
+  const [visibility, setVisibility] = useState<"private" | "extras_only" | "full">("private");
+  const [savingVisibility, setSavingVisibility] = useState(false);
 
   const [search, setSearch] = useState("");
   const [seriesFilter, setSeriesFilter] = useState("all");
@@ -173,6 +178,22 @@ export default function Page() {
       }
 
       setUserId(String(user.id));
+
+      const { data: profile } = await supabase
+        .from("users")
+        .select("is_subscribed, collection_visibility")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      setIsSubscribed(!!profile?.is_subscribed);
+
+      if (
+        profile?.collection_visibility === "private" ||
+        profile?.collection_visibility === "extras_only" ||
+        profile?.collection_visibility === "full"
+      ) {
+        setVisibility(profile.collection_visibility);
+      }
 
       const { data: doorables, error: doorablesError } = await supabase
         .from("doorables")
@@ -230,13 +251,56 @@ export default function Page() {
     }
   }
 
+  async function saveVisibility(next: "private" | "extras_only" | "full") {
+    try {
+      setSavingVisibility(true);
+      setError("");
+
+      const supabase = getSupabase();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setSavingVisibility(false);
+        return;
+      }
+
+      const { error } = await supabase
+        .from("users")
+        .update({ collection_visibility: next })
+        .eq("id", user.id);
+
+      if (error) {
+        setError("Could not save visibility: " + error.message);
+        setSavingVisibility(false);
+        return;
+      }
+
+      setVisibility(next);
+      setSavingVisibility(false);
+    } catch (err) {
+      setSavingVisibility(false);
+      setError(err instanceof Error ? err.message : "Could not save visibility.");
+    }
+  }
+
   async function saveCard(card: Card, nextQty: number, nextNote: string) {
     try {
       const supabase = getSupabase();
       const qty = Math.max(0, Number(nextQty ?? card.qty ?? 0));
       const note = String(nextNote ?? card.note ?? "");
+      const ownedCount = cards.filter((c) => c.qty > 0).length;
+      const isAddingNewOwned = card.qty <= 0 && qty > 0;
+
+      if (!isSubscribed && isAddingNewOwned && ownedCount >= 50) {
+        setError("Free accounts can save up to 50 Doorables. Upgrade to unlock unlimited collection 💜");
+        return;
+      }
 
       setSavingId(card.id);
+      setError("");
 
       const payload = {
         user_id: userId,
@@ -424,7 +488,7 @@ export default function Page() {
     );
   }
 
-  if (error) {
+  if (error && !cards.length) {
     return (
       <div style={{ padding: 24, minHeight: "100vh", background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)", color: "white" }}>
         <h1>Collection Error</h1>
@@ -532,6 +596,16 @@ export default function Page() {
           cursor: not-allowed;
         }
 
+        .upgradeBox {
+          margin-top: 12px;
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          border-radius: 18px;
+          padding: 14px;
+          border: 1px solid rgba(255,255,255,0.35);
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+        }
+
         @media (max-width: 920px) {
           main {
             padding: 16px !important;
@@ -550,12 +624,6 @@ export default function Page() {
           .floatCard {
             border-radius: 18px !important;
             padding: 10px !important;
-          }
-        }
-
-        @media (max-width: 640px) {
-          .cardsGrid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
       `}</style>
@@ -603,6 +671,85 @@ export default function Page() {
                 />
               </div>
             </div>
+          </div>
+
+          {!isSubscribed && (
+            <div className="upgradeBox">
+              <div style={{ fontWeight: 900, marginBottom: 4 }}>
+                Free plan: up to 50 saved Doorables
+              </div>
+              <div style={{ fontSize: 14, color: "#4b5563" }}>
+                You are using {ownedCount}/50 saved Doorables. Upgrade to unlock unlimited collection, marketplace, and selling.
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <Link
+                  href="/pricing"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    background: "#4f46e5",
+                    color: "white",
+                    textDecoration: "none",
+                    fontWeight: 800,
+                  }}
+                >
+                  Upgrade
+                </Link>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section
+          style={{
+            background: "rgba(255,255,255,0.94)",
+            color: "#111827",
+            borderRadius: 24,
+            padding: 16,
+            boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+            marginBottom: 18,
+            border: "1px solid rgba(255,255,255,0.35)",
+          }}
+        >
+          <div style={{ fontWeight: 900, marginBottom: 10 }}>
+            Collection Visibility
+          </div>
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[
+              { value: "private", label: "Private 🔒" },
+              { value: "extras_only", label: "Wishlist + Extras 💜" },
+              { value: "full", label: "Full Collection 🌟" },
+            ].map((option) => {
+              const active = visibility === option.value;
+
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => void saveVisibility(option.value as "private" | "extras_only" | "full")}
+                  disabled={savingVisibility}
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    border: "none",
+                    cursor: savingVisibility ? "wait" : "pointer",
+                    fontWeight: 800,
+                    background: active ? "#4f46e5" : "#eef2ff",
+                    color: active ? "white" : "#3730a3",
+                    opacity: savingVisibility ? 0.7 : 1,
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
+            Control what other collectors can see on your public profile.
           </div>
         </section>
 

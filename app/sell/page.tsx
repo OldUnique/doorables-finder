@@ -67,6 +67,7 @@ export default function SellPage() {
 
   const [title, setTitle] = useState("");
   const [seller, setSeller] = useState("");
+  const [username, setUsername] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -87,28 +88,39 @@ export default function SellPage() {
   }, []);
 
   async function checkUser() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!user) {
-      router.replace("/login");
-      return;
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+
+      let resolvedUsername = "";
+
+      if (user.id) {
+        const { data: usernameProfile } = await supabase
+          .from("users")
+          .select("username, is_subscribed")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        resolvedUsername = String(usernameProfile?.username ?? "");
+        setUsername(resolvedUsername);
+        setIsSubscribed(!!usernameProfile?.is_subscribed);
+      }
+
+      if (!seller) {
+        setSeller(resolvedUsername || user.email || "");
+      }
+
+      setCheckingAuth(false);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not check account.");
+      setCheckingAuth(false);
     }
-
-    const { data: profile } = await supabase
-      .from("users")
-      .select("is_subscribed")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    setIsSubscribed(!!profile?.is_subscribed);
-
-    if (!seller && user.email) {
-      setSeller(user.email);
-    }
-
-    setCheckingAuth(false);
   }
 
   async function handleFileUpload(file: File | null) {
@@ -494,12 +506,34 @@ export default function SellPage() {
               onChange={(e) => setTitle(e.target.value)}
             />
 
-            <input
-              className="field"
-              placeholder="Seller name"
-              value={seller}
-              onChange={(e) => setSeller(e.target.value)}
-            />
+            <div style={{ marginBottom: 12 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#6b7280",
+                  marginBottom: 6,
+                }}
+              >
+                Seller
+              </div>
+
+              <div
+                style={{
+                  width: "100%",
+                  padding: "14px 16px",
+                  borderRadius: 14,
+                  border: "1px solid #e5e7eb",
+                  background: "#f8fafc",
+                  boxSizing: "border-box",
+                  fontSize: 15,
+                  fontWeight: 800,
+                  color: seller ? "#111827" : "#9ca3af",
+                }}
+              >
+                {seller || "Loading..."}
+              </div>
+            </div>
 
             <textarea
               className="field"

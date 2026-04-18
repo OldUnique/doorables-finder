@@ -126,6 +126,9 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
 
+  const [visibility, setVisibility] = useState<"private" | "extras_only" | "full">("private");
+  const [savingVisibility, setSavingVisibility] = useState(false);
+
   const [search, setSearch] = useState("");
   const [seriesFilter, setSeriesFilter] = useState("all");
   const [subcategoryFilter, setSubcategoryFilter] = useState("all");
@@ -178,11 +181,19 @@ export default function Page() {
 
       const { data: profile } = await supabase
         .from("users")
-        .select("is_subscribed")
+        .select("is_subscribed, collection_visibility")
         .eq("id", user.id)
         .maybeSingle();
 
       setIsSubscribed(!!profile?.is_subscribed);
+
+      if (
+        profile?.collection_visibility === "private" ||
+        profile?.collection_visibility === "extras_only" ||
+        profile?.collection_visibility === "full"
+      ) {
+        setVisibility(profile.collection_visibility);
+      }
 
       const { data: doorables, error: doorablesError } = await supabase
         .from("doorables")
@@ -237,6 +248,41 @@ export default function Page() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Collection page crashed while loading.");
       setLoading(false);
+    }
+  }
+
+  async function saveVisibility(next: "private" | "extras_only" | "full") {
+    try {
+      setSavingVisibility(true);
+      setError("");
+
+      const supabase = getSupabase();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setSavingVisibility(false);
+        return;
+      }
+
+      const { error } = await supabase
+        .from("users")
+        .update({ collection_visibility: next })
+        .eq("id", user.id);
+
+      if (error) {
+        setError("Could not save visibility: " + error.message);
+        setSavingVisibility(false);
+        return;
+      }
+
+      setVisibility(next);
+      setSavingVisibility(false);
+    } catch (err) {
+      setSavingVisibility(false);
+      setError(err instanceof Error ? err.message : "Could not save visibility.");
     }
   }
 
@@ -655,6 +701,56 @@ export default function Page() {
               </div>
             </div>
           )}
+        </section>
+
+        <section
+          style={{
+            background: "rgba(255,255,255,0.94)",
+            color: "#111827",
+            borderRadius: 24,
+            padding: 16,
+            boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+            marginBottom: 18,
+            border: "1px solid rgba(255,255,255,0.35)",
+          }}
+        >
+          <div style={{ fontWeight: 900, marginBottom: 10 }}>
+            Collection Visibility
+          </div>
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[
+              { value: "private", label: "Private 🔒" },
+              { value: "extras_only", label: "Wishlist + Extras 💜" },
+              { value: "full", label: "Full Collection 🌟" },
+            ].map((option) => {
+              const active = visibility === option.value;
+
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => void saveVisibility(option.value as "private" | "extras_only" | "full")}
+                  disabled={savingVisibility}
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    border: "none",
+                    cursor: savingVisibility ? "wait" : "pointer",
+                    fontWeight: 800,
+                    background: active ? "#4f46e5" : "#eef2ff",
+                    color: active ? "white" : "#3730a3",
+                    opacity: savingVisibility ? 0.7 : 1,
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
+            Control what other collectors can see on your public profile.
+          </div>
         </section>
 
         <section

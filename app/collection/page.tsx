@@ -704,6 +704,38 @@ export default function Page() {
           box-shadow: 0 12px 24px rgba(0,0,0,0.14);
         }
 
+        .qtyControls {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: 8px;
+        }
+
+        .qtyButton {
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+          border-radius: 14px;
+          font-size: 20px;
+          font-weight: 900;
+          line-height: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          touch-action: manipulation;
+          user-select: none;
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        .qtyValue {
+          min-width: 42px;
+          text-align: center;
+          font-weight: 900;
+          font-size: 22px;
+        }
+
         @media (max-width: 920px) {
           main {
             padding: 16px !important;
@@ -739,6 +771,23 @@ export default function Page() {
 
           .spotlightGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .qtyControls {
+            gap: 8px;
+          }
+
+          .qtyButton {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            border-radius: 16px;
+            font-size: 22px;
+          }
+
+          .qtyValue {
+            min-width: 48px;
+            font-size: 24px;
           }
         }
       `}</style>
@@ -1269,6 +1318,38 @@ export default function Page() {
                       <span>{item.movie}</span>
                     </div>
                   )}
+                </div>
+
+                <div className="qtyControls">
+                  <button
+                    type="button"
+                    onClick={() => void saveCard(item, item.qty - 1, item.note)}
+                    disabled={savingId === item.id}
+                    className="qtyButton"
+                    style={{
+                      border: "1px solid " + rarity.border,
+                      background: "rgba(255,255,255,0.90)",
+                      color: rarity.text,
+                    }}
+                  >
+                    −
+                  </button>
+
+                  <div className="qtyValue">{item.qty}</div>
+
+                  <button
+                    type="button"
+                    onClick={() => void saveCard(item, item.qty + 1, item.note)}
+                    disabled={savingId === item.id}
+                    className="qtyButton"
+                    style={{
+                      border: "1px solid " + rarity.border,
+                      background: "rgba(255,255,255,0.90)",
+                      color: rarity.text,
+                    }}
+                  >
+                    +
+                  </button>
                 </div>
 
                 <div

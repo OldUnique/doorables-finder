@@ -17,6 +17,12 @@ type Card = {
   rowId: string | null;
 };
 
+type PublicCollector = {
+  id: string;
+  username: string;
+  collection_visibility: "private" | "extras_only" | "full";
+};
+
 type Theme = {
   bg: string;
   border: string;
@@ -121,10 +127,16 @@ function collectionStatus(qty: number) {
 export default function Page() {
   const [cards, setCards] = useState<Card[]>([]);
   const [userId, setUserId] = useState("");
+  const [username, setUsername] = useState("");
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
+
+  const [visibility, setVisibility] = useState<"private" | "extras_only" | "full">("private");
+  const [savingVisibility, setSavingVisibility] = useState(false);
+
+  const [publicCollectors, setPublicCollectors] = useState<PublicCollector[]>([]);
 
   const [search, setSearch] = useState("");
   const [seriesFilter, setSeriesFilter] = useState("all");
@@ -178,11 +190,38 @@ export default function Page() {
 
       const { data: profile } = await supabase
         .from("users")
-        .select("is_subscribed")
+        .select("is_subscribed, collection_visibility, username")
         .eq("id", user.id)
         .maybeSingle();
 
       setIsSubscribed(!!profile?.is_subscribed);
+      setUsername(String(profile?.username ?? ""));
+
+      if (
+        profile?.collection_visibility === "private" ||
+        profile?.collection_visibility === "extras_only" ||
+        profile?.collection_visibility === "full"
+      ) {
+        setVisibility(profile.collection_visibility);
+      }
+
+      const { data: spotlightUsers } = await supabase
+        .from("users")
+        .select("id, username, collection_visibility")
+        .neq("collection_visibility", "private")
+        .not("username", "is", null)
+        .order("username", { ascending: true })
+        .limit(24);
+
+      setPublicCollectors(
+        ((spotlightUsers || []) as any[])
+          .filter((row) => String(row.username ?? "").trim() !== "")
+          .map((row) => ({
+            id: String(row.id),
+            username: String(row.username),
+            collection_visibility: row.collection_visibility,
+          }))
+      );
 
       const { data: doorables, error: doorablesError } = await supabase
         .from("doorables")
@@ -237,6 +276,41 @@ export default function Page() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Collection page crashed while loading.");
       setLoading(false);
+    }
+  }
+
+  async function saveVisibility(next: "private" | "extras_only" | "full") {
+    try {
+      setSavingVisibility(true);
+      setError("");
+
+      const supabase = getSupabase();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setSavingVisibility(false);
+        return;
+      }
+
+      const { error } = await supabase
+        .from("users")
+        .update({ collection_visibility: next })
+        .eq("id", user.id);
+
+      if (error) {
+        setError("Could not save visibility: " + error.message);
+        setSavingVisibility(false);
+        return;
+      }
+
+      setVisibility(next);
+      setSavingVisibility(false);
+    } catch (err) {
+      setSavingVisibility(false);
+      setError(err instanceof Error ? err.message : "Could not save visibility.");
     }
   }
 
@@ -426,6 +500,12 @@ export default function Page() {
     });
   }
 
+  function getVisibilityLabel() {
+    if (visibility === "private") return "Private";
+    if (visibility === "extras_only") return "Wishlist + Extras";
+    return "Full Collection";
+  }
+
   const cardsPerPage = isMobile ? 15 : 30;
   const totalPages = Math.max(1, Math.ceil(filteredCards.length / cardsPerPage));
   const safePage = Math.min(page, totalPages);
@@ -436,7 +516,14 @@ export default function Page() {
 
   if (loading) {
     return (
-      <div style={{ padding: 24, minHeight: "100vh", background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)", color: "white" }}>
+      <div
+        style={{
+          padding: 24,
+          minHeight: "100vh",
+          background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)",
+          color: "white",
+        }}
+      >
         Loading collection...
       </div>
     );
@@ -444,7 +531,14 @@ export default function Page() {
 
   if (error && !cards.length) {
     return (
-      <div style={{ padding: 24, minHeight: "100vh", background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)", color: "white" }}>
+      <div
+        style={{
+          padding: 24,
+          minHeight: "100vh",
+          background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)",
+          color: "white",
+        }}
+      >
         <h1>Collection Error</h1>
         <div>{error}</div>
       </div>
@@ -560,6 +654,56 @@ export default function Page() {
           box-shadow: 0 10px 24px rgba(0,0,0,0.18);
         }
 
+        .publicProfileRow {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .publicProfileButton {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 12px 16px;
+          border-radius: 14px;
+          text-decoration: none;
+          color: white;
+          font-weight: 800;
+          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          box-shadow: 0 10px 18px rgba(79,70,229,0.28);
+        }
+
+        .publicProfileMeta {
+          font-size: 14px;
+          color: #4b5563;
+          line-height: 1.5;
+        }
+
+        .spotlightGrid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 12px;
+        }
+
+        .spotlightCard {
+          display: block;
+          text-decoration: none;
+          background: #ffffff;
+          color: #111827;
+          border-radius: 18px;
+          padding: 14px;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 8px 18px rgba(0,0,0,0.10);
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .spotlightCard:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 24px rgba(0,0,0,0.14);
+        }
+
         @media (max-width: 920px) {
           main {
             padding: 16px !important;
@@ -579,10 +723,30 @@ export default function Page() {
             border-radius: 18px !important;
             padding: 10px !important;
           }
+
+          .publicProfileRow {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .publicProfileButton {
+            width: 100%;
+          }
+
+          .publicProfileMeta {
+            font-size: 13px;
+          }
+
+          .spotlightGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
         }
       `}</style>
 
-      <div className="galaxyStars" style={{ maxWidth: 1400, margin: "0 auto", position: "relative", zIndex: 1 }}>
+      <div
+        className="galaxyStars"
+        style={{ maxWidth: 1400, margin: "0 auto", position: "relative", zIndex: 1 }}
+      >
         <section
           style={{
             background: "linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88))",
@@ -594,9 +758,24 @@ export default function Page() {
             backdropFilter: "blur(6px)",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 18,
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
             <div>
-              <h1 style={{ margin: 0, fontSize: "clamp(2rem, 5vw, 3.1rem)", fontWeight: 900, letterSpacing: -1 }}>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(2rem, 5vw, 3.1rem)",
+                  fontWeight: 900,
+                  letterSpacing: -1,
+                }}
+              >
                 My Collection 💜
               </h1>
               <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
@@ -613,9 +792,20 @@ export default function Page() {
                 padding: 16,
               }}
             >
-              <div style={{ fontSize: 14, opacity: 0.88, marginBottom: 8 }}>Collection Completion</div>
-              <div style={{ fontSize: 30, fontWeight: 900, marginBottom: 10 }}>{completion}%</div>
-              <div style={{ height: 10, borderRadius: 999, background: "rgba(255,255,255,0.15)", overflow: "hidden" }}>
+              <div style={{ fontSize: 14, opacity: 0.88, marginBottom: 8 }}>
+                Collection Completion
+              </div>
+              <div style={{ fontSize: 30, fontWeight: 900, marginBottom: 10 }}>
+                {completion}%
+              </div>
+              <div
+                style={{
+                  height: 10,
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.15)",
+                  overflow: "hidden",
+                }}
+              >
                 <div
                   style={{
                     width: `${completion}%`,
@@ -656,6 +846,120 @@ export default function Page() {
             </div>
           )}
         </section>
+
+        {username && (
+          <section
+            style={{
+              background: "rgba(255,255,255,0.94)",
+              color: "#111827",
+              borderRadius: 24,
+              padding: 16,
+              boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+              marginBottom: 18,
+              border: "1px solid rgba(255,255,255,0.35)",
+            }}
+          >
+            <div className="publicProfileRow">
+              <div>
+                <div style={{ fontWeight: 900, marginBottom: 6 }}>Public Collector Page</div>
+                <div className="publicProfileMeta">
+                  Your current visibility: <strong>{getVisibilityLabel()}</strong>
+                  <br />
+                  Public link: <strong>/collector/{username}</strong>
+                </div>
+              </div>
+
+              <Link href={`/collector/${username}`} className="publicProfileButton">
+                View Public Profile
+              </Link>
+            </div>
+          </section>
+        )}
+
+        <section
+          style={{
+            background: "rgba(255,255,255,0.94)",
+            color: "#111827",
+            borderRadius: 24,
+            padding: 16,
+            boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+            marginBottom: 18,
+            border: "1px solid rgba(255,255,255,0.35)",
+          }}
+        >
+          <div style={{ fontWeight: 900, marginBottom: 10 }}>Collection Visibility</div>
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[
+              { value: "private", label: "Private 🔒" },
+              { value: "extras_only", label: "Wishlist + Extras 💜" },
+              { value: "full", label: "Full Collection 🌟" },
+            ].map((option) => {
+              const active = visibility === option.value;
+
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => void saveVisibility(option.value as "private" | "extras_only" | "full")}
+                  disabled={savingVisibility}
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    border: "none",
+                    cursor: savingVisibility ? "wait" : "pointer",
+                    fontWeight: 800,
+                    background: active ? "#4f46e5" : "#eef2ff",
+                    color: active ? "white" : "#3730a3",
+                    opacity: savingVisibility ? 0.7 : 1,
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
+            Control what other collectors can see on your public profile.
+          </div>
+        </section>
+
+        {publicCollectors.length > 0 && (
+          <section
+            style={{
+              background: "rgba(255,255,255,0.94)",
+              color: "#111827",
+              borderRadius: 24,
+              padding: 16,
+              boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+              marginBottom: 18,
+              border: "1px solid rgba(255,255,255,0.35)",
+            }}
+          >
+            <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 12 }}>
+              Public Collectors Spotlight ✨
+            </div>
+
+            <div className="spotlightGrid">
+              {publicCollectors.map((collector) => (
+                <Link
+                  key={collector.id}
+                  href={`/collector/${collector.username}`}
+                  className="spotlightCard"
+                >
+                  <div style={{ fontWeight: 900, fontSize: 16, marginBottom: 6 }}>
+                    @{collector.username}
+                  </div>
+                  <div style={{ fontSize: 13, color: "#6b7280" }}>
+                    {collector.collection_visibility === "full"
+                      ? "Full collection open"
+                      : "Wishlist + extras open"}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section
           style={{
@@ -723,7 +1027,18 @@ export default function Page() {
               }}
             />
 
-            <div style={{ display: "flex", gap: 8, alignItems: "center", padding: 6, borderRadius: 14, background: "#eef2ff", border: "1px solid #c7d2fe", flexWrap: "wrap" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+                padding: 6,
+                borderRadius: 14,
+                background: "#eef2ff",
+                border: "1px solid #c7d2fe",
+                flexWrap: "wrap",
+              }}
+            >
               {[
                 { value: "all", label: "All" },
                 { value: "have", label: "Have" },
@@ -751,7 +1066,11 @@ export default function Page() {
               })}
             </div>
 
-            <select value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}>
+            <select
+              value={seriesFilter}
+              onChange={(e) => setSeriesFilter(e.target.value)}
+              style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}
+            >
               {seriesOptions.map((series) => (
                 <option key={series} value={series}>
                   {series === "all" ? "All Series" : series}
@@ -759,7 +1078,11 @@ export default function Page() {
               ))}
             </select>
 
-            <select value={subcategoryFilter} onChange={(e) => setSubcategoryFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}>
+            <select
+              value={subcategoryFilter}
+              onChange={(e) => setSubcategoryFilter(e.target.value)}
+              style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}
+            >
               {subcategoryOptions.map((subcategory) => (
                 <option key={subcategory} value={subcategory}>
                   {subcategory === "all" ? "All Subcategories" : subcategory}
@@ -767,7 +1090,11 @@ export default function Page() {
               ))}
             </select>
 
-            <select value={movieFilter} onChange={(e) => setMovieFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}>
+            <select
+              value={movieFilter}
+              onChange={(e) => setMovieFilter(e.target.value)}
+              style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}
+            >
               {movieOptions.map((movie) => (
                 <option key={movie} value={movie}>
                   {movie === "all" ? "All Movies" : movie}
@@ -775,7 +1102,11 @@ export default function Page() {
               ))}
             </select>
 
-            <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}>
+            <select
+              value={rarityFilter}
+              onChange={(e) => setRarityFilter(e.target.value)}
+              style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}
+            >
               {rarityOptions.map((rarity) => (
                 <option key={rarity} value={rarity}>
                   {rarity === "all" ? "All Rarities" : rarity}
@@ -843,7 +1174,14 @@ export default function Page() {
                   {entry.owned}/{entry.total} collected • {entry.percent}%
                 </div>
 
-                <div style={{ height: 10, borderRadius: 999, background: "#e5e7eb", overflow: "hidden" }}>
+                <div
+                  style={{
+                    height: 10,
+                    borderRadius: 999,
+                    background: "#e5e7eb",
+                    overflow: "hidden",
+                  }}
+                >
                   <div
                     style={{
                       width: `${entry.percent}%`,
@@ -895,7 +1233,15 @@ export default function Page() {
                   )}
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "start", marginBottom: 6 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    alignItems: "start",
+                    marginBottom: 6,
+                  }}
+                >
                   <div>
                     <div style={{ fontWeight: 900, fontSize: 20 }}>{item.name}</div>
                     <div style={{ opacity: 0.8, fontSize: 14 }}>{item.series}</div>
@@ -925,40 +1271,6 @@ export default function Page() {
                   )}
                 </div>
 
-                <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", justifyContent: "space-between" }}>
-                  <button
-                    onClick={() => void saveCard(item, item.qty - 1, item.note)}
-                    disabled={savingId === item.id}
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 12,
-                      border: "1px solid " + rarity.border,
-                      background: "rgba(255,255,255,0.84)",
-                      cursor: "pointer",
-                    }}
-                  >
-                    -
-                  </button>
-
-                  <div style={{ fontWeight: 900, fontSize: 22 }}>{item.qty}</div>
-
-                  <button
-                    onClick={() => void saveCard(item, item.qty + 1, item.note)}
-                    disabled={savingId === item.id}
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 12,
-                      border: "1px solid " + rarity.border,
-                      background: "rgba(255,255,255,0.84)",
-                      cursor: "pointer",
-                    }}
-                  >
-                    +
-                  </button>
-                </div>
-
                 <div
                   style={{
                     marginTop: 8,
@@ -979,7 +1291,9 @@ export default function Page() {
                   value={item.note}
                   onChange={(e) => {
                     const value = e.target.value;
-                    setCards((prev) => prev.map((c) => (c.id === item.id ? { ...c, note: value } : c)));
+                    setCards((prev) =>
+                      prev.map((c) => (c.id === item.id ? { ...c, note: value } : c))
+                    );
                   }}
                   placeholder="Notes..."
                   style={{

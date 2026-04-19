@@ -277,11 +277,13 @@ export default function AdminSubmissionsPage() {
         style={{
           minHeight: "100vh",
           padding: 24,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.22) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.20) 0%, rgba(59,130,246,0) 22%), linear-gradient(135deg, #0f172a, #1e3a8a)",
-        color: "white",
+display: "flex",
+alignItems: "center",
+justifyContent: "center",
+background:
+  "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.22) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.20) 0%, rgba(59,130,246,0) 22%), linear-gradient(135deg, #0f172a, #1e3a8a)",
+color: "white",
+
       }}
     >
       <style jsx>{`

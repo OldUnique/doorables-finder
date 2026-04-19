@@ -138,6 +138,9 @@ export default function Page() {
 
   const [publicCollectors, setPublicCollectors] = useState<PublicCollector[]>([]);
 
+  const [uploadingPhotoId, setUploadingPhotoId] = useState("");
+  const [photoNote, setPhotoNote] = useState<Record<string, string>>({});
+
   const [search, setSearch] = useState("");
   const [seriesFilter, setSeriesFilter] = useState("all");
   const [subcategoryFilter, setSubcategoryFilter] = useState("all");
@@ -394,6 +397,72 @@ export default function Page() {
     } catch (err) {
       setSavingId("");
       alert("Save failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
+  }
+
+  async function handlePhotoSubmission(card: Card, file: File | null) {
+    if (!file) return;
+
+    try {
+      setError("");
+      setUploadingPhotoId(card.id);
+
+      const supabase = getSupabase();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setError("Please sign in first.");
+        setUploadingPhotoId("");
+        return;
+      }
+
+      const fileExt = file.name.split(".").pop() || "jpg";
+      const filePath = `${card.id}/${user.id}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("submissions")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        setError(uploadError.message);
+        setUploadingPhotoId("");
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("submissions")
+        .getPublicUrl(filePath);
+
+      const { error: insertError } = await supabase
+        .from("image_submissions")
+        .insert([
+          {
+            doorable_id: card.id,
+            submitted_by: user.id,
+            image_url: publicUrlData.publicUrl,
+            note: photoNote[card.id] || null,
+            status: "pending",
+          },
+        ]);
+
+      if (insertError) {
+        setError(insertError.message);
+        setUploadingPhotoId("");
+        return;
+      }
+
+      setPhotoNote((prev) => ({ ...prev, [card.id]: "" }));
+      setUploadingPhotoId("");
+      alert("Photo submitted for review 💜");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not submit photo.");
+      setUploadingPhotoId("");
     }
   }
 
@@ -1407,6 +1476,56 @@ export default function Page() {
                 >
                   {savingId === item.id ? "Saving Note..." : "Save Note"}
                 </button>
+
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: 10,
+                    borderRadius: 12,
+                    background: "rgba(255,255,255,0.55)",
+                    border: "1px solid rgba(255,255,255,0.6)",
+                  }}
+                >
+                  <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>
+                    Submit a better photo
+                  </div>
+
+                  <textarea
+                    value={photoNote[item.id] || ""}
+                    onChange={(e) =>
+                      setPhotoNote((prev) => ({
+                        ...prev,
+                        [item.id]: e.target.value,
+                      }))
+                    }
+                    placeholder="Optional note about this image..."
+                    style={{
+                      width: "100%",
+                      minHeight: 56,
+                      borderRadius: 10,
+                      border: "1px solid #d1d5db",
+                      padding: 8,
+                      boxSizing: "border-box",
+                      marginBottom: 8,
+                      background: "rgba(255,255,255,0.9)",
+                      color: "#111827",
+                    }}
+                  />
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => void handlePhotoSubmission(item, e.target.files?.[0] ?? null)}
+                    disabled={uploadingPhotoId === item.id}
+                    style={{ width: "100%" }}
+                  />
+
+                  <div style={{ marginTop: 6, fontSize: 12, color: "#4b5563" }}>
+                    {uploadingPhotoId === item.id
+                      ? "Submitting photo..."
+                      : "Uploads are sent for review before they replace the main image."}
+                  </div>
+                </div>
               </div>
             );
           })}

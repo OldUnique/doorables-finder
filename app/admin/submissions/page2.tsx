@@ -26,8 +26,6 @@ type UserRow = {
   email: string | null;
 };
 
-type ViewMode = "pending" | "approved" | "rejected" | "all";
-
 const ADMIN_EMAILS = [
   "riffeljosh80@gmail.com",
   "jjowens@ktc.edu",
@@ -41,7 +39,7 @@ function isAdminEmail(email?: string | null) {
 function niceDate(value?: string | null) {
   if (!value) return "Unknown";
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
+  if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleString();
 }
 
@@ -58,17 +56,15 @@ export default function AdminSubmissionsPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("pending");
 
   async function loadEverything() {
     setLoading(true);
     setMessage("");
 
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
     const { data: subData, error: subError } = await supabase
       .from("image_submissions")
       .select("id, doorable_id, image_url, status, created_at, user_id")
+      .in("status", ["pending", "approved", "rejected"])
       .order("created_at", { ascending: false });
 
     if (subError) {
@@ -77,21 +73,15 @@ export default function AdminSubmissionsPage() {
       return;
     }
 
-    const allRows = ((subData || []) as Submission[]).filter((row) => {
-      if (row.status === "pending") {
-        return !!row.created_at && row.created_at >= oneDayAgo;
-      }
-      return true;
-    });
-
-    setSubmissions(allRows);
+    const submissionRows = (subData || []) as Submission[];
+    setSubmissions(submissionRows);
 
     const doorableIds = Array.from(
-      new Set(allRows.map((row) => row.doorable_id).filter(Boolean))
+      new Set(submissionRows.map((row) => row.doorable_id).filter(Boolean))
     );
 
     const userIds = Array.from(
-      new Set(allRows.map((row) => row.user_id).filter(Boolean))
+      new Set(submissionRows.map((row) => row.user_id).filter(Boolean))
     ) as string[];
 
     if (doorableIds.length > 0) {
@@ -102,7 +92,7 @@ export default function AdminSubmissionsPage() {
 
       const nextDoorables: Record<string, Doorable> = {};
       (doorableData || []).forEach((row: any) => {
-        nextDoorables[String(row.id)] = row as Doorable;
+        nextDoorables[row.id] = row as Doorable;
       });
       setDoorablesById(nextDoorables);
     } else {
@@ -117,7 +107,7 @@ export default function AdminSubmissionsPage() {
 
       const nextUsers: Record<string, UserRow> = {};
       (userData || []).forEach((row: any) => {
-        nextUsers[String(row.id)] = row as UserRow;
+        nextUsers[row.id] = row as UserRow;
       });
       setUsersById(nextUsers);
     } else {
@@ -151,7 +141,7 @@ export default function AdminSubmissionsPage() {
       await loadEverything();
     }
 
-    void checkAccess();
+    checkAccess();
   }, [router, supabase]);
 
   async function approveSubmission(submission: Submission) {
@@ -180,8 +170,8 @@ export default function AdminSubmissionsPage() {
       return;
     }
 
-    setSubmissions((prev) => prev.filter((item) => item.id !== submission.id));
     setMessage("Approved image successfully.");
+    await loadEverything();
     setBusyId(null);
   }
 
@@ -191,17 +181,17 @@ export default function AdminSubmissionsPage() {
 
     const { error } = await supabase
       .from("image_submissions")
-      .delete()
+      .update({ status: "rejected" })
       .eq("id", submission.id);
 
     if (error) {
-      setMessage("Could not reject/delete submission: " + error.message);
+      setMessage("Could not reject submission: " + error.message);
       setBusyId(null);
       return;
     }
 
-    setSubmissions((prev) => prev.filter((item) => item.id !== submission.id));
-    setMessage("Rejected submission removed.");
+    setMessage("Rejected submission.");
+    await loadEverything();
     setBusyId(null);
   }
 
@@ -220,12 +210,8 @@ export default function AdminSubmissionsPage() {
       return;
     }
 
-    setSubmissions((prev) =>
-      prev.map((item) =>
-        item.id === submission.id ? { ...item, status: "pending" } : item
-      )
-    );
     setMessage("Moved back to pending.");
+    await loadEverything();
     setBusyId(null);
   }
 
@@ -247,21 +233,14 @@ export default function AdminSubmissionsPage() {
       return;
     }
 
-    setSubmissions((prev) => prev.filter((item) => item.id !== submission.id));
     setMessage("Deleted submission.");
+    await loadEverything();
     setBusyId(null);
   }
 
   const pending = submissions.filter((s) => s.status === "pending");
   const approved = submissions.filter((s) => s.status === "approved");
   const rejected = submissions.filter((s) => s.status === "rejected");
-
-  const visibleSubmissions = useMemo(() => {
-    if (viewMode === "pending") return pending;
-    if (viewMode === "approved") return approved;
-    if (viewMode === "rejected") return rejected;
-    return submissions;
-  }, [viewMode, pending, approved, rejected, submissions]);
 
   if (checkingAccess) {
     return (
@@ -280,209 +259,98 @@ export default function AdminSubmissionsPage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.22) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.20) 0%, rgba(59,130,246,0) 22%), linear-gradient(135deg, #0f172a, #1e3a8a)",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 560,
+            width: "100%",
+            borderRadius: 24,
+            padding: 28,
+            background: "linear-gradient(135deg,#111827,#4338ca)",
+            color: "white",
+            textAlign: "center",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.35)",
+          }}
+        >
+          <div style={{ fontSize: 38, fontWeight: 900, marginBottom: 12 }}>
+            Admin Only 🔒
+          </div>
+          <div style={{ fontSize: 18, opacity: 0.95, lineHeight: 1.5 }}>
+            This page is only for approved admin emails.
+          </div>
+          <div style={{ marginTop: 14, fontSize: 14, opacity: 0.8 }}>
+            Signed in as: {currentEmail || "Unknown"}
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        padding: 24,
+        background: "linear-gradient(135deg, #0f172a, #1e3a8a)",
         color: "white",
       }}
     >
-      <style jsx>{`
-        .statsGrid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 14px;
-          margin-bottom: 18px;
-        }
-
-        .statCard {
-          background: rgba(255,255,255,0.96);
-          color: #111827;
-          padding: 18px;
-          border-radius: 20px;
-          box-shadow: 0 12px 24px rgba(0,0,0,0.16);
-          border: 1px solid rgba(255,255,255,0.45);
-          cursor: pointer;
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
-          text-align: left;
-        }
-
-        .statCard:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 16px 28px rgba(0,0,0,0.2);
-        }
-
-        .statCardActive {
-          outline: 3px solid #4f46e5;
-        }
-
-        .filterRow {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-bottom: 18px;
-        }
-
-        .filterButton {
-          border: none;
-          border-radius: 14px;
-          padding: 12px 16px;
-          font-weight: 800;
-          cursor: pointer;
-          background: rgba(255,255,255,0.14);
-          color: white;
-          box-shadow: 0 8px 18px rgba(0,0,0,0.14);
-        }
-
-        .filterButtonActive {
-          background: linear-gradient(135deg, #4f46e5, #7c3aed);
-        }
-
-        .refreshButton {
-          background: #f59e0b;
-          color: white;
-          border: none;
-          border-radius: 14px;
-          padding: 12px 16px;
-          font-weight: 800;
-          cursor: pointer;
-          box-shadow: 0 8px 18px rgba(0,0,0,0.14);
-        }
-
-        .cardsGrid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-          gap: 18px;
-        }
-
-        .submissionCard {
-          background: rgba(255,255,255,0.97);
-          color: #111827;
-          border-radius: 22px;
-          padding: 16px;
-          box-shadow: 0 14px 28px rgba(0,0,0,0.16);
-          border: 1px solid rgba(255,255,255,0.5);
-        }
-
-        .imageCompare {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-          margin-bottom: 14px;
-        }
-
-        .imageBox {
-          height: 180px;
-          border-radius: 14px;
-          background: #f3f4f6;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-          border: 1px solid #e5e7eb;
-        }
-
-        .actionRow {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-
-        .actionButton {
-          border: none;
-          border-radius: 12px;
-          padding: 10px 14px;
-          font-weight: 800;
-          cursor: pointer;
-          color: white;
-        }
-
-        @media (max-width: 920px) {
-          main {
-            padding: 16px !important;
-          }
-
-          .imageCompare {
-            grid-template-columns: 1fr;
-          }
-
-          .actionRow {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-          }
-
-          .actionButton {
-            width: 100%;
-          }
-        }
-      `}</style>
-
       <div style={{ maxWidth: 1350, margin: "0 auto" }}>
         <div
           style={{
             background: "linear-gradient(135deg,#111827,#4338ca)",
-            borderRadius: 26,
+            borderRadius: 24,
             padding: 28,
             marginBottom: 18,
             boxShadow: "0 20px 40px rgba(0,0,0,0.25)",
           }}
         >
-          <div style={{ fontSize: "clamp(2rem, 5vw, 2.8rem)", fontWeight: 900 }}>
+          <div style={{ fontSize: 42, fontWeight: 900 }}>
             Image Submission Admin Panel 🛠️
           </div>
           <div style={{ marginTop: 8, fontSize: 18, opacity: 0.95 }}>
-            Review submitted images and keep the database looking good.
+            Review, approve, reject, and manage live image submissions
           </div>
           <div style={{ marginTop: 10, fontSize: 14, opacity: 0.8 }}>
             Signed in as: {currentEmail}
           </div>
         </div>
 
-        <div className="statsGrid">
-          {[
-            { key: "pending", label: "Pending (24h)", value: pending.length },
-            { key: "approved", label: "Approved", value: approved.length },
-            { key: "rejected", label: "Rejected", value: rejected.length },
-            { key: "all", label: "All Visible", value: submissions.length },
-          ].map((item) => {
-            const active = viewMode === item.key;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                className={`statCard ${active ? "statCardActive" : ""}`}
-                onClick={() => setViewMode(item.key as ViewMode)}
-              >
-                <div style={{ fontWeight: 800, marginBottom: 8, color: "#6b7280" }}>
-                  {item.label}
-                </div>
-                <div style={{ fontSize: 34, fontWeight: 900 }}>{item.value}</div>
-              </button>
-            );
-          })}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+            gap: 12,
+            marginBottom: 18,
+          }}
+        >
+          <div style={{ background: "rgba(255,255,255,0.95)", color: "#111827", padding: 16, borderRadius: 18 }}>
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>Pending</div>
+            <div style={{ fontSize: 32, fontWeight: 900 }}>{pending.length}</div>
+          </div>
+          <div style={{ background: "rgba(255,255,255,0.95)", color: "#111827", padding: 16, borderRadius: 18 }}>
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>Approved</div>
+            <div style={{ fontSize: 32, fontWeight: 900 }}>{approved.length}</div>
+          </div>
+          <div style={{ background: "rgba(255,255,255,0.95)", color: "#111827", padding: 16, borderRadius: 18 }}>
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>Rejected</div>
+            <div style={{ fontSize: 32, fontWeight: 900 }}>{rejected.length}</div>
+          </div>
         </div>
 
-        <div className="filterRow">
-          {[
-            { key: "pending", label: "Pending" },
-            { key: "approved", label: "Approved" },
-            { key: "rejected", label: "Rejected" },
-            { key: "all", label: "All" },
-          ].map((item) => {
-            const active = viewMode === item.key;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                className={`filterButton ${active ? "filterButtonActive" : ""}`}
-                onClick={() => setViewMode(item.key as ViewMode)}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-
+        <div style={{ marginBottom: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
-            type="button"
-            onClick={() => void loadEverything()}
-            className="refreshButton"
+            onClick={() => loadEverything()}
+            style={{
+              background: "#f59e0b",
+              color: "white",
+              border: "none",
+              borderRadius: 12,
+              padding: "12px 16px",
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
           >
             Refresh
           </button>
@@ -497,7 +365,6 @@ export default function AdminSubmissionsPage() {
               borderRadius: 16,
               padding: 14,
               fontWeight: 700,
-              boxShadow: "0 10px 20px rgba(0,0,0,0.12)",
             }}
           >
             {message}
@@ -506,21 +373,26 @@ export default function AdminSubmissionsPage() {
 
         {loading ? (
           <div style={{ padding: 20 }}>Loading submissions...</div>
-        ) : visibleSubmissions.length === 0 ? (
+        ) : submissions.length === 0 ? (
           <div
             style={{
               background: "rgba(255,255,255,0.95)",
               color: "#111827",
               borderRadius: 18,
               padding: 24,
-              boxShadow: "0 10px 20px rgba(0,0,0,0.12)",
             }}
           >
-            No submissions in this section.
+            No submissions yet.
           </div>
         ) : (
-          <div className="cardsGrid">
-            {visibleSubmissions.map((submission) => {
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit,minmax(340px,1fr))",
+              gap: 18,
+            }}
+          >
+            {submissions.map((submission) => {
               const doorable = doorablesById[submission.doorable_id];
               const submitter = submission.user_id
                 ? usersById[submission.user_id]?.email || submission.user_id
@@ -530,11 +402,20 @@ export default function AdminSubmissionsPage() {
                 submission.status === "approved"
                   ? "#16a34a"
                   : submission.status === "rejected"
-                    ? "#dc2626"
-                    : "#d97706";
+                  ? "#dc2626"
+                  : "#d97706";
 
               return (
-                <div key={submission.id} className="submissionCard">
+                <div
+                  key={submission.id}
+                  style={{
+                    background: "rgba(255,255,255,0.97)",
+                    color: "#111827",
+                    borderRadius: 20,
+                    padding: 16,
+                    boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+                  }}
+                >
                   <div
                     style={{
                       display: "flex",
@@ -542,13 +423,66 @@ export default function AdminSubmissionsPage() {
                       gap: 10,
                       alignItems: "center",
                       marginBottom: 12,
-                      flexWrap: "wrap",
-                  <div className="imageCompare">
+                    }}
+                  >
+                    <div style={{ fontSize: 22, fontWeight: 900 }}>
+                      {doorable?.name || "Unknown Doorable"}
+                    </div>
+
+                    <div
+                      style={{
+                        background: statusColor,
+                        color: "white",
+                        borderRadius: 999,
+                        padding: "6px 10px",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {submission.status || "pending"}
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 14, color: "#475569", marginBottom: 6 }}>
+                    Series: {doorable?.series || "Unknown"}
+                  </div>
+
+                  <div style={{ fontSize: 14, color: "#475569", marginBottom: 6 }}>
+                    Movie: {doorable?.movie || "Unknown"}
+                  </div>
+
+                  <div style={{ fontSize: 14, color: "#475569", marginBottom: 6 }}>
+                    Submitted by: {submitter}
+                  </div>
+
+                  <div style={{ fontSize: 14, color: "#475569", marginBottom: 14 }}>
+                    Submitted: {niceDate(submission.created_at)}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 12,
+                      marginBottom: 14,
+                    }}
+                  >
                     <div>
                       <div style={{ fontWeight: 800, marginBottom: 8 }}>
                         Current image
                       </div>
-                      <div className="imageBox">
+                      <div
+                        style={{
+                          height: 180,
+                          borderRadius: 14,
+                          background: "#f3f4f6",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          overflow: "hidden",
+                        }}
+                      >
                         {doorable?.image_url ? (
                           <img
                             src={doorable.image_url}
@@ -567,7 +501,17 @@ export default function AdminSubmissionsPage() {
                       <div style={{ fontWeight: 800, marginBottom: 8 }}>
                         Submitted image
                       </div>
-                      <div className="imageBox">
+                      <div
+                        style={{
+                          height: 180,
+                          borderRadius: 14,
+                          background: "#f3f4f6",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          overflow: "hidden",
+                        }}
+                      >
                         <img
                           src={submission.image_url}
                           alt="Submitted image"
@@ -577,13 +521,18 @@ export default function AdminSubmissionsPage() {
                     </div>
                   </div>
 
-                  <div className="actionRow">
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <button
-                      onClick={() => void approveSubmission(submission)}
+                      onClick={() => approveSubmission(submission)}
                       disabled={busyId === submission.id}
-                      className="actionButton"
                       style={{
                         background: "#16a34a",
+                        color: "white",
+                        border: "none",
+                        borderRadius: 12,
+                        padding: "10px 14px",
+                        fontWeight: 800,
+                        cursor: "pointer",
                         opacity: busyId === submission.id ? 0.7 : 1,
                       }}
                     >
@@ -591,11 +540,16 @@ export default function AdminSubmissionsPage() {
                     </button>
 
                     <button
-                      onClick={() => void rejectSubmission(submission)}
+                      onClick={() => rejectSubmission(submission)}
                       disabled={busyId === submission.id}
-                      className="actionButton"
                       style={{
                         background: "#dc2626",
+                        color: "white",
+                        border: "none",
+                        borderRadius: 12,
+                        padding: "10px 14px",
+                        fontWeight: 800,
+                        cursor: "pointer",
                         opacity: busyId === submission.id ? 0.7 : 1,
                       }}
                     >
@@ -603,11 +557,16 @@ export default function AdminSubmissionsPage() {
                     </button>
 
                     <button
-                      onClick={() => void markPending(submission)}
+                      onClick={() => markPending(submission)}
                       disabled={busyId === submission.id}
-                      className="actionButton"
                       style={{
                         background: "#f59e0b",
+                        color: "white",
+                        border: "none",
+                        borderRadius: 12,
+                        padding: "10px 14px",
+                        fontWeight: 800,
+                        cursor: "pointer",
                         opacity: busyId === submission.id ? 0.7 : 1,
                       }}
                     >
@@ -615,11 +574,16 @@ export default function AdminSubmissionsPage() {
                     </button>
 
                     <button
-                      onClick={() => void deleteSubmission(submission)}
+                      onClick={() => deleteSubmission(submission)}
                       disabled={busyId === submission.id}
-                      className="actionButton"
                       style={{
                         background: "#334155",
+                        color: "white",
+                        border: "none",
+                        borderRadius: 12,
+                        padding: "10px 14px",
+                        fontWeight: 800,
+                        cursor: "pointer",
                         opacity: busyId === submission.id ? 0.7 : 1,
                       }}
                     >
@@ -635,4 +599,3 @@ export default function AdminSubmissionsPage() {
     </main>
   );
 }
-

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getSupabase } from "../lib/supabase";
@@ -147,9 +148,11 @@ export default function AppHeader() {
         position: "sticky",
         top: 0,
         zIndex: 40,
-        backdropFilter: "blur(10px)",
-        background: "rgba(10, 14, 30, 0.88)",
+        backdropFilter: "blur(14px)",
+        background:
+          "linear-gradient(135deg, rgba(8,11,24,0.92), rgba(32,17,68,0.88), rgba(30,41,99,0.88))",
         borderBottom: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "0 12px 28px rgba(0,0,0,0.22)",
       }}
     >
       <div
@@ -178,22 +181,57 @@ export default function AppHeader() {
         >
           <div
             style={{
-              width: 42,
-              height: 42,
-              borderRadius: 14,
+              width: 52,
+              height: 52,
+              borderRadius: 16,
+              overflow: "hidden",
               display: "grid",
               placeItems: "center",
-              background: "linear-gradient(135deg, #2563eb, #7c3aed)",
-              boxShadow: "0 10px 24px rgba(37,99,235,0.35)",
-              fontSize: 18,
+              background:
+                "linear-gradient(135deg, rgba(124,58,237,0.92), rgba(59,130,246,0.92), rgba(236,72,153,0.92))",
+              boxShadow:
+                "0 10px 24px rgba(124,58,237,0.35), 0 0 0 1px rgba(255,255,255,0.12) inset",
+              flexShrink: 0,
             }}
           >
-            ✨
+            <Image
+              src="/adorable-vault-icon.png"
+              alt="Adorable Vault"
+              width={52}
+              height={52}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+              priority
+            />
           </div>
+
           <div>
-            <div style={{ fontSize: 20, lineHeight: 1.1 }}>Doorables Finder</div>
-            <div style={{ fontSize: 12, opacity: 0.72, fontWeight: 700 }}>
-              collect • browse • sell
+            <div
+              style={{
+                fontSize: 22,
+                lineHeight: 1.05,
+                fontWeight: 900,
+                letterSpacing: -0.4,
+                background: "linear-gradient(90deg, #fde68a, #f9a8d4, #93c5fd)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              Adorable Vault
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                opacity: 0.86,
+                fontWeight: 700,
+                color: "#d8b4fe",
+                letterSpacing: 0.2,
+              }}
+            >
+              track • trade • showcase
             </div>
           </div>
         </Link>
@@ -205,7 +243,7 @@ export default function AppHeader() {
             padding: "10px 12px",
             borderRadius: 12,
             border: "1px solid rgba(255,255,255,0.12)",
-            background: "rgba(255,255,255,0.06)",
+            background: "rgba(255,255,255,0.08)",
             color: "white",
             fontWeight: 800,
             cursor: "pointer",
@@ -244,11 +282,15 @@ export default function AppHeader() {
                   textDecoration: "none",
                   fontWeight: 800,
                   background: active
-                    ? "linear-gradient(135deg, rgba(37,99,235,0.95), rgba(124,58,237,0.95))"
+                    ? "linear-gradient(135deg, rgba(236,72,153,0.92), rgba(124,58,237,0.95), rgba(59,130,246,0.92))"
                     : "rgba(255,255,255,0.06)",
                   border: active
-                    ? "1px solid rgba(255,255,255,0.22)"
+                    ? "1px solid rgba(255,255,255,0.2)"
                     : "1px solid rgba(255,255,255,0.08)",
+                  boxShadow: active
+                    ? "0 10px 22px rgba(124,58,237,0.28)"
+                    : "none",
+                  transition: "all 0.18s ease",
                 }}
               >
                 {link.label}
@@ -301,6 +343,7 @@ export default function AppHeader() {
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
+                  color: "#f9fafb",
                 }}
               >
                 {email}
@@ -311,7 +354,8 @@ export default function AppHeader() {
                   padding: "10px 14px",
                   borderRadius: 14,
                   border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(255,255,255,0.08)",
+                  background:
+                    "linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))",
                   color: "white",
                   fontWeight: 800,
                   cursor: "pointer",
@@ -327,7 +371,8 @@ export default function AppHeader() {
                 padding: "10px 14px",
                 borderRadius: 14,
                 border: "1px solid rgba(255,255,255,0.12)",
-                background: "rgba(255,255,255,0.08)",
+                background:
+                  "linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))",
                 color: "white",
                 fontWeight: 800,
                 textDecoration: "none",

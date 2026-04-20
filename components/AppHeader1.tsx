@@ -28,6 +28,20 @@ export default function AppHeader() {
   useEffect(() => {
     let active = true;
 
+    async function refreshUnread() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!active) return;
+
+      if (user?.id) {
+        await loadUnreadCount(user.id);
+      } else {
+        setUnreadCount(0);
+      }
+    }
+
     async function loadUser() {
       const {
         data: { user },
@@ -64,28 +78,33 @@ export default function AppHeader() {
         "postgres_changes",
         { event: "*", schema: "public", table: "marketplace_messages" },
         async () => {
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          if (user?.id) await loadUnreadCount(user.id);
+          await refreshUnread();
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "marketplace_conversations" },
         async () => {
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          if (user?.id) await loadUnreadCount(user.id);
+          await refreshUnread();
         }
       )
       .subscribe();
+
+    function handleUnreadRefreshEvent() {
+      void refreshUnread();
+    }
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("messages-read-updated", handleUnreadRefreshEvent);
+    }
 
     return () => {
       active = false;
       authSub.data.subscription.unsubscribe();
       supabase.removeChannel(channel);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("messages-read-updated", handleUnreadRefreshEvent);
+      }
     };
   }, [supabase]);
 
@@ -101,6 +120,7 @@ export default function AppHeader() {
     }
 
     const ids = conversations.map((c: any) => c.id);
+
     const { data: messages, error: msgError } = await supabase
       .from("marketplace_messages")
       .select("id")

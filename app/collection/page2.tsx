@@ -138,6 +138,9 @@ export default function Page() {
 
   const [publicCollectors, setPublicCollectors] = useState<PublicCollector[]>([]);
 
+  const [uploadingPhotoId, setUploadingPhotoId] = useState("");
+  const [photoNote, setPhotoNote] = useState<Record<string, string>>({});
+
   const [search, setSearch] = useState("");
   const [seriesFilter, setSeriesFilter] = useState("all");
   const [subcategoryFilter, setSubcategoryFilter] = useState("all");
@@ -394,6 +397,72 @@ export default function Page() {
     } catch (err) {
       setSavingId("");
       alert("Save failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
+  }
+
+  async function handlePhotoSubmission(card: Card, file: File | null) {
+    if (!file) return;
+
+    try {
+      setError("");
+      setUploadingPhotoId(card.id);
+
+      const supabase = getSupabase();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setError("Please sign in first.");
+        setUploadingPhotoId("");
+        return;
+      }
+
+      const fileExt = file.name.split(".").pop() || "jpg";
+      const filePath = `${card.id}/${user.id}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("submissions")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        setError(uploadError.message);
+        setUploadingPhotoId("");
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("submissions")
+        .getPublicUrl(filePath);
+
+      const { error: insertError } = await supabase
+        .from("image_submissions")
+        .insert([
+          {
+            doorable_id: card.id,
+            submitted_by: user.id,
+            image_url: publicUrlData.publicUrl,
+            note: photoNote[card.id] || null,
+            status: "pending",
+          },
+        ]);
+
+      if (insertError) {
+        setError(insertError.message);
+        setUploadingPhotoId("");
+        return;
+      }
+
+      setPhotoNote((prev) => ({ ...prev, [card.id]: "" }));
+      setUploadingPhotoId("");
+      alert("Photo submitted for review 💜");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not submit photo.");
+      setUploadingPhotoId("");
     }
   }
 
@@ -704,6 +773,38 @@ export default function Page() {
           box-shadow: 0 12px 24px rgba(0,0,0,0.14);
         }
 
+        .qtyControls {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: 8px;
+        }
+
+        .qtyButton {
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+          border-radius: 14px;
+          font-size: 20px;
+          font-weight: 900;
+          line-height: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          touch-action: manipulation;
+          user-select: none;
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        .qtyValue {
+          min-width: 42px;
+          text-align: center;
+          font-weight: 900;
+          font-size: 22px;
+        }
+
         @media (max-width: 920px) {
           main {
             padding: 16px !important;
@@ -739,6 +840,23 @@ export default function Page() {
 
           .spotlightGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .qtyControls {
+            gap: 8px;
+          }
+
+          .qtyButton {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            border-radius: 16px;
+            font-size: 22px;
+          }
+
+          .qtyValue {
+            min-width: 48px;
+            font-size: 24px;
           }
         }
       `}</style>
@@ -1271,6 +1389,38 @@ export default function Page() {
                   )}
                 </div>
 
+                <div className="qtyControls">
+                  <button
+                    type="button"
+                    onClick={() => void saveCard(item, item.qty - 1, item.note)}
+                    disabled={savingId === item.id}
+                    className="qtyButton"
+                    style={{
+                      border: "1px solid " + rarity.border,
+                      background: "rgba(255,255,255,0.90)",
+                      color: rarity.text,
+                    }}
+                  >
+                    −
+                  </button>
+
+                  <div className="qtyValue">{item.qty}</div>
+
+                  <button
+                    type="button"
+                    onClick={() => void saveCard(item, item.qty + 1, item.note)}
+                    disabled={savingId === item.id}
+                    className="qtyButton"
+                    style={{
+                      border: "1px solid " + rarity.border,
+                      background: "rgba(255,255,255,0.90)",
+                      color: rarity.text,
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+
                 <div
                   style={{
                     marginTop: 8,
@@ -1326,6 +1476,56 @@ export default function Page() {
                 >
                   {savingId === item.id ? "Saving Note..." : "Save Note"}
                 </button>
+
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: 10,
+                    borderRadius: 12,
+                    background: "rgba(255,255,255,0.55)",
+                    border: "1px solid rgba(255,255,255,0.6)",
+                  }}
+                >
+                  <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>
+                    Submit a better photo
+                  </div>
+
+                  <textarea
+                    value={photoNote[item.id] || ""}
+                    onChange={(e) =>
+                      setPhotoNote((prev) => ({
+                        ...prev,
+                        [item.id]: e.target.value,
+                      }))
+                    }
+                    placeholder="Optional note about this image..."
+                    style={{
+                      width: "100%",
+                      minHeight: 56,
+                      borderRadius: 10,
+                      border: "1px solid #d1d5db",
+                      padding: 8,
+                      boxSizing: "border-box",
+                      marginBottom: 8,
+                      background: "rgba(255,255,255,0.9)",
+                      color: "#111827",
+                    }}
+                  />
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => void handlePhotoSubmission(item, e.target.files?.[0] ?? null)}
+                    disabled={uploadingPhotoId === item.id}
+                    style={{ width: "100%" }}
+                  />
+
+                  <div style={{ marginTop: 6, fontSize: 12, color: "#4b5563" }}>
+                    {uploadingPhotoId === item.id
+                      ? "Submitting photo..."
+                      : "Uploads are sent for review before they replace the main image."}
+                  </div>
+                </div>
               </div>
             );
           })}

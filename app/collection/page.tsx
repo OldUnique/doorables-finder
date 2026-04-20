@@ -575,7 +575,7 @@ export default function Page() {
     return "Full Collection";
   }
 
-  const cardsPerPage = isMobile ? 15 : 30;
+  const cardsPerPage = isMobile ? 12 : 30;
   const totalPages = Math.max(1, Math.ceil(filteredCards.length / cardsPerPage));
   const safePage = Math.min(page, totalPages);
   const pagedCards = filteredCards.slice(
@@ -627,14 +627,8 @@ export default function Page() {
       <style jsx>{`
         .cardsGrid {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 16px;
-        }
-
-        @media (min-width: 900px) {
-          .cardsGrid {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-          }
         }
 
         .floatCard {
@@ -642,7 +636,7 @@ export default function Page() {
         }
 
         .floatCard:hover {
-          transform: translateY(-6px);
+          transform: translateY(-4px);
         }
 
         .galaxyStars {
@@ -662,12 +656,74 @@ export default function Page() {
             radial-gradient(1.6px 1.6px at 72% 35%, rgba(255,255,255,0.95) 40%, transparent 41%),
             radial-gradient(2px 2px at 85% 60%, rgba(255,255,255,0.9) 40%, transparent 41%),
             radial-gradient(1.5px 1.5px at 92% 25%, rgba(255,255,255,0.85) 40%, transparent 41%);
-          opacity: 0.65;
+          opacity: 0.6;
           z-index: 0;
         }
 
+        .heroSection {
+          background: linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
+          border-radius: 28px;
+          padding: 24px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+          margin-bottom: 18px;
+          border: 1px solid rgba(255,255,255,0.08);
+          backdrop-filter: blur(6px);
+        }
+
+        .statsSection {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 14px;
+          margin-bottom: 18px;
+        }
+
+        .statButton {
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          border-radius: 20px;
+          padding: 18px;
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          border: 1px solid rgba(255,255,255,0.35);
+          cursor: pointer;
+          text-align: left;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .statButton:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 14px 28px rgba(0,0,0,0.22);
+        }
+
+        .panelCard {
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          border-radius: 24px;
+          padding: 16px;
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          margin-bottom: 18px;
+          border: 1px solid rgba(255,255,255,0.35);
+        }
+
+        .filterWrap {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .collectionToggleWrap {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          padding: 6px;
+          border-radius: 14px;
+          background: #eef2ff;
+          border: 1px solid #c7d2fe;
+          flex-wrap: wrap;
+        }
+
         .cardImageWrap {
-          height: 170px;
+          height: 180px;
           background: rgba(255,255,255,0.92);
           border-radius: 18px;
           display: flex;
@@ -686,7 +742,7 @@ export default function Page() {
         }
 
         .cardImageWrap:hover .cardImage {
-          transform: scale(1.08);
+          transform: scale(1.05);
         }
 
         .pager {
@@ -742,6 +798,7 @@ export default function Page() {
           font-weight: 800;
           background: linear-gradient(135deg, #4f46e5, #7c3aed);
           box-shadow: 0 10px 18px rgba(79,70,229,0.28);
+          min-height: 46px;
         }
 
         .publicProfileMeta {
@@ -782,11 +839,11 @@ export default function Page() {
         }
 
         .qtyButton {
-          width: 44px;
-          height: 44px;
-          min-width: 44px;
+          width: 46px;
+          height: 46px;
+          min-width: 46px;
           border-radius: 14px;
-          font-size: 20px;
+          font-size: 22px;
           font-weight: 900;
           line-height: 1;
           display: inline-flex;
@@ -799,15 +856,67 @@ export default function Page() {
         }
 
         .qtyValue {
-          min-width: 42px;
+          min-width: 44px;
           text-align: center;
           font-weight: 900;
           font-size: 22px;
         }
 
+        .photoBox {
+          margin-top: 10px;
+          padding: 10px;
+          border-radius: 12px;
+          background: rgba(255,255,255,0.55);
+          border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        .mobileSelect {
+          padding: 14px;
+          border-radius: 14px;
+          border: 1px solid #d1d5db;
+          font-size: 15px;
+          min-width: 180px;
+          background: white;
+        }
+
+        .searchBox {
+          flex: 1 1 280px;
+          padding: 14px;
+          border-radius: 14px;
+          border: 1px solid #d1d5db;
+          font-size: 15px;
+          min-height: 48px;
+        }
+
+        @media (max-width: 1199px) {
+          .cardsGrid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+        }
+
         @media (max-width: 920px) {
           main {
-            padding: 16px !important;
+            padding: 14px !important;
+          }
+
+          .heroSection {
+            padding: 18px;
+            border-radius: 22px;
+          }
+
+          .statsSection {
+            grid-template-columns: 1fr;
+            gap: 10px;
+          }
+
+          .statButton {
+            padding: 16px;
+            border-radius: 18px;
+          }
+
+          .panelCard {
+            padding: 14px;
+            border-radius: 20px;
           }
 
           .cardsGrid {
@@ -816,13 +925,30 @@ export default function Page() {
           }
 
           .cardImageWrap {
-            height: 138px;
+            height: 150px;
             padding: 10px;
+            margin-bottom: 10px;
           }
 
           .floatCard {
             border-radius: 18px !important;
             padding: 10px !important;
+          }
+
+          .filterWrap {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .searchBox,
+          .mobileSelect {
+            width: 100%;
+            min-width: 100%;
+          }
+
+          .collectionToggleWrap {
+            width: 100%;
+            justify-content: flex-start;
           }
 
           .publicProfileRow {
@@ -858,6 +984,29 @@ export default function Page() {
             min-width: 48px;
             font-size: 24px;
           }
+
+          .photoBox {
+            padding: 9px;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .cardsGrid {
+            grid-template-columns: 1fr;
+          }
+
+          .cardImageWrap {
+            height: 190px;
+          }
+
+          .spotlightGrid {
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+          }
+
+          .collectionToggleWrap button {
+            flex: 1 1 auto;
+          }
         }
       `}</style>
 
@@ -865,17 +1014,7 @@ export default function Page() {
         className="galaxyStars"
         style={{ maxWidth: 1400, margin: "0 auto", position: "relative", zIndex: 1 }}
       >
-        <section
-          style={{
-            background: "linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88))",
-            borderRadius: 28,
-            padding: 24,
-            boxShadow: "0 20px 40px rgba(0,0,0,0.30)",
-            marginBottom: 18,
-            border: "1px solid rgba(255,255,255,0.08)",
-            backdropFilter: "blur(6px)",
-          }}
-        >
+        <section className="heroSection">
           <div
             style={{
               display: "flex",
@@ -908,6 +1047,8 @@ export default function Page() {
                 border: "1px solid rgba(255,255,255,0.12)",
                 borderRadius: 22,
                 padding: 16,
+                width: isMobile ? "100%" : "auto",
+                maxWidth: isMobile ? "100%" : 320,
               }}
             >
               <div style={{ fontSize: 14, opacity: 0.88, marginBottom: 8 }}>
@@ -956,6 +1097,7 @@ export default function Page() {
                     color: "white",
                     textDecoration: "none",
                     fontWeight: 800,
+                    minHeight: 44,
                   }}
                 >
                   Upgrade
@@ -966,17 +1108,7 @@ export default function Page() {
         </section>
 
         {username && (
-          <section
-            style={{
-              background: "rgba(255,255,255,0.94)",
-              color: "#111827",
-              borderRadius: 24,
-              padding: 16,
-              boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
-              marginBottom: 18,
-              border: "1px solid rgba(255,255,255,0.35)",
-            }}
-          >
+          <section className="panelCard">
             <div className="publicProfileRow">
               <div>
                 <div style={{ fontWeight: 900, marginBottom: 6 }}>Public Collector Page</div>
@@ -994,17 +1126,7 @@ export default function Page() {
           </section>
         )}
 
-        <section
-          style={{
-            background: "rgba(255,255,255,0.94)",
-            color: "#111827",
-            borderRadius: 24,
-            padding: 16,
-            boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
-            marginBottom: 18,
-            border: "1px solid rgba(255,255,255,0.35)",
-          }}
-        >
+        <section className="panelCard">
           <div style={{ fontWeight: 900, marginBottom: 10 }}>Collection Visibility</div>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1029,6 +1151,7 @@ export default function Page() {
                     background: active ? "#4f46e5" : "#eef2ff",
                     color: active ? "white" : "#3730a3",
                     opacity: savingVisibility ? 0.7 : 1,
+                    minHeight: 44,
                   }}
                 >
                   {option.label}
@@ -1043,17 +1166,7 @@ export default function Page() {
         </section>
 
         {publicCollectors.length > 0 && (
-          <section
-            style={{
-              background: "rgba(255,255,255,0.94)",
-              color: "#111827",
-              borderRadius: 24,
-              padding: 16,
-              boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
-              marginBottom: 18,
-              border: "1px solid rgba(255,255,255,0.35)",
-            }}
-          >
+          <section className="panelCard">
             <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 12 }}>
               Public Collectors Spotlight ✨
             </div>
@@ -1079,14 +1192,7 @@ export default function Page() {
           </section>
         )}
 
-        <section
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: 14,
-            marginBottom: 18,
-          }}
-        >
+        <section className="statsSection">
           {[
             { label: "Total Doorables", value: totalCount, action: "all" },
             { label: "Owned", value: ownedCount, action: "have" },
@@ -1095,23 +1201,13 @@ export default function Page() {
             <button
               key={stat.label}
               type="button"
+              className="statButton"
               onClick={() => {
                 setCollectionFilter(stat.action);
                 document.getElementById("cards-grid")?.scrollIntoView({
                   behavior: "smooth",
                   block: "start",
                 });
-              }}
-              style={{
-                background: "rgba(255,255,255,0.94)",
-                color: "#111827",
-                borderRadius: 20,
-                padding: 18,
-                boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
-                border: "1px solid rgba(255,255,255,0.35)",
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "transform 0.15s ease, box-shadow 0.15s ease",
               }}
             >
               <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>{stat.label}</div>
@@ -1120,43 +1216,16 @@ export default function Page() {
           ))}
         </section>
 
-        <section
-          style={{
-            background: "rgba(255,255,255,0.94)",
-            color: "#111827",
-            borderRadius: 24,
-            padding: 16,
-            boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
-            marginBottom: 18,
-            border: "1px solid rgba(255,255,255,0.35)",
-          }}
-        >
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+        <section className="panelCard">
+          <div className="filterWrap">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, series, rarity, movie, notes..."
-              style={{
-                flex: "1 1 280px",
-                padding: 14,
-                borderRadius: 14,
-                border: "1px solid #d1d5db",
-                fontSize: 15,
-              }}
+              className="searchBox"
             />
 
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                alignItems: "center",
-                padding: 6,
-                borderRadius: 14,
-                background: "#eef2ff",
-                border: "1px solid #c7d2fe",
-                flexWrap: "wrap",
-              }}
-            >
+            <div className="collectionToggleWrap">
               {[
                 { value: "all", label: "All" },
                 { value: "have", label: "Have" },
@@ -1176,6 +1245,7 @@ export default function Page() {
                       fontWeight: 800,
                       background: active ? "#4f46e5" : "transparent",
                       color: active ? "white" : "#3730a3",
+                      minHeight: 40,
                     }}
                   >
                     {option.label}
@@ -1184,11 +1254,7 @@ export default function Page() {
               })}
             </div>
 
-            <select
-              value={seriesFilter}
-              onChange={(e) => setSeriesFilter(e.target.value)}
-              style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}
-            >
+            <select value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)} className="mobileSelect">
               {seriesOptions.map((series) => (
                 <option key={series} value={series}>
                   {series === "all" ? "All Series" : series}
@@ -1196,11 +1262,7 @@ export default function Page() {
               ))}
             </select>
 
-            <select
-              value={subcategoryFilter}
-              onChange={(e) => setSubcategoryFilter(e.target.value)}
-              style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}
-            >
+            <select value={subcategoryFilter} onChange={(e) => setSubcategoryFilter(e.target.value)} className="mobileSelect">
               {subcategoryOptions.map((subcategory) => (
                 <option key={subcategory} value={subcategory}>
                   {subcategory === "all" ? "All Subcategories" : subcategory}
@@ -1208,11 +1270,7 @@ export default function Page() {
               ))}
             </select>
 
-            <select
-              value={movieFilter}
-              onChange={(e) => setMovieFilter(e.target.value)}
-              style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}
-            >
+            <select value={movieFilter} onChange={(e) => setMovieFilter(e.target.value)} className="mobileSelect">
               {movieOptions.map((movie) => (
                 <option key={movie} value={movie}>
                   {movie === "all" ? "All Movies" : movie}
@@ -1220,11 +1278,7 @@ export default function Page() {
               ))}
             </select>
 
-            <select
-              value={rarityFilter}
-              onChange={(e) => setRarityFilter(e.target.value)}
-              style={{ padding: 14, borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15, minWidth: 180 }}
-            >
+            <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} className="mobileSelect">
               {rarityOptions.map((rarity) => (
                 <option key={rarity} value={rarity}>
                   {rarity === "all" ? "All Rarities" : rarity}
@@ -1238,17 +1292,7 @@ export default function Page() {
           </div>
         </section>
 
-        <section
-          style={{
-            background: "rgba(255,255,255,0.94)",
-            color: "#111827",
-            borderRadius: 24,
-            padding: 16,
-            boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
-            marginBottom: 18,
-            border: "1px solid rgba(255,255,255,0.35)",
-          }}
-        >
+        <section className="panelCard">
           <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 12 }}>
             Series Progress
           </div>
@@ -1256,7 +1300,7 @@ export default function Page() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
               gap: 12,
             }}
           >
@@ -1332,7 +1376,7 @@ export default function Page() {
                   color: rarity.text,
                   borderRadius: 22,
                   padding: 12,
-                  border: `5px solid ${rarity.border}`,
+                  border: `4px solid ${rarity.border}`,
                   boxShadow: `0 12px 28px rgba(0,0,0,0.14), 0 0 18px ${rarity.glow}`,
                   filter: item.qty > 0 ? "saturate(1.02)" : "saturate(0.98)",
                 }}
@@ -1360,8 +1404,17 @@ export default function Page() {
                     marginBottom: 6,
                   }}
                 >
-                  <div>
-                    <div style={{ fontWeight: 900, fontSize: 20 }}>{item.name}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontWeight: 900,
+                        fontSize: isMobile ? 18 : 20,
+                        lineHeight: 1.1,
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {item.name}
+                    </div>
                     <div style={{ opacity: 0.8, fontSize: 14 }}>{item.series}</div>
                   </div>
                   <div
@@ -1373,6 +1426,7 @@ export default function Page() {
                       background: rarity.badgeBg,
                       color: rarity.badgeText,
                       whiteSpace: "nowrap",
+                      flexShrink: 0,
                     }}
                   >
                     {item.rarity}
@@ -1449,13 +1503,14 @@ export default function Page() {
                   style={{
                     width: "100%",
                     marginTop: 8,
-                    minHeight: 70,
+                    minHeight: isMobile ? 64 : 70,
                     borderRadius: 12,
                     border: "1px solid " + rarity.border,
                     background: "rgba(255,255,255,0.82)",
                     padding: 10,
                     color: "#111827",
                     boxSizing: "border-box",
+                    fontSize: 14,
                   }}
                 />
 
@@ -1465,27 +1520,20 @@ export default function Page() {
                   style={{
                     marginTop: 8,
                     width: "100%",
-                    padding: "10px 12px",
+                    padding: "11px 12px",
                     borderRadius: 12,
                     border: "none",
                     cursor: "pointer",
                     fontWeight: 800,
                     background: rarity.badgeBg,
                     color: rarity.badgeText,
+                    minHeight: 44,
                   }}
                 >
                   {savingId === item.id ? "Saving Note..." : "Save Note"}
                 </button>
 
-                <div
-                  style={{
-                    marginTop: 10,
-                    padding: 10,
-                    borderRadius: 12,
-                    background: "rgba(255,255,255,0.55)",
-                    border: "1px solid rgba(255,255,255,0.6)",
-                  }}
-                >
+                <div className="photoBox">
                   <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>
                     Submit a better photo
                   </div>
@@ -1509,6 +1557,7 @@ export default function Page() {
                       marginBottom: 8,
                       background: "rgba(255,255,255,0.9)",
                       color: "#111827",
+                      fontSize: 14,
                     }}
                   />
 

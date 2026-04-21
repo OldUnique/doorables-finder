@@ -188,7 +188,7 @@ export default function AppHeader() {
     borderRadius: 12,
     objectFit: "cover",
     transform: "scale(1.75)",
-    boxShadow: "0 6px 16px rgba(124,58,237,0.4)",
+    boxShadow: "0 2px 8px rgba(124,58,237,0.25)",
   }}
 />
 

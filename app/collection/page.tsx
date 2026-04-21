@@ -685,71 +685,94 @@ export default function Page() {
     }
   }
 
-  async function handlePhotoSubmission(card: Card, file: File | null) {
-    if (!file) return;
+async function handlePhotoSubmission(card: Card, file: File | null) {
+  if (!file) return;
 
-    try {
-      setError("");
-      setUploadingPhotoId(card.id);
+  try {
+    setError("");
+    setUploadingPhotoId(card.id);
 
-      const supabase = getSupabase();
+    const supabase = getSupabase();
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-      if (!user) {
-        setError("Please sign in first.");
-        setUploadingPhotoId("");
-        return;
-      }
-
-      const fileExt = file.name.split(".").pop() || "jpg";
-      const filePath = `${card.id}/${user.id}-${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("submissions")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (uploadError) {
-        setError(uploadError.message);
-        setUploadingPhotoId("");
-        return;
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from("submissions")
-        .getPublicUrl(filePath);
-
-      const { error: insertError } = await supabase
-        .from("image_submissions")
-        .insert([
-          {
-            doorable_id: card.id,
-            submitted_by: user.id,
-            image_url: publicUrlData.publicUrl,
-            note: photoNote[card.id] || null,
-            status: "pending",
-          },
-        ]);
-
-      if (insertError) {
-        setError(insertError.message);
-        setUploadingPhotoId("");
-        return;
-      }
-
-      setPhotoNote((prev) => ({ ...prev, [card.id]: "" }));
-      setUploadingPhotoId("");
-      alert("Photo submitted for review 💜");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not submit photo.");
-      setUploadingPhotoId("");
+    if (userError || !user) {
+      console.error("Auth error:", userError);
+      setError("You are not signed in. Refresh and log in again.");
+      return;
     }
+
+    console.log("📸 Uploading file:", file);
+
+    const fileExt = file.name.split(".").pop() || "jpg";
+
+    // ✅ BETTER PATH (organized + prevents overwrite issues)
+    const filePath = `doorables/${card.id}/${user.id}-${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("submissions")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: true, // ✅ important fix
+      });
+
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      setError(uploadError.message);
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("submissions")
+      .getPublicUrl(filePath);
+
+    const publicUrl = publicUrlData.publicUrl;
+
+    console.log("✅ Uploaded URL:", publicUrl);
+
+    const insertPayload = {
+  user_id: user.id,
+  doorable_id: card.id,
+  image_url: publicUrl,
+  status: "pending",
+};
+
+console.log("Insert payload:", insertPayload);
+
+const { data: insertedRow, error: insertError } = await supabase
+  .from("image_submissions")
+  .insert([insertPayload])
+  .select();
+
+if (insertError) {
+  console.error("Insert error full:", JSON.stringify(insertError, null, 2));
+  setError(insertError.message || "Insert failed");
+  setUploadingPhotoId("");
+  return;
+}
+
+console.log("Inserted row:", insertedRow);
+
+
+    if (insertError) {
+      console.error("Insert error:", insertError);
+      setError(insertError.message);
+      return;
+    }
+
+    alert("Photo submitted 💜");
+
+    setPhotoNote((prev) => ({ ...prev, [card.id]: "" }));
+  } catch (err) {
+    console.error("Upload crash:", err);
+    setError("Upload failed");
+  } finally {
+    setUploadingPhotoId("");
   }
+}
 
   const seriesOptions = useMemo(
     () => ["all", ...Array.from(new Set(cards.map((c) => c.series).filter(Boolean))).sort(seriesSort)],

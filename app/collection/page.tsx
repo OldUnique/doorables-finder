@@ -885,7 +885,11 @@ export default function Page() {
           border-radius: 14px;
           border: 1px solid #d1d5db;
           font-size: 15px;
-          min-height: 48px;
+          min-height: 52px;
+	  height: 52px;
+	  max-height: 52px;
+	  background:white;
+	  box-sizing: border-box;
         }
 
         @media (max-width: 1199px) {
@@ -908,6 +912,13 @@ export default function Page() {
             grid-template-columns: 1fr;
             gap: 10px;
           }
+
+	  .searchBox,
+	   height: 50px !important;
+	   min-height: 50px !important;
+	   max-height: 50px !important;
+	   flex: none;
+	  }
 
           .statButton {
             padding: 16px;

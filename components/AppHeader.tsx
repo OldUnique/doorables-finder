@@ -179,34 +179,17 @@ export default function AppHeader() {
             fontSize: 18,
           }}
         >
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: 16,
-              overflow: "hidden",
-              display: "grid",
-              placeItems: "center",
-              background:
-                "linear-gradient(135deg, rgba(124,58,237,0.92), rgba(59,130,246,0.92), rgba(236,72,153,0.92))",
-              boxShadow:
-                "0 10px 24px rgba(124,58,237,0.35), 0 0 0 1px rgba(255,255,255,0.12) inset",
-              flexShrink: 0,
-            }}
-          >
-            <Image
-              src="/adorable-vault-icon.png"
-              alt="Adorable Vault"
-              width={52}
-              height={52}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-              }}
-              priority
-            />
-          </div>
+<img
+  src="/icon.png"
+  alt="Adorable Vault"
+  style={{
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    objectFit: "cover",
+    boxShadow: "0 6px 16px rgba(124,58,237,0.4)",
+  }}
+/>
 
           <div>
             <div

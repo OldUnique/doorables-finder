@@ -627,8 +627,8 @@ export default function Page() {
       <style jsx>{`
         .cardsGrid {
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 16px;
+          grid-template-columns: 1fr;
+          gap: 14px;
         }
 
         .floatCard {
@@ -672,7 +672,7 @@ export default function Page() {
 
         .statsSection {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: 1fr;
           gap: 14px;
           margin-bottom: 18px;
         }
@@ -709,6 +709,8 @@ export default function Page() {
           gap: 12px;
           flex-wrap: wrap;
           align-items: center;
+          flex-direction: column;
+          align-items: stretch;
         }
 
         .collectionToggleWrap {
@@ -720,6 +722,8 @@ export default function Page() {
           background: #eef2ff;
           border: 1px solid #c7d2fe;
           flex-wrap: wrap;
+          width: 100%;
+          justify-content: flex-start;
         }
 
         .cardImageWrap {
@@ -785,6 +789,8 @@ export default function Page() {
           align-items: center;
           gap: 12px;
           flex-wrap: wrap;
+          flex-direction: column;
+          align-items: stretch;
         }
 
         .publicProfileButton {
@@ -799,18 +805,19 @@ export default function Page() {
           background: linear-gradient(135deg, #4f46e5, #7c3aed);
           box-shadow: 0 10px 18px rgba(79,70,229,0.28);
           min-height: 46px;
+          width: 100%;
         }
 
         .publicProfileMeta {
-          font-size: 14px;
+          font-size: 13px;
           color: #4b5563;
           line-height: 1.5;
         }
 
         .spotlightGrid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
         }
 
         .spotlightCard {
@@ -875,155 +882,101 @@ export default function Page() {
           border-radius: 14px;
           border: 1px solid #d1d5db;
           font-size: 15px;
-          min-width: 180px;
+          min-width: 100%;
           background: white;
+          width: 100%;
         }
 
         .searchBox {
           flex: 1 1 280px;
-          padding: 14px;
+          padding: 14px 16px;
           border-radius: 14px;
           border: 1px solid #d1d5db;
           font-size: 15px;
           min-height: 52px;
-	  height: 52px;
-	  max-height: 52px;
-	  background:white;
-	  box-sizing: border-box;
+          height: 52px;
+          max-height: 52px;
+          background: white;
+          box-sizing: border-box;
+          width: 100%;
+          min-width: 100%;
         }
 
-        @media (max-width: 1199px) {
-          .cardsGrid {
+        @media (min-width: 641px) {
+          .statsSection {
             grid-template-columns: repeat(3, minmax(0, 1fr));
           }
+
+          .spotlightGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
         }
 
-        @media (max-width: 920px) {
+        @media (min-width: 921px) {
           main {
-            padding: 14px !important;
-          }
-
-          .heroSection {
-            padding: 18px;
-            border-radius: 22px;
-          }
-
-          .statsSection {
-            grid-template-columns: 1fr;
-            gap: 10px;
-          }
-
-	  .searchBox,
-	   height: 50px !important;
-	   min-height: 50px !important;
-	   max-height: 50px !important;
-	   flex: none;
-	  }
-
-          .statButton {
-            padding: 16px;
-            border-radius: 18px;
-          }
-
-          .panelCard {
-            padding: 14px;
-            border-radius: 20px;
-          }
-
-          .cardsGrid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-          }
-
-          .cardImageWrap {
-            height: 150px;
-            padding: 10px;
-            margin-bottom: 10px;
-          }
-
-          .floatCard {
-            border-radius: 18px !important;
-            padding: 10px !important;
+            padding: 18px !important;
           }
 
           .filterWrap {
-            flex-direction: column;
-            align-items: stretch;
+            flex-direction: row;
+            align-items: center;
+          }
+
+          .publicProfileRow {
+            flex-direction: row;
+            align-items: center;
+          }
+
+          .publicProfileButton {
+            width: auto;
+          }
+
+          .publicProfileMeta {
+            font-size: 14px;
+          }
+
+          .collectionToggleWrap {
+            width: auto;
           }
 
           .searchBox,
           .mobileSelect {
-            width: 100%;
-            min-width: 100%;
+            width: auto;
+            min-width: 180px;
           }
 
-          .collectionToggleWrap {
-            width: 100%;
-            justify-content: flex-start;
+          .searchBox {
+            flex: 1 1 280px;
+            min-width: 280px;
           }
 
-          .publicProfileRow {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .publicProfileButton {
-            width: 100%;
-          }
-
-          .publicProfileMeta {
-            font-size: 13px;
+          .cardsGrid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
           }
 
           .spotlightGrid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
-          .qtyControls {
-            gap: 8px;
-          }
-
-          .qtyButton {
-            width: 48px;
-            height: 48px;
-            min-width: 48px;
-            border-radius: 16px;
-            font-size: 22px;
-          }
-
-          .qtyValue {
-            min-width: 48px;
-            font-size: 24px;
-          }
-
-          .photoBox {
-            padding: 9px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
           }
         }
 
-        @media (max-width: 640px) {
+        @media (min-width: 1200px) {
           .cardsGrid {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
           }
+        }
 
-          .cardImageWrap {
-            height: 190px;
-          }
-
-          .spotlightGrid {
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-          }
-
-          .collectionToggleWrap button {
-            flex: 1 1 auto;
+        @media (min-width: 1500px) {
+          .cardsGrid {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
           }
         }
       `}</style>
 
       <div
         className="galaxyStars"
-        style={{ maxWidth: 1400, margin: "0 auto", position: "relative", zIndex: 1 }}
+        style={{ maxWidth: 1500, margin: "0 auto", position: "relative", zIndex: 1 }}
       >
         <section className="heroSection">
           <div

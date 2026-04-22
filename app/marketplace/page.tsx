@@ -672,14 +672,17 @@ export default function MarketplacePage() {
             )}
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Link href="/sell" className="secondaryButton">
-                Create Listing
+              <Link href={'/sell?edit=${listing.id}' } className="secondaryButton">
+                Edit Listing
               </Link>
-              {userId ? (
+
                 <Link href="/messages" className="secondaryButton">
                   Open Messages
                 </Link>
-              ) : null}
+
+                 <Link href="/sell" className="secondaryButton">
+                  New Listing
+                </Link>          
             </div>
 
             <div style={{ fontSize: 14, color: "#4b5563", fontWeight: 700 }}>

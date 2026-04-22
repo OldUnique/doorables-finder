@@ -15,8 +15,6 @@ type FeedbackPost = {
   likes: number | null;
   created_at: string | null;
   user_id: string | null;
-  admin_reply: string | null;
-  resolved: boolean | null;
 };
 
 const ADMIN_EMAILS = [
@@ -26,7 +24,7 @@ const ADMIN_EMAILS = [
 ];
 
 const CATEGORIES = ["Bug", "Idea", "Feature Request", "General Comment"];
-const STATUS_TAGS = ["new", "planned", "added", "resolved", "not right now"];
+const STATUS_TAGS = ["new", "planned", "added", "not right now"];
 
 function isAdminEmail(email?: string | null) {
   return !!email && ADMIN_EMAILS.includes(email.trim().toLowerCase());
@@ -53,7 +51,6 @@ export default function FeedbackPage() {
   const [adminEmail, setAdminEmail] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
 
   async function loadPosts() {
     setLoading(true);
@@ -61,17 +58,16 @@ export default function FeedbackPage() {
     const { data: authData } = await supabase.auth.getUser();
     const user = authData.user;
     const email = user?.email || "";
-    const admin = isAdminEmail(email);
 
     setAdminEmail(email);
-    setIsAdmin(admin);
+    setIsAdmin(isAdminEmail(email));
 
     const query = supabase
       .from("feedback_posts")
       .select("*")
       .order("created_at", { ascending: false });
 
-    const { data, error } = admin
+    const { data, error } = isAdmin
       ? await query
       : await query.eq("approved", true);
 
@@ -81,24 +77,40 @@ export default function FeedbackPage() {
       return;
     }
 
-    const nextPosts = (data || []) as FeedbackPost[];
-    setPosts(nextPosts);
-
-    setReplyDrafts((prev) => {
-      const next = { ...prev };
-      for (const post of nextPosts) {
-        if (next[post.id] === undefined) {
-          next[post.id] = post.admin_reply || "";
-        }
-      }
-      return next;
-    });
-
+    setPosts((data || []) as FeedbackPost[]);
     setLoading(false);
   }
 
   useEffect(() => {
-    loadPosts();
+    async function init() {
+      const { data: authData } = await supabase.auth.getUser();
+      const email = authData.user?.email || "";
+      const admin = isAdminEmail(email);
+      setAdminEmail(email);
+      setIsAdmin(admin);
+
+      let query = supabase
+        .from("feedback_posts")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!admin) {
+        query = query.eq("approved", true);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        setStatusMessage("Could not load feedback: " + error.message);
+        setLoading(false);
+        return;
+      }
+
+      setPosts((data || []) as FeedbackPost[]);
+      setLoading(false);
+    }
+
+    init();
   }, [supabase]);
 
   async function handleSubmit() {
@@ -123,8 +135,6 @@ export default function FeedbackPage() {
       status_tag: "new",
       likes: 0,
       user_id: user?.id || null,
-      admin_reply: null,
-      resolved: false,
     });
 
     if (error) {
@@ -202,10 +212,7 @@ export default function FeedbackPage() {
 
     const { error } = await supabase
       .from("feedback_posts")
-      .update({
-        status_tag: statusTag,
-        resolved: statusTag === "resolved",
-      })
+      .update({ status_tag: statusTag })
       .eq("id", post.id);
 
     if (error) {
@@ -214,48 +221,6 @@ export default function FeedbackPage() {
       return;
     }
 
-    await loadPosts();
-    setBusyId(null);
-  }
-
-  async function markResolved(post: FeedbackPost) {
-    setBusyId(post.id);
-
-    const { error } = await supabase
-      .from("feedback_posts")
-      .update({
-        resolved: true,
-        status_tag: "resolved",
-      })
-      .eq("id", post.id);
-
-    if (error) {
-      setStatusMessage("Could not mark resolved: " + error.message);
-      setBusyId(null);
-      return;
-    }
-
-    await loadPosts();
-    setBusyId(null);
-  }
-
-  async function saveReply(post: FeedbackPost) {
-    setBusyId(post.id);
-
-    const reply = (replyDrafts[post.id] || "").trim();
-
-    const { error } = await supabase
-      .from("feedback_posts")
-      .update({ admin_reply: reply || null })
-      .eq("id", post.id);
-
-    if (error) {
-      setStatusMessage("Could not save reply: " + error.message);
-      setBusyId(null);
-      return;
-    }
-
-    setStatusMessage(reply ? "Reply saved." : "Reply cleared.");
     await loadPosts();
     setBusyId(null);
   }
@@ -417,12 +382,10 @@ export default function FeedbackPage() {
                 post.status_tag === "added"
                   ? "#16a34a"
                   : post.status_tag === "planned"
-                    ? "#2563eb"
-                    : post.status_tag === "resolved"
-                      ? "#059669"
-                      : post.status_tag === "not right now"
-                        ? "#64748b"
-                        : "#d97706";
+                  ? "#2563eb"
+                  : post.status_tag === "not right now"
+                  ? "#64748b"
+                  : "#d97706";
 
               return (
                 <div
@@ -468,21 +431,6 @@ export default function FeedbackPage() {
                         {post.status_tag || "new"}
                       </span>
 
-                      {post.resolved ? (
-                        <span
-                          style={{
-                            background: "#dcfce7",
-                            color: "#166534",
-                            borderRadius: 999,
-                            padding: "6px 10px",
-                            fontWeight: 800,
-                            fontSize: 12,
-                          }}
-                        >
-                          Resolved ✅
-                        </span>
-                      ) : null}
-
                       {post.contact_me ? (
                         <span
                           style={{
@@ -518,29 +466,6 @@ export default function FeedbackPage() {
                   <div style={{ fontSize: 16, lineHeight: 1.6, marginBottom: 16 }}>
                     {post.message}
                   </div>
-
-                  {post.admin_reply ? (
-                    <div
-                      style={{
-                        marginBottom: 16,
-                        background: "#eff6ff",
-                        border: "1px solid #bfdbfe",
-                        borderRadius: 14,
-                        padding: 14,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontWeight: 900,
-                          marginBottom: 6,
-                          color: "#1d4ed8",
-                        }}
-                      >
-                        Reply from Adorable Vault
-                      </div>
-                      <div style={{ lineHeight: 1.6 }}>{post.admin_reply}</div>
-                    </div>
-                  ) : null}
 
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <button onClick={() => handleLike(post)} style={secondaryButton}>
@@ -581,14 +506,6 @@ export default function FeedbackPage() {
                         </select>
 
                         <button
-                          onClick={() => markResolved(post)}
-                          disabled={busyId === post.id}
-                          style={resolvedButton}
-                        >
-                          Resolved ✅
-                        </button>
-
-                        <button
                           onClick={() => deletePost(post)}
                           disabled={busyId === post.id}
                           style={redButton}
@@ -598,50 +515,6 @@ export default function FeedbackPage() {
                       </>
                     ) : null}
                   </div>
-
-                  {isAdmin ? (
-                    <div
-                      style={{
-                        marginTop: 16,
-                        paddingTop: 16,
-                        borderTop: "1px solid #e5e7eb",
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontWeight: 900,
-                          marginBottom: 10,
-                        }}
-                      >
-                        Admin Reply
-                      </div>
-
-                      <textarea
-                        value={replyDrafts[post.id] || ""}
-                        onChange={(e) =>
-                          setReplyDrafts((prev) => ({
-                            ...prev,
-                            [post.id]: e.target.value,
-                          }))
-                        }
-                        placeholder="Write a reply for this feedback..."
-                        style={{
-                          ...inputStyle,
-                          minHeight: 90,
-                          resize: "vertical",
-                          marginBottom: 10,
-                        }}
-                      />
-
-                      <button
-                        onClick={() => saveReply(post)}
-                        disabled={busyId === post.id}
-                        style={replyButton}
-                      >
-                        Save Reply 💬
-                      </button>
-                    </div>
-                  ) : null}
                 </div>
               );
             })}
@@ -711,26 +584,6 @@ const orangeButton = {
 
 const redButton = {
   background: "#dc2626",
-  color: "white",
-  border: "none",
-  borderRadius: 12,
-  padding: "10px 14px",
-  fontWeight: 800,
-  cursor: "pointer",
-};
-
-const resolvedButton = {
-  background: "#059669",
-  color: "white",
-  border: "none",
-  borderRadius: 12,
-  padding: "10px 14px",
-  fontWeight: 800,
-  cursor: "pointer",
-};
-
-const replyButton = {
-  background: "#2563eb",
   color: "white",
   border: "none",
   borderRadius: 12,

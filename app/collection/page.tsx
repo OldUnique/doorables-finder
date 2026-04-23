@@ -433,7 +433,8 @@ export default function Page() {
 
       const { data: doorables, error: doorablesError } = await supabase
         .from("doorables")
-        .select("*");
+        .select("*")
+	.range(0, 1999);
 
       if (doorablesError) {
         setError(doorablesError.message);
@@ -457,7 +458,7 @@ export default function Page() {
         userMap.set(String(row.doorable_id), row);
       });
 
-      const merged: Card[] = (doorables || [])
+      const merged: Card[] = allDoorables
         .map((d: any) => {
           const row = userMap.get(String(d.id));
           return {

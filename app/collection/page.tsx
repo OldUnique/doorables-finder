@@ -458,7 +458,7 @@ export default function Page() {
         userMap.set(String(row.doorable_id), row);
       });
 
-      const merged: Card[] = allDoorables
+      const merged: Card[] = (doorables || [])
         .map((d: any) => {
           const row = userMap.get(String(d.id));
           return {

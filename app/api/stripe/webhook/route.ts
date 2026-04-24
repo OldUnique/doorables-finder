@@ -36,7 +36,10 @@ async function setSubscriptionActive(userId: string, active: boolean) {
     .update({ is_subscribed: active })
     .eq("id", userId);
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("Update subscription error:", error.message);
+    throw new Error(error.message);
+  }
 }
 
 async function getUserIdFromCustomer(customerId: string) {
@@ -90,8 +93,8 @@ function isActiveStatus(status: Stripe.Subscription.Status) {
 
 async function handleReferral(
   userId: string,
-  stripeCustomerId?: string | null,
-  stripeSubscriptionId?: string | null
+  stripeCustomerId: string | null,
+  stripeSubscriptionId: string | null
 ) {
   const { data: user, error: userError } = await supabaseAdmin
     .from("users")
@@ -99,49 +102,59 @@ async function handleReferral(
     .eq("id", userId)
     .maybeSingle();
 
-  if (userError) {
-    console.error("Referral user lookup error:", userError.message);
+  if (userError || !user) {
+    console.error("Referral user lookup error:", userError?.message);
     return;
   }
 
-  const referralUsername = String(user?.referral_username_used || "").trim();
+  const referralUsername = String(user.referral_username_used || "").trim();
   if (!referralUsername) return;
 
   const { data: referrer, error: referrerError } = await supabaseAdmin
     .from("users")
-    .select("id")
+    .select("id, free_months_earned")
     .ilike("username", referralUsername)
     .maybeSingle();
 
-  if (referrerError) {
-    console.error("Referrer lookup error:", referrerError.message);
+  if (referrerError || !referrer?.id) {
+    console.error("Referrer lookup error:", referrerError?.message);
     return;
   }
 
-  if (!referrer?.id) return;
-  if (referrer.id === userId) return;
+  if (referrer.id === userId) {
+    console.log("Self-referral blocked.");
+    return;
+  }
 
-  const { data: existing } = await supabaseAdmin
+  const { data: existing, error: existingError } = await supabaseAdmin
     .from("referrals")
     .select("id")
     .eq("referrer_user_id", referrer.id)
     .eq("referred_user_id", userId)
     .maybeSingle();
 
-  if (!existing) {
-    const { error: insertError } = await supabaseAdmin.from("referrals").insert({
-      referrer_user_id: referrer.id,
-      referred_user_id: userId,
-      stripe_customer_id: stripeCustomerId || null,
-      stripe_subscription_id: stripeSubscriptionId || null,
-      qualified: true,
-      rewarded: false,
-    });
+  if (existingError) {
+    console.error("Referral duplicate check error:", existingError.message);
+    return;
+  }
 
-    if (insertError) {
-      console.error("Referral insert error:", insertError.message);
-      return;
-    }
+  if (existing) {
+    console.log("Referral already exists. Skipping.");
+    return;
+  }
+
+  const { error: insertError } = await supabaseAdmin.from("referrals").insert({
+    referrer_user_id: referrer.id,
+    referred_user_id: userId,
+    stripe_customer_id: stripeCustomerId,
+    stripe_subscription_id: stripeSubscriptionId,
+    qualified: true,
+    rewarded: false,
+  });
+
+  if (insertError) {
+    console.error("Referral insert error:", insertError.message);
+    return;
   }
 
   const { count, error: countError } = await supabaseAdmin
@@ -157,13 +170,7 @@ async function handleReferral(
 
   if (!count || count % 10 !== 0) return;
 
-  const { data: currentUser } = await supabaseAdmin
-    .from("users")
-    .select("free_months_earned")
-    .eq("id", referrer.id)
-    .maybeSingle();
-
-  const currentFreeMonths = Number(currentUser?.free_months_earned || 0);
+  const currentFreeMonths = Number(referrer.free_months_earned || 0);
 
   const { error: rewardError } = await supabaseAdmin
     .from("users")
@@ -172,7 +179,17 @@ async function handleReferral(
 
   if (rewardError) {
     console.error("Free month reward error:", rewardError.message);
+    return;
   }
+
+  await supabaseAdmin
+    .from("referrals")
+    .update({ rewarded: true })
+    .eq("referrer_user_id", referrer.id)
+    .eq("qualified", true)
+    .eq("rewarded", false);
+
+  console.log("Free month earned for referrer:", referrer.id);
 }
 
 export async function POST(req: NextRequest) {
@@ -201,6 +218,7 @@ export async function POST(req: NextRequest) {
 
         if (userId) {
           await setSubscriptionActive(userId, true);
+
           await handleReferral(
             userId,
             typeof session.customer === "string" ? session.customer : null,
@@ -223,6 +241,7 @@ export async function POST(req: NextRequest) {
 
           if (userId) {
             await setSubscriptionActive(userId, true);
+
             await handleReferral(
               userId,
               customerId,

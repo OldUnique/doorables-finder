@@ -44,6 +44,7 @@ export default function PricingPage() {
         body: JSON.stringify({
           plan,
           referralUsername: cleanReferral || null,
+})
         <section
           style={{
             background: "rgba(255,255,255,0.96)",

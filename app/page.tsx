@@ -25,9 +25,10 @@ export default function HomePage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  const isAdmin = useMemo(() => {
-    return ADMIN_EMAILS.includes(userEmail.toLowerCase());
-  }, [userEmail]);
+  const isAdmin = useMemo(
+    () => ADMIN_EMAILS.includes(userEmail.toLowerCase()),
+    [userEmail]
+  );
 
   useEffect(() => {
     void loadPage();
@@ -92,7 +93,7 @@ export default function HomePage() {
 
       const payload = {
         title: title.trim() || "This Week’s Updates",
-        body: body,
+        body,
         is_active: true,
         updated_by: userEmail || null,
         updated_at: new Date().toISOString(),
@@ -137,90 +138,180 @@ export default function HomePage() {
     }
   }
 
+  const announcementText =
+    body.trim() ||
+    "New updates are coming soon. More Doorables, more collector tools, and more ways to track, trade, and showcase your collection are on the way 💜";
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        padding: 24,
-        color: "white",
-        background:
-          "radial-gradient(circle at 15% 20%, rgba(168,85,247,0.34) 0%, rgba(168,85,247,0) 26%), radial-gradient(circle at 85% 10%, rgba(59,130,246,0.30) 0%, rgba(59,130,246,0) 24%), radial-gradient(circle at 80% 78%, rgba(236,72,153,0.22) 0%, rgba(236,72,153,0) 20%), linear-gradient(180deg, #070b14 0%, #111827 38%, #0f172a 70%, #020617 100%)",
-      }}
-    >
+    <main className="page">
       <style jsx>{`
+        .page {
+          min-height: 100vh;
+          padding: 20px;
+          color: white;
+          background:
+            radial-gradient(circle at 12% 12%, rgba(168,85,247,0.34) 0%, transparent 28%),
+            radial-gradient(circle at 88% 8%, rgba(59,130,246,0.28) 0%, transparent 24%),
+            radial-gradient(circle at 75% 85%, rgba(236,72,153,0.20) 0%, transparent 24%),
+            linear-gradient(180deg, #070b14 0%, #111827 45%, #020617 100%);
+        }
+
         .shell {
-          max-width: 1280px;
+          max-width: 1220px;
           margin: 0 auto;
-          position: relative;
-          z-index: 1;
         }
 
         .hero {
-          position: relative;
-          overflow: hidden;
-          background:
-            radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 28%),
-            linear-gradient(135deg, rgba(17,24,39,0.94), rgba(67,56,202,0.92) 48%, rgba(37,99,235,0.88));
           border-radius: 32px;
-          padding: 30px;
-          box-shadow:
-            0 24px 50px rgba(0,0,0,0.34),
-            0 0 40px rgba(59,130,246,0.12);
-          border: 1px solid rgba(255,255,255,0.10);
+          padding: 34px;
           margin-bottom: 18px;
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 28%),
+            linear-gradient(135deg, rgba(17,24,39,0.96), rgba(79,70,229,0.92), rgba(37,99,235,0.88));
+          border: 1px solid rgba(255,255,255,0.12);
+          box-shadow: 0 24px 55px rgba(0,0,0,0.34);
+          overflow: hidden;
         }
 
-        .hero::after {
-          content: "";
-          position: absolute;
-          inset: auto -40px -40px auto;
-          width: 180px;
-          height: 180px;
+        .badge {
+          display: inline-flex;
+          padding: 8px 13px;
           border-radius: 999px;
-          background: radial-gradient(circle, rgba(192,132,252,0.20), rgba(192,132,252,0));
-          pointer-events: none;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.14);
+          font-size: 13px;
+          font-weight: 900;
+          margin-bottom: 16px;
         }
 
-        .infoCard {
-          background:
-            linear-gradient(180deg, rgba(255,255,255,0.97), rgba(248,250,252,0.96));
-          color: #111827;
-          border-radius: 24px;
-          padding: 20px;
-          border: 1px solid rgba(255,255,255,0.45);
-          box-shadow:
-            0 14px 30px rgba(0,0,0,0.18),
-            0 0 22px rgba(99,102,241,0.08);
+        .heroTitle {
+          font-size: clamp(2.3rem, 6vw, 4.6rem);
+          font-weight: 950;
+          line-height: 0.95;
+          letter-spacing: -1.5px;
+          margin: 0;
+        }
+
+        .heroText {
+          margin-top: 16px;
+          max-width: 760px;
+          color: rgba(255,255,255,0.90);
+          font-size: 18px;
+          line-height: 1.6;
+        }
+
+        .buttonRow {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-top: 24px;
+        }
+
+        .primaryButton,
+        .secondaryButton {
+          min-height: 48px;
+          border-radius: 16px;
+          padding: 13px 18px;
+          font-weight: 900;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .primaryButton {
+          background: white;
+          color: #312e81;
+        }
+
+        .secondaryButton {
+          background: rgba(255,255,255,0.12);
+          color: white;
+          border: 1px solid rgba(255,255,255,0.16);
+        }
+
+        .grid2 {
+          display: grid;
+          grid-template-columns: 1.2fr 0.8fr;
+          gap: 18px;
           margin-bottom: 18px;
         }
 
+        .card,
         .announcementCard {
-          background:
-            linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,250,255,0.96));
+          background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
           color: #111827;
           border-radius: 26px;
-          padding: 20px;
-          border: 1px solid rgba(255,255,255,0.45);
-          box-shadow:
-            0 16px 34px rgba(0,0,0,0.18),
-            0 0 20px rgba(99,102,241,0.08);
+          padding: 22px;
+          box-shadow: 0 16px 34px rgba(0,0,0,0.18);
+          border: 1px solid rgba(255,255,255,0.48);
+        }
+
+        .sectionTitle {
+          font-size: 24px;
+          font-weight: 950;
+          margin-bottom: 8px;
+        }
+
+        .muted {
+          color: #4b5563;
+          line-height: 1.7;
+          font-size: 15px;
+        }
+
+        .featureGrid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 14px;
           margin-bottom: 18px;
+        }
+
+        .feature {
+          background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(243,244,255,0.95));
+          color: #111827;
+          border-radius: 22px;
+          padding: 18px;
+          text-decoration: none;
+          min-height: 150px;
+          box-shadow: 0 14px 28px rgba(0,0,0,0.16);
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .feature:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 18px 36px rgba(0,0,0,0.22);
+        }
+
+        .emoji {
+          width: 44px;
+          height: 44px;
+          border-radius: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, #dbeafe, #ede9fe);
+          font-size: 22px;
+          margin-bottom: 12px;
+        }
+
+        .featureTitle {
+          font-size: 18px;
+          font-weight: 950;
+          margin-bottom: 6px;
         }
 
         .announcementBody {
           margin-top: 14px;
           padding: 18px;
           border-radius: 20px;
-          background:
-            linear-gradient(180deg, #ffffff, #f8fbff);
+          background: #ffffff;
           border: 1px solid #e5e7eb;
           white-space: pre-wrap;
           word-break: break-word;
-          min-height: 120px;
+          min-height: 110px;
           line-height: 1.75;
           font-size: 15px;
           color: #374151;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
         }
 
         .adminBox {
@@ -245,6 +336,7 @@ export default function HomePage() {
           resize: vertical;
           white-space: pre-wrap;
           line-height: 1.6;
+          margin-top: 10px;
         }
 
         .saveButton {
@@ -253,7 +345,7 @@ export default function HomePage() {
           border-radius: 14px;
           border: none;
           cursor: pointer;
-          font-weight: 800;
+          font-weight: 900;
           color: white;
           background: linear-gradient(90deg, #4f46e5, #7c3aed);
           box-shadow: 0 10px 18px rgba(79,70,229,0.28);
@@ -264,56 +356,14 @@ export default function HomePage() {
           color: #6b7280;
         }
 
-        .cards {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 16px;
-        }
-
-        .cardLink {
-          text-decoration: none;
-          color: inherit;
-          display: block;
-        }
-
-        .card {
-          background:
-            linear-gradient(180deg, rgba(255,255,255,0.97), rgba(243,244,255,0.95));
-          color: #111827;
-          border-radius: 24px;
-          padding: 20px;
-          border: 1px solid rgba(255,255,255,0.40);
-          box-shadow:
-            0 16px 28px rgba(0,0,0,0.18),
-            0 0 24px rgba(99,102,241,0.06);
-          transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
-          min-height: 150px;
-        }
-
-        .cardLink:hover .card {
-          transform: translateY(-4px);
-          box-shadow:
-            0 18px 36px rgba(0,0,0,0.22),
-            0 0 28px rgba(99,102,241,0.10);
-          border-color: rgba(99,102,241,0.22);
-        }
-
-        .emojiBadge {
-          width: 44px;
-          height: 44px;
-          border-radius: 14px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 20px;
-          background: linear-gradient(135deg, #dbeafe, #ede9fe);
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
-          margin-bottom: 12px;
+        .mobileBottomPad {
+          display: none;
         }
 
         @media (max-width: 920px) {
-          main {
-            padding: 16px !important;
+          .page {
+            padding: 14px;
+            padding-bottom: 92px;
           }
 
           .hero {
@@ -321,25 +371,63 @@ export default function HomePage() {
             border-radius: 24px;
           }
 
-          .infoCard,
-          .announcementCard,
-          .card {
+          .heroText {
+            font-size: 16px;
+          }
+
+          .buttonRow {
+            display: grid;
+            grid-template-columns: 1fr;
+          }
+
+          .primaryButton,
+          .secondaryButton {
+            width: 100%;
+          }
+
+          .grid2 {
+            grid-template-columns: 1fr;
+          }
+
+          .featureGrid {
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+          }
+
+          .feature {
+            min-height: 132px;
+            padding: 15px;
             border-radius: 20px;
+          }
+
+          .featureTitle {
+            font-size: 16px;
+          }
+
+          .muted {
+            font-size: 14px;
+          }
+
+          .card,
+          .announcementCard {
             padding: 16px;
+            border-radius: 22px;
           }
 
           .announcementBody {
             padding: 14px;
             font-size: 14px;
-            line-height: 1.7;
-            min-height: 100px;
+            min-height: 90px;
           }
 
-          .textarea {
-            min-height: 180px;
+          .mobileBottomPad {
+            display: block;
+            height: 16px;
           }
+        }
 
-          .cards {
+        @media (max-width: 520px) {
+          .featureGrid {
             grid-template-columns: 1fr;
           }
         }
@@ -347,149 +435,163 @@ export default function HomePage() {
 
       <div className="shell">
         <section className="hero">
-          <div style={{ fontSize: "clamp(2rem, 5vw, 3.2rem)", fontWeight: 900, lineHeight: 1 }}>
-            Welcome back{username ? `, ${username}` : ""} 💜
-          </div>
-          <div style={{ marginTop: 10, fontSize: 17, opacity: 0.94 }}>
-            Track your Disney Doorables collection, browse marketplace finds, and connect with other collectors.
-          </div>
-        </section>
+          <div className="badge">✨ Fan-made collector vault ✨</div>
 
-        <section className="infoCard">
-          <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 8 }}>
-            Disney Doorables Collector Hub ✨
-          </div>
+          <h1 className="heroTitle">
+            Track your Doorables without the chaos 💜
+          </h1>
 
-          <div style={{ color: "#4b5563", lineHeight: 1.7 }}>
-            Browse and track your Disney Doorables collection, connect with other collectors,
-            explore marketplace listings, and keep up with community updates all in one place.
+          <div className="heroText">
+            Welcome{username ? ` back, ${username}` : ""}! Adorable Vault helps collectors track Disney Doorables,
+            organize what they have, mark what they still need, list extras, browse marketplace finds,
+            and connect with other collectors — all in one easy collector hub.
           </div>
 
-          <div
-            style={{
-              marginTop: 14,
-              padding: 12,
-              borderRadius: 14,
-              background: "#f8fafc",
-              border: "1px solid #e5e7eb",
-              fontSize: 13,
-              color: "#6b7280",
-              lineHeight: 1.5,
-            }}
-          >
-            Disclaimer: Doorables Finder is an independent collector website and is not affiliated with,
-            endorsed by, sponsored by, or officially connected to Disney or Disney Doorables.
-            Disney and Disney Doorables are trademarks of their respective owners.
+          <div className="buttonRow">
+            <Link href="/collection" className="primaryButton">
+              Start Tracking
+            </Link>
+            <Link href="/marketplace" className="secondaryButton">
+              Browse Marketplace
+            </Link>
+            <Link href="/pricing" className="secondaryButton">
+              View Plans
+            </Link>
           </div>
         </section>
 
-        <section className="announcementCard">
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start", flexWrap: "wrap" }}>
-            <div>
-              <div style={{ fontSize: 24, fontWeight: 900 }}>
-                {announcement?.title || "This Week’s Updates"}
-              </div>
-              <div className="tiny" style={{ marginTop: 6 }}>
-                {announcement?.updated_at
-                  ? `Last updated: ${new Date(announcement.updated_at).toLocaleString()}`
-                  : "Add your first homepage update below."}
-              </div>
+        <section className="grid2">
+          <div className="announcementCard">
+            <div className="sectionTitle">{loading ? "Loading updates..." : title}</div>
+            <div className="muted">
+              Weekly notes, new features, collector updates, and what is coming next.
             </div>
+
+            <div className="announcementBody">{announcementText}</div>
+
+            {isAdmin && (
+              <div className="adminBox">
+                <div style={{ fontWeight: 900, marginBottom: 8 }}>Admin update box</div>
+
+                <input
+                  className="field"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Announcement title"
+                />
+
+                <textarea
+                  className="field textarea"
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder="Paste this week’s update here..."
+                />
+
+                <button
+                  type="button"
+                  className="saveButton"
+                  onClick={() => void saveAnnouncement()}
+                  disabled={saving}
+                >
+                  {saving ? "Saving..." : "Save Homepage Update"}
+                </button>
+              </div>
+            )}
+
+            {message && <div className="tiny" style={{ marginTop: 10 }}>{message}</div>}
           </div>
 
-          <div className="announcementBody">
-            {loading
-              ? "Loading updates..."
-              : announcement?.body || "No updates posted yet."}
+          <div className="card">
+            <div className="sectionTitle">Referral rewards are live 🎁</div>
+            <div className="muted">
+              If someone signs up with your username and becomes a paying customer,
+              it can count toward your referral rewards. Get 10 qualified paid referrals
+              and earn a free month.
+            </div>
+
+            <div
+              style={{
+                marginTop: 16,
+                padding: 14,
+                borderRadius: 18,
+                background: "#eef2ff",
+                color: "#3730a3",
+                fontWeight: 900,
+                lineHeight: 1.5,
+              }}
+            >
+              Plus: keep an eye out for secret codes, riddles, giveaways, and limited free-year promos 👀
+            </div>
+
+            <Link
+              href="/pricing"
+              className="primaryButton"
+              style={{
+                marginTop: 16,
+                background: "linear-gradient(90deg,#4f46e5,#7c3aed)",
+                color: "white",
+              }}
+            >
+              Upgrade or Subscribe
+            </Link>
           </div>
-
-          {isAdmin && (
-            <div className="adminBox">
-              <div style={{ fontWeight: 900, marginBottom: 10 }}>Admin-only editor</div>
-
-              <input
-                className="field"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Announcement title"
-              />
-
-              <textarea
-                className="field textarea"
-                style={{ marginTop: 10 }}
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder={`Example:
-💜 Welcome to Doorables Finder — your new favorite collector hub!
-
-Jump in:
-📦 Collection — track what you own and what you still need
-🛒 Marketplace — browse listings and discover new finds
-📸 Photos — add pictures to help grow the database
-💬 Messages — connect with collectors
-⭐ Subscription — unlock the full experience
-
-Pro tip: Start with your Collection first — it powers everything else.`}
-              />
-
-              <button
-                className="saveButton"
-                onClick={() => void saveAnnouncement()}
-                disabled={saving}
-              >
-                {saving ? "Saving..." : "Save Announcement"}
-              </button>
-
-              <div className="tiny" style={{ marginTop: 8 }}>
-                Only admin emails in this page file can edit this box.
-              </div>
-            </div>
-          )}
-
-          {!isAdmin && !!userEmail && (
-            <div className="tiny" style={{ marginTop: 10 }}>
-              Signed in as {userEmail}
-            </div>
-          )}
-
-          {!!message && (
-            <div style={{ marginTop: 10, fontSize: 14, color: message.includes("saved") ? "#166534" : "#b91c1c" }}>
-              {message}
-            </div>
-          )}
         </section>
 
-        <section className="cards">
-          <Link href="/collection" className="cardLink">
-            <div className="card">
-              <div className="emojiBadge">📦</div>
-              <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>Collection</div>
-              <div style={{ marginTop: 8, color: "#4b5563", lineHeight: 1.6 }}>
-                Track everything you own and see what you still need.
-              </div>
-            </div>
+        <section className="featureGrid">
+          <Link href="/collection" className="feature">
+            <div className="emoji">💜</div>
+            <div className="featureTitle">Collection Tracker</div>
+            <div className="muted">Track have, need, extras, notes, series progress, and more.</div>
           </Link>
 
-          <Link href="/marketplace" className="cardLink">
-            <div className="card">
-              <div className="emojiBadge">🛒</div>
-              <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>Marketplace</div>
-              <div style={{ marginTop: 8, color: "#4b5563", lineHeight: 1.6 }}>
-                Browse listings, discover new finds, and catch rare extras.
-              </div>
-            </div>
+          <Link href="/marketplace" className="feature">
+            <div className="emoji">🛍️</div>
+            <div className="featureTitle">Marketplace</div>
+            <div className="muted">Browse collector listings and find Doorables you need.</div>
           </Link>
 
-          <Link href="/sell" className="cardLink">
-            <div className="card">
-              <div className="emojiBadge">💰</div>
-              <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>Sell</div>
-              <div style={{ marginTop: 8, color: "#4b5563", lineHeight: 1.6 }}>
-                List your extras and make room for more Doorables.
-              </div>
-            </div>
+          <Link href="/sell" className="feature">
+            <div className="emoji">✨</div>
+            <div className="featureTitle">Sell Extras</div>
+            <div className="muted">List your extra Doorables and connect with collectors.</div>
+          </Link>
+
+          <Link href="/feedback" className="feature">
+            <div className="emoji">💬</div>
+            <div className="featureTitle">Feedback</div>
+            <div className="muted">Request features, share ideas, and help shape the site.</div>
           </Link>
         </section>
+
+        <section className="grid2">
+          <div className="card">
+            <div className="sectionTitle">Built for collectors, not spreadsheets 📋</div>
+            <div className="muted">
+              Adorable Vault is designed to make Disney Doorables collecting easier on mobile and desktop.
+              Search by name, series, rarity, movie, and notes. Mark what you own, track what you still need,
+              and keep your extras organized for trading or selling.
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="sectionTitle">More Doorables added regularly 🌟</div>
+            <div className="muted">
+              The vault will keep growing with more Doorables, more series, better images,
+              improved mobile features, and collector-friendly tools.
+            </div>
+          </div>
+        </section>
+
+        <section className="card">
+          <div className="sectionTitle">Fan-made disclaimer</div>
+          <div className="muted">
+            Adorable Vault is a fan-made collector tracking and marketplace tool. It is not affiliated with,
+            sponsored by, or endorsed by Disney or Just Play. Character names and references are used only
+            to help collectors organize and identify their collections.
+          </div>
+        </section>
+
+        <div className="mobileBottomPad" />
       </div>
     </main>
   );

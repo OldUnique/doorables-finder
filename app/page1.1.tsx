@@ -13,15 +13,6 @@ type Announcement = {
   updated_at: string | null;
 };
 
-type HomeStats = {
-  owned: number;
-  needed: number;
-  extras: number;
-  total: number;
-  progress: number;
-  listings: number;
-};
-
 type FeatureCard = {
   icon: string;
   title: string;
@@ -135,14 +126,6 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [stats, setStats] = useState<HomeStats>({
-    owned: 0,
-    needed: 0,
-    extras: 0,
-    total: 0,
-    progress: 0,
-    listings: 0,
-  });
 
   const isAdmin = useMemo(
     () => ADMIN_EMAILS.includes(userEmail.toLowerCase()),
@@ -177,8 +160,6 @@ export default function HomePage() {
         setUsername(String(profile?.username ?? ""));
       }
 
-      await loadHomeStats(user?.id);
-
       const { data, error } = await supabase
         .from("site_announcements")
         .select("*")
@@ -202,71 +183,6 @@ export default function HomePage() {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not load homepage.");
       setLoading(false);
-    }
-  }
-
-
-  async function loadHomeStats(userId?: string) {
-    try {
-      const supabase = getSupabase();
-
-      const { data: doorables, error: doorablesError } = await supabase
-        .from("doorables")
-        .select("id");
-
-      if (doorablesError) {
-        return;
-      }
-
-      const total = doorables?.length ?? 0;
-
-      let owned = 0;
-      let extras = 0;
-
-      if (userId) {
-        const { data: userRows } = await supabase
-          .from("user_doorables")
-          .select("doorable_id, qty_owned")
-          .eq("user_id", userId);
-
-        const ownedIds = new Set<string>();
-
-        (userRows ?? []).forEach((row: any) => {
-          const qty = Number(row?.qty_owned ?? 0);
-
-          if (qty > 0 && row?.doorable_id) {
-            ownedIds.add(String(row.doorable_id));
-          }
-
-          if (qty > 1) {
-            extras += qty - 1;
-          }
-        });
-
-        owned = ownedIds.size;
-      }
-
-      let listings = 0;
-
-      const { count: listingCount } = await supabase
-        .from("marketplace_listings")
-        .select("id", { count: "exact", head: true });
-
-      listings = listingCount ?? 0;
-
-      const needed = Math.max(total - owned, 0);
-      const progress = total > 0 ? Math.round((owned / total) * 100) : 0;
-
-      setStats({
-        owned,
-        needed,
-        extras,
-        total,
-        progress,
-        listings,
-      });
-    } catch {
-      // Keep homepage usable even if stats are unavailable.
     }
   }
 
@@ -620,14 +536,6 @@ export default function HomePage() {
           margin-bottom: 4px;
         }
 
-        .miniCount {
-          font-size: 25px;
-          line-height: 1;
-          font-weight: 1000;
-          color: #312e81;
-          margin-bottom: 6px;
-        }
-
         .miniMeta {
           font-size: 12px;
           color: #6b7280;
@@ -686,158 +594,6 @@ export default function HomePage() {
           color: rgba(255,255,255,0.78);
           font-size: 14px;
           line-height: 1.45;
-        }
-
-
-        .liveStatsGrid {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 14px;
-          margin-bottom: 18px;
-        }
-
-        .liveStatCard {
-          display: flex;
-          gap: 14px;
-          align-items: center;
-          border-radius: 24px;
-          padding: 18px;
-          text-decoration: none;
-          color: #111827;
-          background: linear-gradient(180deg, #ffffff, #f8fafc);
-          border: 1px solid rgba(255,255,255,0.58);
-          box-shadow: 0 16px 32px rgba(0,0,0,0.16);
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .liveStatCard:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 22px 42px rgba(0,0,0,0.22);
-        }
-
-        .liveIcon {
-          width: 54px;
-          height: 54px;
-          border-radius: 17px;
-          display: grid;
-          place-items: center;
-          font-size: 24px;
-          flex: 0 0 auto;
-        }
-
-        .liveIcon.purple { background: linear-gradient(135deg, #ddd6fe, #a78bfa); }
-        .liveIcon.blue { background: linear-gradient(135deg, #dbeafe, #93c5fd); }
-        .liveIcon.orange { background: linear-gradient(135deg, #ffedd5, #fdba74); }
-        .liveIcon.green { background: linear-gradient(135deg, #dcfce7, #86efac); }
-
-        .liveLabel {
-          font-weight: 1000;
-          font-size: 15px;
-        }
-
-        .liveNumber {
-          font-size: 32px;
-          line-height: 1;
-          font-weight: 1000;
-          color: #0f172a;
-          margin: 7px 0 5px;
-        }
-
-        .liveSub {
-          color: #64748b;
-          font-size: 13px;
-          font-weight: 800;
-          line-height: 1.35;
-        }
-
-        .realProgressCard {
-          position: relative;
-          margin-bottom: 18px;
-          border-radius: 28px;
-          padding: 24px;
-          color: #111827;
-          background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.97));
-          border: 1px solid rgba(255,255,255,0.56);
-          box-shadow: 0 18px 38px rgba(0,0,0,0.19);
-        }
-
-        .realProgressTop {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 14px;
-          margin-bottom: 16px;
-        }
-
-        .overallProgress {
-          font-weight: 1000;
-          color: #312e81;
-          white-space: nowrap;
-          padding: 10px 12px;
-          border-radius: 999px;
-          background: #eef2ff;
-          border: 1px solid #c7d2fe;
-        }
-
-        .realProgressTrack {
-          height: 34px;
-          border-radius: 999px;
-          background: #e5e7eb;
-          overflow: hidden;
-          box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);
-        }
-
-        .realProgressFill {
-          min-width: 0;
-          height: 100%;
-          border-radius: inherit;
-          background: linear-gradient(90deg, #7c3aed, #2563eb);
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
-          color: white;
-          font-weight: 1000;
-          font-size: 14px;
-          transition: width 0.45s ease;
-        }
-
-        .realProgressFill span {
-          padding-right: 12px;
-        }
-
-        .realProgressText {
-          margin-top: 14px;
-          color: #475569;
-          line-height: 1.6;
-          font-weight: 750;
-        }
-
-        .realProgressLegend {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 16px;
-          margin-top: 16px;
-          color: #334155;
-          font-size: 14px;
-          font-weight: 900;
-        }
-
-        .dot {
-          display: inline-block;
-          width: 9px;
-          height: 9px;
-          border-radius: 999px;
-          margin-right: 7px;
-        }
-
-        .ownedDot { background: #10b981; }
-        .neededDot { background: #2563eb; }
-        .extrasDot { background: #f59e0b; }
-        .totalDot { background: #8b5cf6; }
-
-        .realProgressButton {
-          margin-top: 18px;
-          width: fit-content;
         }
 
         .grid2 {
@@ -1214,22 +970,8 @@ export default function HomePage() {
 
           .trustStrip,
           .grid2,
-          .grid3,
-          .liveStatsGrid {
+          .grid3 {
             grid-template-columns: 1fr;
-          }
-
-          .realProgressTop {
-            display: grid;
-          }
-
-          .overallProgress {
-            white-space: normal;
-            width: fit-content;
-          }
-
-          .realProgressButton {
-            width: 100%;
           }
 
           .featureGrid {
@@ -1375,7 +1117,7 @@ export default function HomePage() {
             <div className="phoneMock">
               <div className="phoneTop">
                 <span>Open Your Real Vault</span>
-                <span>{stats.progress}%</span>
+                <span>Tap →</span>
               </div>
 
               <div className="searchMock">Search by name, series, movie...</div>
@@ -1384,25 +1126,21 @@ export default function HomePage() {
                 <div className="miniCard">
                   <div className="miniImage">💜</div>
                   <div className="miniTitle">Owned</div>
-                  <div className="miniCount">{stats.owned}</div>
                   <div className="miniMeta">Track your favorites</div>
                 </div>
                 <div className="miniCard">
                   <div className="miniImage">🔎</div>
                   <div className="miniTitle">Needed</div>
-                  <div className="miniCount">{stats.needed}</div>
                   <div className="miniMeta">Find collection gaps</div>
                 </div>
                 <div className="miniCard">
                   <div className="miniImage">✨</div>
                   <div className="miniTitle">Extras</div>
-                  <div className="miniCount">{stats.extras}</div>
                   <div className="miniMeta">Ready to trade or sell</div>
                 </div>
                 <div className="miniCard">
                   <div className="miniImage">🛍️</div>
                   <div className="miniTitle">Marketplace</div>
-                  <div className="miniCount">{stats.listings}</div>
                   <div className="miniMeta">Browse collector finds</div>
                 </div>
               </div>
@@ -1410,12 +1148,10 @@ export default function HomePage() {
               <div className="progressBlock">
                 <div className="progressTitle">Series progress</div>
                 <div className="progressBar">
-                  <div className="progressFill" style={{ width: `${stats.progress}%` }} />
+                  <div className="progressFill" />
                 </div>
                 <div style={{ marginTop: 9, fontSize: 13, fontWeight: 850, opacity: 0.9 }}>
-                  {stats.total > 0
-                    ? `${stats.owned} of ${stats.total} Doorables collected`
-                    : "Open your collection to start tracking."}
+                  Keep going — your vault is getting closer.
                 </div>
               </div>
             </div>
@@ -1429,78 +1165,6 @@ export default function HomePage() {
               <div className="statLabel">{stat.label}</div>
             </div>
           ))}
-        </section>
-
-
-        <section className="liveStatsGrid" aria-label="Live collection stats">
-          <Link href="/collection" className="liveStatCard">
-            <div className="liveIcon purple">📦</div>
-            <div>
-              <div className="liveLabel">Owned</div>
-              <div className="liveNumber">{stats.owned}</div>
-              <div className="liveSub">Total owned</div>
-            </div>
-          </Link>
-
-          <Link href="/collection" className="liveStatCard">
-            <div className="liveIcon blue">📋</div>
-            <div>
-              <div className="liveLabel">Needed</div>
-              <div className="liveNumber">{stats.needed}</div>
-              <div className="liveSub">Still needed</div>
-            </div>
-          </Link>
-
-          <Link href="/sell" className="liveStatCard">
-            <div className="liveIcon orange">⭐</div>
-            <div>
-              <div className="liveLabel">Extras</div>
-              <div className="liveNumber">{stats.extras}</div>
-              <div className="liveSub">Ready to trade or sell</div>
-            </div>
-          </Link>
-
-          <Link href="/marketplace" className="liveStatCard">
-            <div className="liveIcon green">🛍️</div>
-            <div>
-              <div className="liveLabel">Marketplace</div>
-              <div className="liveNumber">{stats.listings}</div>
-              <div className="liveSub">Current listings</div>
-            </div>
-          </Link>
-        </section>
-
-        <section className="realProgressCard">
-          <div className="realProgressTop">
-            <div>
-              <div className="sectionEyebrow">Real collection progress</div>
-              <div className="sectionTitle">Series Progress</div>
-            </div>
-            <div className="overallProgress">Overall Progress: {stats.progress}%</div>
-          </div>
-
-          <div className="realProgressTrack">
-            <div className="realProgressFill" style={{ width: `${stats.progress}%` }}>
-              <span>{stats.progress}%</span>
-            </div>
-          </div>
-
-          <div className="realProgressText">
-            {stats.total > 0
-              ? `You’ve collected ${stats.owned} of ${stats.total} Doorables across your vault.`
-              : "Once your Doorables are added, this bar will update automatically from your real collection."}
-          </div>
-
-          <div className="realProgressLegend">
-            <span><b className="dot ownedDot" /> {stats.owned} Owned</span>
-            <span><b className="dot neededDot" /> {stats.needed} Needed</span>
-            <span><b className="dot extrasDot" /> {stats.extras} Extras</span>
-            <span><b className="dot totalDot" /> {stats.total} Total</span>
-          </div>
-
-          <Link href="/collection" className="darkButton realProgressButton">
-            View Collection
-          </Link>
         </section>
 
         <section className="grid2">

@@ -467,14 +467,6 @@ export default function HomePage() {
           border: 1px solid rgba(255,255,255,0.15);
           backdrop-filter: blur(14px);
           box-shadow: 0 24px 56px rgba(0,0,0,0.28);
-          text-decoration: none;
-          color: inherit;
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .appPreview:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 30px 70px rgba(0,0,0,0.34);
         }
 
         .phoneMock {
@@ -838,7 +830,7 @@ export default function HomePage() {
 
         .miniPricing {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: 1fr 1fr;
           gap: 14px;
           margin-top: 16px;
         }
@@ -853,24 +845,6 @@ export default function HomePage() {
         .priceCard.featuredPrice {
           background: linear-gradient(135deg, #eef2ff, #faf5ff);
           border-color: #c4b5fd;
-        }
-
-        .priceCard.bestValue {
-          position: relative;
-          background: linear-gradient(135deg, #f5f3ff, #eff6ff);
-          border-color: #a78bfa;
-          box-shadow: 0 14px 28px rgba(124,58,237,0.13);
-        }
-
-        .valueTag {
-          display: inline-flex;
-          margin-bottom: 9px;
-          padding: 6px 10px;
-          border-radius: 999px;
-          color: white;
-          background: linear-gradient(90deg, #4f46e5, #7c3aed);
-          font-size: 12px;
-          font-weight: 1000;
         }
 
         .price {
@@ -1113,11 +1087,11 @@ export default function HomePage() {
             </div>
           </div>
 
-          <Link href="/collection" className="appPreview" aria-label="Open the real collection tracker">
+          <div className="appPreview" aria-label="App preview">
             <div className="phoneMock">
               <div className="phoneTop">
-                <span>Open Your Real Vault</span>
-                <span>Tap →</span>
+                <span>My Vault</span>
+                <span>72%</span>
               </div>
 
               <div className="searchMock">Search by name, series, movie...</div>
@@ -1155,7 +1129,7 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-          </Link>
+          </div>
         </section>
 
         <section className="trustStrip" aria-label="Site highlights">
@@ -1284,15 +1258,16 @@ export default function HomePage() {
         <section className="grid2">
           <div className="card">
             <div className="sectionEyebrow">Plans</div>
-            <div className="sectionTitle">Start simple. Save big when your vault grows.</div>
+            <div className="sectionTitle">Start simple. Upgrade when your vault grows.</div>
             <div className="muted">
-              Keep pricing easy to understand and collector-friendly. The $15 yearly plan is the best value for serious collectors who want their vault ready all year.
+              Keep pricing easy to understand and collector-friendly. The goal is to make the paid plan feel
+              like a no-brainer for anyone serious about completing sets.
             </div>
 
             <div className="miniPricing">
               <div className="priceCard">
                 <div style={{ fontWeight: 1000 }}>Starter</div>
-                <div className="price">$0 <small>/ limited access</small></div>
+                <div className="price">$0 <small>/ trial or limited access</small></div>
                 <div className="checkList">
                   <span>✅ Try the vault</span>
                   <span>✅ See how tracking works</span>
@@ -1301,23 +1276,12 @@ export default function HomePage() {
               </div>
 
               <div className="priceCard featuredPrice">
-                <div style={{ fontWeight: 1000 }}>Collector Monthly</div>
+                <div style={{ fontWeight: 1000 }}>Collector</div>
                 <div className="price">$3 <small>/ month</small></div>
                 <div className="checkList">
                   <span>✅ Unlock full tracking</span>
                   <span>✅ Organize extras</span>
-                  <span>✅ Flexible monthly access</span>
-                </div>
-              </div>
-
-              <div className="priceCard bestValue">
-                <div className="valueTag">Best value</div>
-                <div style={{ fontWeight: 1000 }}>Collector Yearly</div>
-                <div className="price">$15 <small>/ year</small></div>
-                <div className="checkList">
-                  <span>✅ Full collector access</span>
-                  <span>✅ Save compared to monthly</span>
-                  <span>✅ Best for serious collectors</span>
+                  <span>✅ Less than many blind bags</span>
                 </div>
               </div>
             </div>

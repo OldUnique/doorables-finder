@@ -523,17 +523,49 @@ export default function HomePage() {
           box-shadow: 0 14px 28px rgba(255,255,255,0.16);
         }
 
-        .secondaryButton {
-          background: rgba(255,255,255,0.12);
-          color: white;
-          border: 1px solid rgba(255,255,255,0.16);
-        }
+.secondaryButton {
+  background: rgba(15,23,42,0.72);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.28);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.22);
+}
 
-        .purpleButton {
-          background: linear-gradient(90deg, #4f46e5, #a855f7);
-          color: white;
-          box-shadow: 0 14px 26px rgba(124,58,237,0.28);
-        }
+.purpleButton {
+  background: linear-gradient(90deg, #ffffff, #fef3c7);
+  color: #312e81;
+  box-shadow: 0 14px 26px rgba(255,255,255,0.18);
+}
+
+.trustPill {
+  color: #ffffff;
+  background: rgba(15,23,42,0.52);
+  border: 1px solid rgba(255,255,255,0.24);
+}
+
+.featureLink,
+.miniAction {
+  color: #ffffff;
+  font-weight: 1000;
+  text-decoration: none;
+}
+
+.miniAction {
+  background: rgba(15,23,42,0.65);
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+}
+
+.statLabel {
+  color: #fef3c7;
+}
+
+.statSub {
+  color: #ffffff;
+}
+
+.statValue {
+  color: #ffffff;
+}
 
         .previewPanel {
           padding: 18px;
@@ -957,6 +989,18 @@ export default function HomePage() {
         .mobileSticky {
           display: none;
         }
+
+.heroCard a,
+.previewPanel a,
+.finalCta a {
+  color: inherit;
+}
+
+.previewPanel a:not(.statCard),
+.heroCard a:not(.primaryButton),
+.finalCta a:not(.primaryButton) {
+  color: #ffffff;
+}
 
         @media (max-width: 980px) {
           .shell {

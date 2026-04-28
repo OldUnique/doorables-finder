@@ -117,7 +117,8 @@ export default function HomePage() {
           "@type": "Offer",
           price: "0",
           priceCurrency: "USD",
-          description: "Free Doorables collection tracking up to 50 saved Doorables.",
+          description:
+            "Free Doorables collection tracking up to 50 saved Doorables.",
         },
         {
           "@type": "Offer",
@@ -185,7 +186,7 @@ export default function HomePage() {
         listings: listingCount ?? 0,
       });
     } catch {
-      // Stats are nice-to-have; homepage should never crash from optional counts.
+      // Optional stats should not break homepage.
     }
   }
 
@@ -236,7 +237,9 @@ export default function HomePage() {
 
       setLoading(false);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not load homepage.");
+      setMessage(
+        error instanceof Error ? error.message : "Could not load homepage."
+      );
       setLoading(false);
     }
   }
@@ -290,7 +293,9 @@ export default function HomePage() {
       setMessage("Announcement saved.");
       setSaving(false);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not save announcement.");
+      setMessage(
+        error instanceof Error ? error.message : "Could not save announcement."
+      );
       setSaving(false);
     }
   }
@@ -310,9 +315,9 @@ export default function HomePage() {
           min-height: 100vh;
           color: white;
           background:
-            radial-gradient(circle at 8% 4%, rgba(168,85,247,0.42) 0%, transparent 28%),
-            radial-gradient(circle at 88% 8%, rgba(59,130,246,0.31) 0%, transparent 26%),
-            radial-gradient(circle at 72% 96%, rgba(236,72,153,0.25) 0%, transparent 28%),
+            radial-gradient(circle at 8% 4%, rgba(168, 85, 247, 0.44) 0%, transparent 28%),
+            radial-gradient(circle at 88% 8%, rgba(59, 130, 246, 0.32) 0%, transparent 26%),
+            radial-gradient(circle at 72% 96%, rgba(236, 72, 153, 0.26) 0%, transparent 28%),
             linear-gradient(180deg, #030712 0%, #080b1f 44%, #020617 100%);
           overflow-x: hidden;
         }
@@ -323,14 +328,14 @@ export default function HomePage() {
           inset: 0;
           pointer-events: none;
           background-image:
-            radial-gradient(2px 2px at 18% 22%, rgba(255,255,255,0.82) 35%, transparent 36%),
+            radial-gradient(2px 2px at 18% 22%, rgba(255,255,255,0.84) 35%, transparent 36%),
             radial-gradient(1.5px 1.5px at 78% 16%, rgba(255,255,255,0.72) 35%, transparent 36%),
             radial-gradient(1.8px 1.8px at 48% 72%, rgba(255,255,255,0.62) 35%, transparent 36%),
             linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
             linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
           background-size: auto, auto, auto, 46px 46px, 46px 46px;
-          opacity: 0.68;
-          mask-image: linear-gradient(to bottom, rgba(0,0,0,0.88), transparent 78%);
+          opacity: 0.7;
+          mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 78%);
         }
 
         .shell {
@@ -366,7 +371,7 @@ export default function HomePage() {
           place-items: center;
           font-size: 35px;
           background: radial-gradient(circle at top left, #fef3c7, #a855f7 48%, #020617);
-          box-shadow: 0 18px 38px rgba(168,85,247,0.42);
+          box-shadow: 0 18px 38px rgba(168, 85, 247, 0.42);
           flex: 0 0 auto;
         }
 
@@ -401,7 +406,7 @@ export default function HomePage() {
           font-weight: 950;
           padding: 12px 15px;
           border-radius: 999px;
-          background: rgba(255,255,255,0.10);
+          background: rgba(255,255,255,0.1);
           border: 1px solid rgba(255,255,255,0.14);
           box-shadow: 0 10px 24px rgba(0,0,0,0.15);
         }
@@ -415,7 +420,8 @@ export default function HomePage() {
         }
 
         .heroCard,
-        .previewPanel {
+        .previewPanel,
+        .premiumPanel {
           border-radius: 32px;
           border: 1px solid rgba(255,255,255,0.16);
           background:
@@ -479,7 +485,7 @@ export default function HomePage() {
           font-size: 12px;
           font-weight: 1000;
           color: rgba(255,255,255,0.92);
-          background: rgba(255,255,255,0.10);
+          background: rgba(255,255,255,0.1);
           border: 1px solid rgba(255,255,255,0.12);
         }
 
@@ -541,25 +547,36 @@ export default function HomePage() {
           gap: 12px;
         }
 
+        .statBubble {
+          padding: 7px;
+          border-radius: 31px;
+          background:
+            linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.04)),
+            radial-gradient(circle at top, rgba(192,132,252,0.26), transparent 55%);
+          border: 1px solid rgba(255,255,255,0.16);
+          box-shadow: 0 16px 34px rgba(0,0,0,0.26);
+        }
+
         .statCard {
           min-height: 148px;
-          border-radius: 26px;
+          border-radius: 24px;
           padding: 16px;
           color: white;
           position: relative;
           overflow: hidden;
-          border: 1px solid rgba(255,255,255,0.20);
+          border: 1px solid rgba(255,255,255,0.2);
           box-shadow:
             0 18px 40px rgba(0,0,0,0.36),
             inset 0 1px 0 rgba(255,255,255,0.14);
           text-decoration: none;
           backdrop-filter: blur(12px);
           transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+          display: block;
         }
 
-        .statCard:hover {
+        .statBubble:hover .statCard {
           transform: translateY(-4px) scale(1.01);
-          border-color: rgba(192,132,252,0.64);
+          border-color: rgba(255,255,255,0.36);
           box-shadow:
             0 24px 55px rgba(0,0,0,0.46),
             0 0 25px rgba(168,85,247,0.25);
@@ -571,8 +588,8 @@ export default function HomePage() {
           inset: 0;
           border-radius: inherit;
           background:
-            radial-gradient(circle at top left, rgba(255,255,255,0.20), transparent 38%),
-            radial-gradient(circle at bottom right, rgba(168,85,247,0.30), transparent 42%);
+            radial-gradient(circle at top left, rgba(255,255,255,0.22), transparent 38%),
+            radial-gradient(circle at bottom right, rgba(255,255,255,0.12), transparent 42%);
           pointer-events: none;
           z-index: 0;
         }
@@ -613,7 +630,7 @@ export default function HomePage() {
 
         .statSub {
           font-size: 13px;
-          color: rgba(255,255,255,0.88);
+          color: rgba(255,255,255,0.9);
           font-weight: 850;
         }
 
@@ -663,6 +680,27 @@ export default function HomePage() {
           height: 100%;
           border-radius: inherit;
           background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
+        }
+
+        .miniActions {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          margin-top: 12px;
+        }
+
+        .miniAction {
+          text-decoration: none;
+          color: white;
+          border-radius: 18px;
+          padding: 13px;
+          min-height: 72px;
+          background: rgba(255,255,255,0.09);
+          border: 1px solid rgba(255,255,255,0.13);
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-weight: 1000;
         }
 
         .section {
@@ -873,7 +911,7 @@ export default function HomePage() {
           background:
             radial-gradient(circle at top right, rgba(244,114,182,0.24), transparent 36%),
             linear-gradient(135deg, rgba(88,28,135,0.88), rgba(15,23,42,0.95));
-          border-color: rgba(217,70,239,0.40);
+          border-color: rgba(217,70,239,0.4);
         }
 
         .tag {
@@ -899,7 +937,7 @@ export default function HomePage() {
         }
 
         .finePrint {
-          color: rgba(255,255,255,0.80);
+          color: rgba(255,255,255,0.8);
           line-height: 1.55;
           font-size: 14px;
         }
@@ -970,27 +1008,34 @@ export default function HomePage() {
 
           .premiumDash {
             grid-template-columns: 1fr 1fr;
+            gap: 10px;
           }
 
           .previewPanel {
             padding: 12px;
           }
 
+          .statBubble {
+            padding: 5px;
+            border-radius: 25px;
+          }
+
           .statCard {
-            min-height: 132px;
-            padding: 14px;
-            border-radius: 21px;
+            min-height: 126px;
+            padding: 13px;
+            border-radius: 20px;
           }
 
           .statIcon {
-            width: 46px;
-            height: 46px;
-            border-radius: 16px;
-            font-size: 24px;
+            width: 44px;
+            height: 44px;
+            border-radius: 15px;
+            font-size: 23px;
+            margin-bottom: 8px;
           }
 
           .statValue {
-            font-size: 34px;
+            font-size: 31px;
           }
 
           .statSub {
@@ -1066,28 +1111,16 @@ export default function HomePage() {
             font-size: 13px;
           }
 
-          .premiumDash {
-            gap: 10px;
-          }
-
-          .statCard {
-            min-height: 122px;
-          }
-
           .statLabel {
             font-size: 10px;
           }
 
-          .statValue {
-            font-size: 31px;
-          }
-
-          .statIcon {
-            margin-bottom: 8px;
-          }
-
           .progressPanel {
             padding: 16px;
+          }
+
+          .miniActions {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
@@ -1103,26 +1136,16 @@ export default function HomePage() {
           </Link>
 
           <div className="navActions">
-            <Link href="/collection" className="navPill">
-              Tracker
-            </Link>
-            <Link href="/marketplace" className="navPill">
-              Marketplace
-            </Link>
-            <Link href="/pricing" className="navPill">
-              Plans
-            </Link>
-            <Link href="/feedback" className="navPill menuPill">
-              Feedback
-            </Link>
+            <Link href="/collection" className="navPill">Tracker</Link>
+            <Link href="/marketplace" className="navPill">Marketplace</Link>
+            <Link href="/pricing" className="navPill">Plans</Link>
+            <Link href="/feedback" className="navPill menuPill">Feedback</Link>
           </div>
         </nav>
 
         <section className="hero">
           <div className="heroCard">
-            <div className="badge">
-              ✨ Premium Doorables tracker • fan-made collector vault ✨
-            </div>
+            <div className="badge">✨ Premium Doorables tracker • fan-made collector vault ✨</div>
 
             <h1 className="headline">
               The Doorables tracker for collectors who are done guessing.
@@ -1145,47 +1168,49 @@ export default function HomePage() {
             </div>
 
             <div className="buttonRow">
-              <Link href="/collection" className="primaryButton">
-                🎯 Start Tracking Free
-              </Link>
-              <Link href="/marketplace" className="secondaryButton">
-                🛍️ Browse Finds
-              </Link>
-              <Link href="/pricing" className="secondaryButton">
-                👑 View Plans
-              </Link>
+              <Link href="/collection" className="primaryButton">🎯 Start Tracking Free</Link>
+              <Link href="/marketplace" className="secondaryButton">🛍️ Browse Finds</Link>
+              <Link href="/pricing" className="secondaryButton">👑 View Plans</Link>
             </div>
           </div>
 
           <div className="previewPanel">
             <div className="premiumDash">
-              <Link href="/collection" className="statCard owned">
-                <div className="statIcon">📦</div>
-                <div className="statLabel">Total Owned</div>
-                <div className="statValue">{stats.owned}</div>
-                <div className="statSub">Doorables you own</div>
-              </Link>
+              <div className="statBubble">
+                <Link href="/collection" className="statCard owned">
+                  <div className="statIcon">📦</div>
+                  <div className="statLabel">Total Owned</div>
+                  <div className="statValue">{stats.owned}</div>
+                  <div className="statSub">Doorables you own</div>
+                </Link>
+              </div>
 
-              <Link href="/collection" className="statCard needed">
-                <div className="statIcon">📋</div>
-                <div className="statLabel">Still Needed</div>
-                <div className="statValue">{stats.needed.toLocaleString()}</div>
-                <div className="statSub">Doorables to collect</div>
-              </Link>
+              <div className="statBubble">
+                <Link href="/collection" className="statCard needed">
+                  <div className="statIcon">📋</div>
+                  <div className="statLabel">Still Needed</div>
+                  <div className="statValue">{stats.needed.toLocaleString()}</div>
+                  <div className="statSub">Doorables to collect</div>
+                </Link>
+              </div>
 
-              <Link href="/sell" className="statCard extras">
-                <div className="statIcon">⭐</div>
-                <div className="statLabel">Extras</div>
-                <div className="statValue">{stats.extras}</div>
-                <div className="statSub">Ready to trade or sell</div>
-              </Link>
+              <div className="statBubble">
+                <Link href="/sell" className="statCard extras">
+                  <div className="statIcon">⭐</div>
+                  <div className="statLabel">Extras</div>
+                  <div className="statValue">{stats.extras}</div>
+                  <div className="statSub">Ready to trade or sell</div>
+                </Link>
+              </div>
 
-              <Link href="/marketplace" className="statCard market">
-                <div className="statIcon">🛍️</div>
-                <div className="statLabel">Marketplace</div>
-                <div className="statValue">{stats.listings}</div>
-                <div className="statSub">Current listings</div>
-              </Link>
+              <div className="statBubble">
+                <Link href="/marketplace" className="statCard market">
+                  <div className="statIcon">🛍️</div>
+                  <div className="statLabel">Marketplace</div>
+                  <div className="statValue">{stats.listings}</div>
+                  <div className="statSub">Current listings</div>
+                </Link>
+              </div>
             </div>
 
             <div className="progressPanel">
@@ -1196,36 +1221,26 @@ export default function HomePage() {
                   <div style={{ fontWeight: 1000, fontSize: 19 }}>
                     Free collector plan
                   </div>
-                  <div
-                    style={{
-                      color: "#d8b4fe",
-                      fontWeight: 900,
-                      marginTop: 4,
-                    }}
-                  >
+                  <div style={{ color: "#d8b4fe", fontWeight: 900, marginTop: 4 }}>
                     Save up to 50 Doorables • {remainingFree} free saves left
                   </div>
                 </div>
 
-                <Link href="/pricing" className="purpleButton">
-                  Upgrade Now
-                </Link>
+                <Link href="/pricing" className="purpleButton">Upgrade Now</Link>
               </div>
 
               <div className="progressTrack">
                 <div className="progressFill" style={{ width: `${freePercent}%` }} />
               </div>
 
-              <div
-                style={{
-                  marginTop: 10,
-                  color: "rgba(255,255,255,0.80)",
-                  fontWeight: 800,
-                  fontSize: 13,
-                }}
-              >
+              <div style={{ marginTop: 10, color: "rgba(255,255,255,0.80)", fontWeight: 800, fontSize: 13 }}>
                 {freeUsed} / 50 free saved Doorables used
               </div>
+            </div>
+
+            <div className="miniActions">
+              <Link href="/collection" className="miniAction">🎯 Open tracker</Link>
+              <Link href="/feedback" className="miniAction">💬 Send feedback</Link>
             </div>
           </div>
         </section>

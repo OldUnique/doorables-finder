@@ -1196,6 +1196,44 @@ export default function HomePage() {
             grid-template-columns: 1fr;
           }
         }
+/* FINAL BUTTON VISIBILITY OVERRIDE */
+.heroCard .buttonRow a,
+.heroCard a.primaryButton,
+.heroCard a.secondaryButton,
+.heroCard a.purpleButton,
+.previewPanel .miniActions a,
+.previewPanel a.miniAction,
+.finalCta .buttonRow a {
+  color: #ffffff !important;
+  text-decoration: none !important;
+  opacity: 1 !important;
+  font-weight: 1000 !important;
+  background: linear-gradient(90deg, #4f46e5, #a855f7) !important;
+  border: 1px solid rgba(255,255,255,0.55) !important;
+  box-shadow: 0 16px 34px rgba(124,58,237,0.55) !important;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.35) !important;
+}
+
+.heroCard .buttonRow a:first-child,
+.heroCard a.primaryButton,
+.finalCta a.primaryButton {
+  color: #312e81 !important;
+  background: linear-gradient(90deg, #ffffff, #fef3c7) !important;
+  text-shadow: none !important;
+}
+
+.heroCard .buttonRow a:visited,
+.previewPanel .miniActions a:visited,
+.finalCta .buttonRow a:visited {
+  color: #ffffff !important;
+}
+
+.heroCard .buttonRow a:first-child:visited,
+.heroCard a.primaryButton:visited,
+.finalCta a.primaryButton:visited {
+  color: #312e81 !important;
+}
+
       `}</style>
 
       <div className="shell">

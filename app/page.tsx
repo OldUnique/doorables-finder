@@ -186,7 +186,7 @@ export default function HomePage() {
         listings: listingCount ?? 0,
       });
     } catch {
-      // Optional homepage stats should never crash the page.
+      // Homepage stats are optional. Do not crash the homepage.
     }
   }
 
@@ -564,8 +564,7 @@ export default function HomePage() {
 
         .primaryButton,
         .secondaryButton,
-        .purpleButton,
-        .planButton {
+        .upgradeButton {
           min-height: 50px;
           border-radius: 17px;
           padding: 13px 18px;
@@ -578,20 +577,28 @@ export default function HomePage() {
           transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
         }
 
-        .primaryButton,
-        .planButton {
+        .primaryButton {
           background: linear-gradient(90deg, #ffffff, #fef3c7);
           color: #312e81 !important;
           border: 1px solid rgba(255,255,255,0.55);
           box-shadow: 0 18px 40px rgba(255,255,255,0.22);
         }
 
-        .secondaryButton,
-        .purpleButton {
+        .secondaryButton {
           background: linear-gradient(90deg, #4f46e5, #a855f7);
           color: #ffffff !important;
           border: 1px solid rgba(255,255,255,0.45);
           box-shadow: 0 16px 34px rgba(124,58,237,0.50);
+        }
+
+        .upgradeButton {
+          background: linear-gradient(90deg, #f472b6, #a855f7, #4f46e5);
+          color: #ffffff !important;
+          border: 1px solid rgba(255,255,255,0.55);
+          box-shadow:
+            0 16px 34px rgba(168,85,247,0.58),
+            inset 0 1px 0 rgba(255,255,255,0.20);
+          white-space: nowrap;
         }
 
         .previewPanel {
@@ -754,46 +761,62 @@ export default function HomePage() {
           background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
         }
 
-        .miniActions {
+        .quickActions {
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-          margin-top: 12px;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          margin-top: 18px;
+          padding-top: 16px;
+          border-top: 1px solid rgba(255,255,255,0.12);
         }
 
-        .miniAction {
-          min-height: 72px;
-          border-radius: 18px;
-          padding: 13px;
-          background: linear-gradient(90deg, rgba(79,70,229,0.96), rgba(168,85,247,0.96));
-          border: 1px solid rgba(255,255,255,0.45);
-          box-shadow: 0 14px 30px rgba(124,58,237,0.42);
+        .quickAction {
+          min-height: 92px;
+          border-radius: 20px;
+          padding: 14px;
+          background:
+            radial-gradient(circle at top, rgba(255,255,255,0.15), transparent 45%),
+            rgba(15,23,42,0.55);
+          border: 1px solid rgba(255,255,255,0.18);
           color: #ffffff !important;
-          font-weight: 1000;
           text-decoration: none !important;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          opacity: 1;
-        }
-
-        .miniActionText {
           display: grid;
-          gap: 2px;
+          align-content: center;
+          justify-items: center;
+          text-align: center;
+          gap: 7px;
+          box-shadow: 0 12px 24px rgba(0,0,0,0.24);
+          transition: transform 0.15s ease, border-color 0.15s ease;
         }
 
-        .miniActionTitle {
+        .quickAction:hover {
+          transform: translateY(-3px);
+          border-color: rgba(255,255,255,0.38);
+        }
+
+        .quickActionIcon {
+          width: 44px;
+          height: 44px;
+          border-radius: 16px;
+          display: grid;
+          place-items: center;
+          font-size: 24px;
+          background: linear-gradient(135deg, rgba(79,70,229,0.95), rgba(168,85,247,0.95));
+          box-shadow: 0 10px 20px rgba(124,58,237,0.32);
+        }
+
+        .quickActionTitle {
           color: #ffffff !important;
-          font-size: 15px;
           font-weight: 1000;
-          line-height: 1.1;
+          font-size: 14px;
+          line-height: 1.12;
         }
 
-        .miniActionSub {
-          color: rgba(255,255,255,0.86) !important;
-          font-size: 12px;
+        .quickActionSub {
+          color: rgba(255,255,255,0.78) !important;
           font-weight: 800;
-          line-height: 1.2;
+          font-size: 11px;
+          line-height: 1.18;
         }
 
         .section {
@@ -1122,8 +1145,7 @@ export default function HomePage() {
 
           .primaryButton,
           .secondaryButton,
-          .purpleButton,
-          .planButton {
+          .upgradeButton {
             width: 100%;
           }
 
@@ -1167,7 +1189,7 @@ export default function HomePage() {
             grid-template-columns: 52px 1fr;
           }
 
-          .progressHeader .planButton {
+          .progressHeader .upgradeButton {
             grid-column: 1 / -1;
           }
 
@@ -1175,6 +1197,17 @@ export default function HomePage() {
             width: 52px;
             height: 52px;
             font-size: 26px;
+          }
+
+          .quickActions {
+            grid-template-columns: 1fr;
+          }
+
+          .quickAction {
+            min-height: 76px;
+            grid-template-columns: 44px 1fr;
+            justify-items: start;
+            text-align: left;
           }
 
           .featureGrid,
@@ -1239,10 +1272,6 @@ export default function HomePage() {
           .progressPanel {
             padding: 16px;
           }
-
-          .miniActions {
-            grid-template-columns: 1fr;
-          }
         }
       `}</style>
 
@@ -1267,7 +1296,7 @@ export default function HomePage() {
               Plans
             </Link>
             <Link href="/feedback" className="navPill menuPill">
-              Feedback
+              💙 Feedback
             </Link>
           </div>
         </nav>
@@ -1316,7 +1345,7 @@ export default function HomePage() {
               <Link href="/marketplace" className="heroCta heroCtaSecondary">
                 <span className="heroCtaIcon">🛍️</span>
                 <span className="heroCtaText">
-                  <span className="heroCtaTitle">Browse Marketplace</span>
+                  <span className="heroCtaTitle">Browse Finds</span>
                   <span className="heroCtaSub">
                     Find missing pieces and extras
                   </span>
@@ -1327,26 +1356,6 @@ export default function HomePage() {
 
           <div className="previewPanel">
             <div className="premiumDash">
-              <div className="statBubble">
-                <Link href="/collection" className="statCard owned">
-                  <div className="statIcon">📦</div>
-                  <div className="statLabel">Total Owned</div>
-                  <div className="statValue">{stats.owned}</div>
-                  <div className="statSub">Doorables you own</div>
-                </Link>
-              </div>
-
-              <div className="statBubble">
-                <Link href="/collection" className="statCard needed">
-                  <div className="statIcon">📋</div>
-                  <div className="statLabel">Still Needed</div>
-                  <div className="statValue">
-                    {stats.needed.toLocaleString()}
-                  </div>
-                  <div className="statSub">Doorables to collect</div>
-                </Link>
-              </div>
-
               <div className="statBubble">
                 <Link href="/sell" className="statCard extras">
                   <div className="statIcon">⭐</div>
@@ -1385,7 +1394,7 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <Link href="/pricing" className="planButton">
+                <Link href="/pricing" className="upgradeButton">
                   Upgrade Now
                 </Link>
               </div>
@@ -1407,24 +1416,35 @@ export default function HomePage() {
               >
                 {freeUsed} / 50 free saved Doorables used
               </div>
-            </div>
 
-            <div className="miniActions">
-              <Link href="/collection" className="miniAction">
-                <span aria-hidden="true">🎯</span>
-                <span className="miniActionText">
-                  <span className="miniActionTitle">Open tracker</span>
-                  <span className="miniActionSub">View your collection</span>
-                </span>
-              </Link>
+              <div className="quickActions">
+                <Link href="/collection" className="quickAction">
+                  <span className="quickActionIcon">🎯</span>
+                  <span>
+                    <span className="quickActionTitle">Open tracker</span>
+                    <br />
+                    <span className="quickActionSub">View your collection</span>
+                  </span>
+                </Link>
 
-              <Link href="/feedback" className="miniAction">
-                <span aria-hidden="true">💬</span>
-                <span className="miniActionText">
-                  <span className="miniActionTitle">Send feedback</span>
-                  <span className="miniActionSub">Help us improve</span>
-                </span>
-              </Link>
+                <Link href="/marketplace" className="quickAction">
+                  <span className="quickActionIcon">🛍️</span>
+                  <span>
+                    <span className="quickActionTitle">Browse Marketplace</span>
+                    <br />
+                    <span className="quickActionSub">Find extras & gaps</span>
+                  </span>
+                </Link>
+
+                <Link href="/feedback" className="quickAction">
+                  <span className="quickActionIcon">💬</span>
+                  <span>
+                    <span className="quickActionTitle">Send feedback</span>
+                    <br />
+                    <span className="quickActionSub">Help us improve</span>
+                  </span>
+                </Link>
+              </div>
             </div>
           </div>
         </section>

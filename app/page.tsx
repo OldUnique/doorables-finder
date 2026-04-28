@@ -1006,6 +1006,26 @@ export default function HomePage() {
 .finalCta a:not(.primaryButton) {
   color: #ffffff;
 }
+.heroCard .buttonRow a {
+  color: #ffffff !important;
+  text-decoration: none !important;
+  background: linear-gradient(90deg, #4f46e5, #a855f7) !important;
+  border: 1px solid rgba(255,255,255,0.45) !important;
+  box-shadow: 0 16px 34px rgba(124,58,237,0.50) !important;
+  opacity: 1 !important;
+}
+
+.heroCard .buttonRow a:first-child {
+  background: linear-gradient(90deg, #ffffff, #fef3c7) !important;
+  color: #312e81 !important;
+}
+
+.heroCard .buttonRow a span,
+.heroCard .buttonRow a {
+  text-shadow: none !important;
+  font-weight: 1000 !important;
+}
+
 
         @media (max-width: 980px) {
           .shell {

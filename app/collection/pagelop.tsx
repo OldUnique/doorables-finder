@@ -43,6 +43,7 @@ const FREE_LIMIT = 50;
 const MONTHLY_PRICE_LABEL = "$3/month";
 const YEARLY_PRICE_LABEL = "$15/year";
 
+
 function rarityTheme(rarity: string): Theme {
   const value = String(rarity || "").toLowerCase().trim();
 
@@ -337,11 +338,11 @@ export default function Page() {
 
   const [visibility, setVisibility] = useState<"private" | "extras_only" | "full">("private");
   const [savingVisibility, setSavingVisibility] = useState(false);
+
   const [publicCollectors, setPublicCollectors] = useState<PublicCollector[]>([]);
 
   const [uploadingPhotoId, setUploadingPhotoId] = useState("");
   const [photoNote, setPhotoNote] = useState<Record<string, string>>({});
-  const [expandedPhotoCardId, setExpandedPhotoCardId] = useState("");
 
   const [marketplaceStars, setMarketplaceStars] = useState(0);
   const [marketplaceReviewCount, setMarketplaceReviewCount] = useState(0);
@@ -360,8 +361,6 @@ export default function Page() {
   const [collectionFilter, setCollectionFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [expandedSeries, setExpandedSeries] = useState(false);
 
   useEffect(() => {
     void load();
@@ -441,8 +440,8 @@ export default function Page() {
 
       const { data: doorables, error: doorablesError } = await supabase
         .from("doorables")
-        .select("id, name, series, rarity, subcategory, movie, image_url")
-        .range(0, 1999);
+        .select("*")
+	.range(0, 1999);
 
       if (doorablesError) {
         setError(doorablesError.message);
@@ -452,7 +451,7 @@ export default function Page() {
 
       const { data: userDoorables, error: userDoorablesError } = await supabase
         .from("user_doorables")
-        .select("id, doorable_id, qty_owned, custom_tag")
+        .select("*")
         .eq("user_id", user.id);
 
       if (userDoorablesError) {
@@ -698,77 +697,94 @@ export default function Page() {
     }
   }
 
-  async function handlePhotoSubmission(card: Card, file: File | null) {
-    if (!file) return;
+async function handlePhotoSubmission(card: Card, file: File | null) {
+  if (!file) return;
 
-    try {
-      setError("");
-      setUploadingPhotoId(card.id);
+  try {
+    setError("");
+    setUploadingPhotoId(card.id);
 
-      const supabase = getSupabase();
+    const supabase = getSupabase();
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-      if (userError || !user) {
-        console.error("Auth error:", userError);
-        setError("You are not signed in. Refresh and log in again.");
-        return;
-      }
-
-      const fileExt = file.name.split(".").pop() || "jpg";
-      const filePath = `doorables/${card.id}/${user.id}-${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("submissions")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: true,
-        });
-
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        setError(uploadError.message);
-        return;
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from("submissions")
-        .getPublicUrl(filePath);
-
-      const publicUrl = publicUrlData.publicUrl;
-
-      const insertPayload = {
-        user_id: user.id,
-        doorable_id: card.id,
-        image_url: publicUrl,
-        status: "pending",
-      };
-
-      const { error: insertError } = await supabase
-        .from("image_submissions")
-        .insert([insertPayload])
-        .select();
-
-      if (insertError) {
-        console.error("Insert error full:", JSON.stringify(insertError, null, 2));
-        setError(insertError.message || "Insert failed");
-        setUploadingPhotoId("");
-        return;
-      }
-
-      setNotice("Photo submitted for review 💜");
-      setPhotoNote((prev) => ({ ...prev, [card.id]: "" }));
-      setExpandedPhotoCardId("");
-    } catch (err) {
-      console.error("Upload crash:", err);
-      setError("Upload failed");
-    } finally {
-      setUploadingPhotoId("");
+    if (userError || !user) {
+      console.error("Auth error:", userError);
+      setError("You are not signed in. Refresh and log in again.");
+      return;
     }
+
+    console.log("📸 Uploading file:", file);
+
+    const fileExt = file.name.split(".").pop() || "jpg";
+
+    // ✅ BETTER PATH (organized + prevents overwrite issues)
+    const filePath = `doorables/${card.id}/${user.id}-${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("submissions")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: true, // ✅ important fix
+      });
+
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      setError(uploadError.message);
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("submissions")
+      .getPublicUrl(filePath);
+
+    const publicUrl = publicUrlData.publicUrl;
+
+    console.log("✅ Uploaded URL:", publicUrl);
+
+    const insertPayload = {
+  user_id: user.id,
+  doorable_id: card.id,
+  image_url: publicUrl,
+  status: "pending",
+};
+
+console.log("Insert payload:", insertPayload);
+
+const { data: insertedRow, error: insertError } = await supabase
+  .from("image_submissions")
+  .insert([insertPayload])
+  .select();
+
+if (insertError) {
+  console.error("Insert error full:", JSON.stringify(insertError, null, 2));
+  setError(insertError.message || "Insert failed");
+  setUploadingPhotoId("");
+  return;
+}
+
+console.log("Inserted row:", insertedRow);
+
+
+    if (insertError) {
+      console.error("Insert error:", insertError);
+      setError(insertError.message);
+      return;
+    }
+
+    setNotice("Photo submitted for review 💜");
+
+    setPhotoNote((prev) => ({ ...prev, [card.id]: "" }));
+  } catch (err) {
+    console.error("Upload crash:", err);
+    setError("Upload failed");
+  } finally {
+    setUploadingPhotoId("");
   }
+}
 
   const seriesOptions = useMemo(
     () => ["all", ...Array.from(new Set(cards.map((c) => c.series).filter(Boolean))).sort(seriesSort)],
@@ -894,11 +910,8 @@ export default function Page() {
       .sort((a, b) => seriesSort(a.series, b.series));
   }, [cards]);
 
-  const visibleSeriesProgress = isMobile && !expandedSeries ? seriesProgress.slice(0, 6) : seriesProgress;
-
   function jumpToSeries(seriesName: string) {
     setSeriesFilter(seriesName);
-    setShowMobileFilters(false);
     requestAnimationFrame(() => {
       document.getElementById("cards-grid")?.scrollIntoView({
         behavior: "smooth",
@@ -913,24 +926,7 @@ export default function Page() {
     return "Full Collection";
   }
 
-  function clearFilters() {
-    setSearch("");
-    setSeriesFilter("all");
-    setSubcategoryFilter("all");
-    setRarityFilter("all");
-    setMovieFilter("all");
-    setCollectionFilter("all");
-  }
-
-  const activeFilterCount =
-    (seriesFilter !== "all" ? 1 : 0) +
-    (subcategoryFilter !== "all" ? 1 : 0) +
-    (rarityFilter !== "all" ? 1 : 0) +
-    (movieFilter !== "all" ? 1 : 0) +
-    (collectionFilter !== "all" ? 1 : 0) +
-    (search.trim() ? 1 : 0);
-
-  const cardsPerPage = isMobile ? 8 : 24;
+  const cardsPerPage = isMobile ? 10 : 30;
   const totalPages = Math.max(1, Math.ceil(filteredCards.length / cardsPerPage));
   const safePage = Math.min(page, totalPages);
   const pagedCards = filteredCards.slice(
@@ -970,24 +966,32 @@ export default function Page() {
   }
 
   return (
-    <main className="collectionPage">
+    <main
+      style={{
+        minHeight: "100vh",
+        padding: 24,
+        color: "white",
+        background:
+          "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), radial-gradient(circle at 70% 70%, rgba(236,72,153,0.18) 0%, rgba(236,72,153,0) 20%), linear-gradient(180deg, #09090f 0%, #111827 38%, #0f172a 65%, #020617 100%)",
+      }}
+    >
       <style jsx>{`
-        .collectionPage {
-          min-height: 100vh;
-          padding: 24px;
-          color: white;
-          background:
-            radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%),
-            radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%),
-            radial-gradient(circle at 70% 70%, rgba(236,72,153,0.18) 0%, rgba(236,72,153,0) 20%),
-            linear-gradient(180deg, #09090f 0%, #111827 38%, #0f172a 65%, #020617 100%);
+        .cardsGrid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 14px;
+        }
+
+        .floatCard {
+          transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+        }
+
+        .floatCard:hover {
+          transform: translateY(-4px);
         }
 
         .galaxyStars {
           position: relative;
-          max-width: 1500px;
-          margin: 0 auto;
-          z-index: 1;
         }
 
         .galaxyStars::before {
@@ -1007,175 +1011,14 @@ export default function Page() {
           z-index: 0;
         }
 
-        .eliteStatusStack {
-          position: sticky;
-          top: 8px;
-          z-index: 60;
-          display: grid;
-          gap: 8px;
-          margin-bottom: 12px;
-        }
-
-        .eliteNotice,
-        .eliteError {
-          border-radius: 18px;
-          padding: 12px 14px;
-          font-weight: 900;
-          box-shadow: 0 12px 26px rgba(0,0,0,0.20);
-        }
-
-        .eliteNotice {
-          background: #ecfdf5;
-          color: #065f46;
-          border: 1px solid #bbf7d0;
-        }
-
-        .eliteError {
-          background: #fff1f2;
-          color: #9f1239;
-          border: 1px solid #fecdd3;
-        }
-
         .heroSection {
-          background: radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 32%), linear-gradient(135deg, rgba(17,24,39,0.94), rgba(67,56,202,0.88));
+          background: linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
           border-radius: 28px;
           padding: 24px;
           box-shadow: 0 20px 40px rgba(0,0,0,0.3);
           margin-bottom: 18px;
-          border: 1px solid rgba(255,255,255,0.10);
+          border: 1px solid rgba(255,255,255,0.08);
           backdrop-filter: blur(6px);
-        }
-
-        .heroTop {
-          display: flex;
-          justify-content: space-between;
-          gap: 18px;
-          flex-wrap: wrap;
-          align-items: center;
-        }
-
-        .heroProgress {
-          min-width: 250px;
-          background: rgba(255,255,255,0.08);
-          border: 1px solid rgba(255,255,255,0.12);
-          border-radius: 22px;
-          padding: 16px;
-          width: auto;
-          max-width: 320px;
-        }
-
-        .heroQuickStats {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 10px;
-          margin-top: 18px;
-        }
-
-        .heroQuickStat {
-          border: 1px solid rgba(255,255,255,0.12);
-          background: rgba(255,255,255,0.08);
-          border-radius: 18px;
-          padding: 12px;
-        }
-
-        .heroQuickLabel {
-          font-size: 12px;
-          color: rgba(255,255,255,0.72);
-          font-weight: 900;
-        }
-
-        .heroQuickValue {
-          margin-top: 4px;
-          font-size: 22px;
-          font-weight: 1000;
-        }
-
-        .eliteUpgradeWall {
-          margin-bottom: 18px;
-          border-radius: 26px;
-          padding: 20px;
-          color: #111827;
-          background: radial-gradient(circle at top right, rgba(196,181,253,0.42), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
-          border: 1px solid rgba(255,255,255,0.55);
-          box-shadow: 0 18px 38px rgba(0,0,0,0.20);
-          display: flex;
-          justify-content: space-between;
-          gap: 18px;
-          align-items: center;
-        }
-
-        .eliteUpgradeEyebrow {
-          color: #6d28d9;
-          font-size: 13px;
-          font-weight: 1000;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          margin-bottom: 7px;
-        }
-
-        .eliteUpgradeTitle {
-          font-size: clamp(1.35rem, 3vw, 2rem);
-          font-weight: 1000;
-          letter-spacing: -0.6px;
-          line-height: 1.1;
-          margin-bottom: 8px;
-        }
-
-        .eliteUpgradeText {
-          color: #4b5563;
-          line-height: 1.6;
-          font-size: 15px;
-          max-width: 760px;
-        }
-
-        .elitePlanRow {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-top: 14px;
-        }
-
-        .eliteMiniPlan {
-          border-radius: 17px;
-          padding: 11px 13px;
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
-          min-width: 130px;
-        }
-
-        .eliteMiniPlan.best {
-          background: linear-gradient(135deg, #f5f3ff, #eff6ff);
-          border-color: #a78bfa;
-          box-shadow: 0 10px 20px rgba(124,58,237,0.10);
-        }
-
-        .eliteMiniPlan span {
-          display: block;
-          color: #64748b;
-          font-size: 12px;
-          font-weight: 900;
-          margin-bottom: 4px;
-        }
-
-        .eliteMiniPlan strong {
-          color: #312e81;
-          font-size: 20px;
-          font-weight: 1000;
-        }
-
-        .eliteUpgradeButton,
-        .eliteModalButton {
-          min-height: 50px;
-          border-radius: 17px;
-          padding: 13px 18px;
-          font-weight: 1000;
-          text-decoration: none;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(90deg, #4f46e5, #7c3aed);
-          color: white;
-          box-shadow: 0 14px 26px rgba(79,70,229,0.26);
         }
 
         .tierGrid {
@@ -1203,6 +1046,30 @@ export default function Page() {
           border-radius: 22px 0 0 22px;
         }
 
+        .statsSection {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 14px;
+          margin-bottom: 18px;
+        }
+
+        .statButton {
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          border-radius: 20px;
+          padding: 18px;
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          border: 1px solid rgba(255,255,255,0.35);
+          cursor: pointer;
+          text-align: left;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .statButton:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 14px 28px rgba(0,0,0,0.22);
+        }
+
         .panelCard {
           background: rgba(255,255,255,0.94);
           color: #111827;
@@ -1213,12 +1080,93 @@ export default function Page() {
           border: 1px solid rgba(255,255,255,0.35);
         }
 
+        .filterWrap {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          align-items: center;
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .collectionToggleWrap {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          padding: 6px;
+          border-radius: 14px;
+          background: #eef2ff;
+          border: 1px solid #c7d2fe;
+          flex-wrap: wrap;
+          width: 100%;
+          justify-content: flex-start;
+        }
+
+        .cardImageWrap {
+          height: 180px;
+          background: rgba(255,255,255,0.92);
+          border-radius: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 12px;
+          overflow: hidden;
+          padding: 14px;
+        }
+
+        .cardImage {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          transition: transform 0.2s ease;
+        }
+
+        .cardImageWrap:hover .cardImage {
+          transform: scale(1.05);
+        }
+
+        .pager {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-top: 18px;
+        }
+
+        .pagerButton {
+          padding: 10px 14px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.16);
+          background: rgba(255,255,255,0.08);
+          color: white;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .pagerButton:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+
+        .upgradeBox {
+          margin-top: 12px;
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          border-radius: 18px;
+          padding: 14px;
+          border: 1px solid rgba(255,255,255,0.35);
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+        }
+
         .publicProfileRow {
           display: flex;
           justify-content: space-between;
           align-items: center;
           gap: 12px;
           flex-wrap: wrap;
+          flex-direction: column;
+          align-items: stretch;
         }
 
         .publicProfileButton {
@@ -1233,10 +1181,11 @@ export default function Page() {
           background: linear-gradient(135deg, #4f46e5, #7c3aed);
           box-shadow: 0 10px 18px rgba(79,70,229,0.28);
           min-height: 46px;
+          width: 100%;
         }
 
         .publicProfileMeta {
-          font-size: 14px;
+          font-size: 13px;
           color: #4b5563;
           line-height: 1.5;
         }
@@ -1262,205 +1211,6 @@ export default function Page() {
         .spotlightCard:hover {
           transform: translateY(-2px);
           box-shadow: 0 12px 24px rgba(0,0,0,0.14);
-        }
-
-        .statsSection {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 14px;
-          margin-bottom: 18px;
-        }
-
-        .statButton {
-          background: rgba(255,255,255,0.94);
-          color: #111827;
-          border-radius: 20px;
-          padding: 18px;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-          border: 1px solid rgba(255,255,255,0.35);
-          cursor: pointer;
-          text-align: left;
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .statButton:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 14px 28px rgba(0,0,0,0.22);
-        }
-
-        .filterPanel {
-          position: sticky;
-          top: 8px;
-          z-index: 55;
-        }
-
-        .filterHeader {
-          display: grid;
-          grid-template-columns: 1fr auto;
-          gap: 10px;
-          align-items: center;
-        }
-
-        .filterToggleButton {
-          display: none;
-          border: none;
-          border-radius: 14px;
-          padding: 13px 14px;
-          background: linear-gradient(135deg, #4f46e5, #7c3aed);
-          color: #ffffff;
-          font-weight: 950;
-          min-height: 50px;
-          cursor: pointer;
-        }
-
-        .filterBody {
-          margin-top: 12px;
-        }
-
-        .filterWrap {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-          align-items: center;
-        }
-
-        .collectionToggleWrap {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          padding: 6px;
-          border-radius: 14px;
-          background: #eef2ff;
-          border: 1px solid #c7d2fe;
-          flex-wrap: wrap;
-          justify-content: flex-start;
-        }
-
-        .quickMobileChips {
-          display: none;
-          gap: 8px;
-          overflow-x: auto;
-          padding-bottom: 2px;
-          scrollbar-width: none;
-        }
-
-        .quickMobileChips::-webkit-scrollbar {
-          display: none;
-        }
-
-        .quickChip {
-          min-height: 42px;
-          border-radius: 999px;
-          border: 1px solid #c7d2fe;
-          padding: 9px 13px;
-          font-weight: 900;
-          background: #eef2ff;
-          color: #3730a3;
-          white-space: nowrap;
-          cursor: pointer;
-        }
-
-        .quickChip.active {
-          background: #4f46e5;
-          color: #ffffff;
-        }
-
-        .clearFiltersButton {
-          border: none;
-          border-radius: 12px;
-          padding: 10px 12px;
-          background: #f1f5f9;
-          color: #334155;
-          font-weight: 900;
-          min-height: 42px;
-          cursor: pointer;
-        }
-
-        .mobileSelect {
-          padding: 14px;
-          border-radius: 14px;
-          border: 1px solid #d1d5db;
-          font-size: 15px;
-          background: white;
-          min-width: 180px;
-        }
-
-        .searchBox {
-          flex: 1 1 280px;
-          padding: 14px 16px;
-          border-radius: 14px;
-          border: 1px solid #d1d5db;
-          font-size: 15px;
-          min-height: 52px;
-          height: 52px;
-          max-height: 52px;
-          background: white;
-          box-sizing: border-box;
-          min-width: 280px;
-        }
-
-        .seriesProgressGrid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 12px;
-        }
-
-        .seriesProgressButton {
-          border-radius: 18px;
-          border: 1px solid #e5e7eb;
-          padding: 14px;
-          background: #ffffff;
-          text-align: left;
-          cursor: pointer;
-        }
-
-        .showMoreButton {
-          margin-top: 12px;
-          width: 100%;
-          min-height: 44px;
-          border: none;
-          border-radius: 14px;
-          background: #eef2ff;
-          color: #3730a3;
-          font-weight: 950;
-          cursor: pointer;
-        }
-
-        .cardsGrid {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 16px;
-        }
-
-        .floatCard {
-          transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
-        }
-
-        .floatCard:hover {
-          transform: translateY(-4px);
-        }
-
-        .cardImageWrap {
-          height: 180px;
-          background: rgba(255,255,255,0.92);
-          border-radius: 18px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 12px;
-          overflow: hidden;
-          padding: 14px;
-        }
-
-        .cardImage {
-          max-width: 100%;
-          max-height: 100%;
-          object-fit: contain;
-          transition: transform 0.2s ease;
-        }
-
-        .cardImageWrap:hover .cardImage {
-          transform: scale(1.05);
         }
 
         .qtyControls {
@@ -1503,227 +1253,70 @@ export default function Page() {
           border: 1px solid rgba(255,255,255,0.6);
         }
 
-        .photoToggleButton {
-          width: 100%;
-          margin-top: 10px;
-          min-height: 42px;
-          border-radius: 12px;
-          border: 1px solid rgba(255,255,255,0.6);
-          background: rgba(255,255,255,0.68);
-          color: #111827;
-          font-weight: 900;
-          cursor: pointer;
-        }
-
-        .pager {
-          display: flex;
-          gap: 10px;
-          align-items: center;
-          justify-content: center;
-          flex-wrap: wrap;
-          margin-top: 18px;
-        }
-
-        .pagerButton {
-          padding: 10px 14px;
-          border-radius: 12px;
-          border: 1px solid rgba(255,255,255,0.16);
-          background: rgba(255,255,255,0.08);
-          color: white;
-          font-weight: 800;
-          cursor: pointer;
-        }
-
-        .pagerButton:disabled {
-          opacity: 0.45;
-          cursor: not-allowed;
-        }
-
-        .eliteModalOverlay {
-          position: fixed;
-          inset: 0;
-          z-index: 1000;
-          display: grid;
-          place-items: center;
-          padding: 16px;
-          background: rgba(2,6,23,0.72);
-          backdrop-filter: blur(10px);
-        }
-
-        .eliteModal {
-          position: relative;
-          width: min(540px, 100%);
-          border-radius: 30px;
-          padding: 24px;
-          color: #111827;
-          background: radial-gradient(circle at top right, rgba(196,181,253,0.55), transparent 32%), linear-gradient(180deg, #ffffff, #f8fafc);
-          border: 1px solid rgba(255,255,255,0.75);
-          box-shadow: 0 28px 80px rgba(0,0,0,0.42);
-          text-align: center;
-        }
-
-        .eliteModalClose {
-          position: absolute;
-          right: 14px;
-          top: 12px;
-          width: 38px;
-          height: 38px;
-          border-radius: 999px;
-          border: none;
-          background: #eef2ff;
-          color: #312e81;
-          font-size: 25px;
-          font-weight: 900;
-          cursor: pointer;
-        }
-
-        .eliteModalIcon {
-          width: 64px;
-          height: 64px;
-          margin: 0 auto 12px;
-          border-radius: 22px;
-          display: grid;
-          place-items: center;
-          font-size: 31px;
-          background: linear-gradient(135deg, #ddd6fe, #bfdbfe);
-        }
-
-        .eliteModalTitle {
-          margin: 0;
-          font-size: clamp(1.8rem, 6vw, 2.6rem);
-          line-height: 1;
-          letter-spacing: -1px;
-          font-weight: 1000;
-          color: #111827;
-        }
-
-        .eliteModalText {
-          margin: 13px auto 0;
-          max-width: 430px;
-          color: #4b5563;
-          line-height: 1.6;
-          font-weight: 750;
-        }
-
-        .eliteModalPlans {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-          margin-top: 18px;
-        }
-
-        .eliteModalPlan {
-          border-radius: 20px;
-          padding: 16px;
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.08);
-        }
-
-        .eliteModalPlan.best {
-          border-color: #a78bfa;
-          background: linear-gradient(135deg, #f5f3ff, #eff6ff);
-        }
-
-        .eliteBestValueTag {
-          display: inline-flex;
-          margin-bottom: 8px;
-          padding: 5px 9px;
-          border-radius: 999px;
-          color: white;
-          background: linear-gradient(90deg, #4f46e5, #7c3aed);
-          font-size: 11px;
-          font-weight: 1000;
-        }
-
-        .elitePlanName {
-          font-weight: 1000;
-          color: #334155;
-        }
-
-        .elitePlanPrice {
-          margin-top: 5px;
-          font-size: 31px;
-          line-height: 1;
-          font-weight: 1000;
-          color: #312e81;
-        }
-
-        .elitePlanSub {
-          margin-top: 6px;
-          font-size: 13px;
-          color: #64748b;
-          font-weight: 800;
-        }
-
-        .eliteModalButton {
-          margin-top: 18px;
-          width: 100%;
-        }
-
-        .eliteModalLater {
-          margin-top: 10px;
-          border: none;
-          background: transparent;
-          color: #64748b;
-          font-weight: 900;
-          cursor: pointer;
-        }
-
-        .eliteMobileSticky {
-          position: fixed;
-          left: 12px;
-          right: 12px;
-          bottom: 12px;
-          z-index: 80;
-          display: none;
-          grid-template-columns: 1fr auto;
-          gap: 11px;
-          align-items: center;
-          padding: 11px;
-          border-radius: 22px;
-          background: rgba(15,23,42,0.88);
-          border: 1px solid rgba(255,255,255,0.14);
-          backdrop-filter: blur(14px);
-          box-shadow: 0 18px 40px rgba(0,0,0,0.36);
-        }
-
-        .eliteMobileTop {
-          color: white;
-          font-size: 13px;
-          font-weight: 1000;
-          margin-bottom: 7px;
-        }
-
-        .eliteMobileTrack {
-          height: 8px;
-          border-radius: 999px;
-          background: rgba(255,255,255,0.16);
-          overflow: hidden;
-        }
-
-        .eliteMobileFill {
-          height: 100%;
-          border-radius: inherit;
-          background: linear-gradient(90deg, #60a5fa, #c084fc);
-        }
-
-        .eliteMobileButton {
-          min-height: 44px;
-          border-radius: 15px;
-          padding: 10px 14px;
-          text-decoration: none;
-          color: #312e81;
+        .mobileSelect {
+          padding: 14px;
+          border-radius: 14px;
+          border: 1px solid #d1d5db;
+          font-size: 15px;
+          min-width: 100%;
           background: white;
-          font-weight: 1000;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
+          width: 100%;
         }
 
+        .searchBox {
+          flex: 1 1 280px;
+          padding: 14px 16px;
+          border-radius: 14px;
+          border: 1px solid #d1d5db;
+          font-size: 15px;
+          min-height: 52px;
+          height: 52px;
+          max-height: 52px;
+          background: white;
+          box-sizing: border-box;
+          width: 100%;
+          min-width: 100%;
+        }
+
+
+        .eliteStatusStack { position: sticky; top: 8px; z-index: 60; display: grid; gap: 8px; margin-bottom: 12px; }
+        .eliteNotice, .eliteError { border-radius: 18px; padding: 12px 14px; font-weight: 900; box-shadow: 0 12px 26px rgba(0,0,0,0.20); }
+        .eliteNotice { background: #ecfdf5; color: #065f46; border: 1px solid #bbf7d0; }
+        .eliteError { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; }
+        .eliteUpgradeWall { margin-bottom: 18px; border-radius: 26px; padding: 20px; color: #111827; background: radial-gradient(circle at top right, rgba(196,181,253,0.42), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96)); border: 1px solid rgba(255,255,255,0.55); box-shadow: 0 18px 38px rgba(0,0,0,0.20); display: flex; justify-content: space-between; gap: 18px; align-items: center; }
+        .eliteUpgradeEyebrow { color: #6d28d9; font-size: 13px; font-weight: 1000; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 7px; }
+        .eliteUpgradeTitle { font-size: clamp(1.35rem, 3vw, 2rem); font-weight: 1000; letter-spacing: -0.6px; line-height: 1.1; margin-bottom: 8px; }
+        .eliteUpgradeText { color: #4b5563; line-height: 1.6; font-size: 15px; max-width: 760px; }
+        .elitePlanRow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+        .eliteMiniPlan { border-radius: 17px; padding: 11px 13px; background: #f8fafc; border: 1px solid #e5e7eb; min-width: 130px; }
+        .eliteMiniPlan.best { background: linear-gradient(135deg, #f5f3ff, #eff6ff); border-color: #a78bfa; box-shadow: 0 10px 20px rgba(124,58,237,0.10); }
+        .eliteMiniPlan span { display: block; color: #64748b; font-size: 12px; font-weight: 900; margin-bottom: 4px; }
+        .eliteMiniPlan strong { color: #312e81; font-size: 20px; font-weight: 1000; }
+        .eliteUpgradeButton, .eliteModalButton { min-height: 50px; border-radius: 17px; padding: 13px 18px; font-weight: 1000; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(90deg, #4f46e5, #7c3aed); color: white; box-shadow: 0 14px 26px rgba(79,70,229,0.26); }
+        .eliteModalOverlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px; background: rgba(2,6,23,0.72); backdrop-filter: blur(10px); }
+        .eliteModal { position: relative; width: min(540px, 100%); border-radius: 30px; padding: 24px; color: #111827; background: radial-gradient(circle at top right, rgba(196,181,253,0.55), transparent 32%), linear-gradient(180deg, #ffffff, #f8fafc); border: 1px solid rgba(255,255,255,0.75); box-shadow: 0 28px 80px rgba(0,0,0,0.42); text-align: center; }
+        .eliteModalClose { position: absolute; right: 14px; top: 12px; width: 38px; height: 38px; border-radius: 999px; border: none; background: #eef2ff; color: #312e81; font-size: 25px; font-weight: 900; cursor: pointer; }
+        .eliteModalIcon { width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 22px; display: grid; place-items: center; font-size: 31px; background: linear-gradient(135deg, #ddd6fe, #bfdbfe); }
+        .eliteModalTitle { margin: 0; font-size: clamp(1.8rem, 6vw, 2.6rem); line-height: 1; letter-spacing: -1px; font-weight: 1000; color: #111827; }
+        .eliteModalText { margin: 13px auto 0; max-width: 430px; color: #4b5563; line-height: 1.6; font-weight: 750; }
+        .eliteModalPlans { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+        .eliteModalPlan { border-radius: 20px; padding: 16px; background: #ffffff; border: 1px solid #e5e7eb; box-shadow: 0 10px 24px rgba(0,0,0,0.08); }
+        .eliteModalPlan.best { border-color: #a78bfa; background: linear-gradient(135deg, #f5f3ff, #eff6ff); }
+        .eliteBestValueTag { display: inline-flex; margin-bottom: 8px; padding: 5px 9px; border-radius: 999px; color: white; background: linear-gradient(90deg, #4f46e5, #7c3aed); font-size: 11px; font-weight: 1000; }
+        .elitePlanName { font-weight: 1000; color: #334155; }
+        .elitePlanPrice { margin-top: 5px; font-size: 31px; line-height: 1; font-weight: 1000; color: #312e81; }
+        .elitePlanSub { margin-top: 6px; font-size: 13px; color: #64748b; font-weight: 800; }
+        .eliteModalButton { margin-top: 18px; width: 100%; }
+        .eliteModalLater { margin-top: 10px; border: none; background: transparent; color: #64748b; font-weight: 900; cursor: pointer; }
+        .eliteMobileSticky { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 80; display: none; grid-template-columns: 1fr auto; gap: 11px; align-items: center; padding: 11px; border-radius: 22px; background: rgba(15,23,42,0.88); border: 1px solid rgba(255,255,255,0.14); backdrop-filter: blur(14px); box-shadow: 0 18px 40px rgba(0,0,0,0.36); }
+        .eliteMobileTop { color: white; font-size: 13px; font-weight: 1000; margin-bottom: 7px; }
+        .eliteMobileTrack { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.16); overflow: hidden; }
+        .eliteMobileFill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #60a5fa, #c084fc); }
+        .eliteMobileButton { min-height: 44px; border-radius: 15px; padding: 10px 14px; text-decoration: none; color: #312e81; background: white; font-weight: 1000; display: inline-flex; align-items: center; justify-content: center; }
+        @media (max-width: 920px) { .eliteUpgradeWall { display: grid; padding: 16px; border-radius: 22px; } .eliteUpgradeButton { width: 100%; } .eliteMobileSticky { display: grid; } .eliteModalPlans { grid-template-columns: 1fr; } }
         @media (min-width: 641px) {
           .statsSection {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
           }
 
           .tierGrid {
@@ -1735,161 +1328,58 @@ export default function Page() {
           }
         }
 
-        @media (max-width: 1199px) {
-          .cardsGrid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-        }
-
-        @media (max-width: 920px) {
-          .collectionPage {
-            padding: 12px 12px 106px;
-          }
-
-          .galaxyStars::before {
-            opacity: 0.32;
-          }
-
-          .heroSection,
-          .panelCard,
-          .eliteUpgradeWall {
-            border-radius: 22px;
-          }
-
-          .heroSection {
-            padding: 18px;
-          }
-
-          .heroTop {
-            display: grid;
-          }
-
-          .heroProgress {
-            width: 100%;
-            max-width: none;
-            min-width: 0;
-            box-sizing: border-box;
-          }
-
-          .heroQuickStats {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
-          .eliteUpgradeWall {
-            display: grid;
-            padding: 16px;
-          }
-
-          .eliteUpgradeButton {
-            width: 100%;
-            box-sizing: border-box;
-          }
-
-          .elitePlanRow {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-          }
-
-          .tierGrid,
-          .statsSection {
-            grid-template-columns: 1fr;
-          }
-
-          .publicProfileRow {
-            display: grid;
-          }
-
-          .publicProfileButton {
-            width: 100%;
-            box-sizing: border-box;
-          }
-
-          .spotlightGrid {
-            grid-template-columns: 1fr;
-          }
-
-          .filterPanel {
-            top: 6px;
-          }
-
-          .filterToggleButton {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-          }
-
-          .filterBody {
-            display: none;
-          }
-
-          .filterBody.open {
-            display: block;
+        @media (min-width: 921px) {
+          main {
+            padding: 18px !important;
           }
 
           .filterWrap {
-            display: grid;
-            grid-template-columns: 1fr;
+            flex-direction: row;
+            align-items: center;
           }
 
-          .quickMobileChips {
-            display: flex;
-            margin-top: 12px;
+          .publicProfileRow {
+            flex-direction: row;
+            align-items: center;
+          }
+
+          .publicProfileButton {
+            width: auto;
+          }
+
+          .publicProfileMeta {
+            font-size: 14px;
           }
 
           .collectionToggleWrap {
-            display: none;
+            width: auto;
           }
 
           .searchBox,
           .mobileSelect {
-            width: 100%;
-            min-width: 0;
-            box-sizing: border-box;
+            width: auto;
+            min-width: 180px;
           }
 
-          .seriesProgressGrid {
-            grid-template-columns: 1fr;
-          }
-
-          .seriesProgressButton {
-            padding: 12px;
-            border-radius: 16px;
+          .searchBox {
+            flex: 1 1 280px;
+            min-width: 280px;
           }
 
           .cardsGrid {
-            grid-template-columns: 1fr;
-            gap: 12px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
           }
 
-          .cardImageWrap {
-            height: 148px;
-            border-radius: 16px;
-            padding: 10px;
-          }
-
-          .qtyButton {
-            width: 50px;
-            height: 50px;
-            min-width: 50px;
-            border-radius: 16px;
-          }
-
-          .qtyValue {
-            font-size: 24px;
-          }
-
-          .eliteMobileSticky {
-            display: grid;
-          }
-
-          .eliteModalPlans {
-            grid-template-columns: 1fr;
+          .spotlightGrid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
           }
         }
 
-        @media (min-width: 921px) {
-          .publicProfileButton {
-            width: auto;
+        @media (min-width: 1200px) {
+          .cardsGrid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
           }
         }
 
@@ -1900,35 +1390,51 @@ export default function Page() {
         }
       `}</style>
 
-      <div className="galaxyStars">
-        <div className="eliteStatusStack">
-          {notice && <div className="eliteNotice">{notice}</div>}
-          {error && <div className="eliteError">{error}</div>}
-        </div>
-
+      <div
+        className="galaxyStars"
+        style={{ maxWidth: 1500, margin: "0 auto", position: "relative", zIndex: 1 }}
+      >
         <section className="heroSection">
-          <div className="heroTop">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 18,
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
             <div>
               <h1
                 style={{
                   margin: 0,
                   fontSize: "clamp(2rem, 5vw, 3.1rem)",
-                  fontWeight: 1000,
+                  fontWeight: 900,
                   letterSpacing: -1,
                 }}
               >
                 My Collection 💜
               </h1>
               <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
-                Track your vault, find your gaps, and keep your extras organized.
+                It only gets better in this galaxy 💜
               </div>
             </div>
 
-            <div className="heroProgress">
+            <div
+              style={{
+                minWidth: 250,
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 22,
+                padding: 16,
+                width: isMobile ? "100%" : "auto",
+                maxWidth: isMobile ? "100%" : 320,
+              }}
+            >
               <div style={{ fontSize: 14, opacity: 0.88, marginBottom: 8 }}>
                 Collection Completion
               </div>
-              <div style={{ fontSize: 30, fontWeight: 1000, marginBottom: 10 }}>
+              <div style={{ fontSize: 30, fontWeight: 900, marginBottom: 10 }}>
                 {completion}%
               </div>
               <div
@@ -1950,19 +1456,35 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="heroQuickStats">
-            {[
-              { label: "Owned", value: ownedCount },
-              { label: "Need", value: needCount },
-              { label: "Extras", value: extrasCount },
-              { label: "Showing", value: filteredCards.length },
-            ].map((stat) => (
-              <div key={stat.label} className="heroQuickStat">
-                <div className="heroQuickLabel">{stat.label}</div>
-                <div className="heroQuickValue">{stat.value.toLocaleString()}</div>
+          {!isSubscribed && (
+            <div className="upgradeBox">
+              <div style={{ fontWeight: 900, marginBottom: 4 }}>
+                Free plan: up to 50 saved Doorables
               </div>
-            ))}
-          </div>
+              <div style={{ fontSize: 14, color: "#4b5563" }}>
+                You are using {ownedCount}/50 saved Doorables. Upgrade to unlock unlimited collection, marketplace, and selling.
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <Link
+                  href="/pricing"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    background: "#4f46e5",
+                    color: "white",
+                    textDecoration: "none",
+                    fontWeight: 800,
+                    minHeight: 44,
+                  }}
+                >
+                  Upgrade
+                </Link>
+              </div>
+            </div>
+          )}
         </section>
 
         <section id="upgrade-wall" className="eliteUpgradeWall">
@@ -2002,7 +1524,7 @@ export default function Page() {
                 <div style={{ fontSize: 13, color: "#6b7280", fontWeight: 800, marginBottom: 6 }}>
                   {tier.title}
                 </div>
-                <div style={{ fontSize: 24, fontWeight: 1000, marginBottom: 6 }}>
+                <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 6 }}>
                   {tier.label}
                 </div>
                 <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.5 }}>
@@ -2034,7 +1556,7 @@ export default function Page() {
           <section className="panelCard">
             <div className="publicProfileRow">
               <div>
-                <div style={{ fontWeight: 1000, marginBottom: 6 }}>Public Collector Page</div>
+                <div style={{ fontWeight: 900, marginBottom: 6 }}>Public Collector Page</div>
                 <div className="publicProfileMeta">
                   Your current visibility: <strong>{getVisibilityLabel()}</strong>
                   <br />
@@ -2050,7 +1572,7 @@ export default function Page() {
         )}
 
         <section className="panelCard">
-          <div style={{ fontWeight: 1000, marginBottom: 10 }}>Collection Visibility</div>
+          <div style={{ fontWeight: 900, marginBottom: 10 }}>Collection Visibility</div>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[
@@ -2070,7 +1592,7 @@ export default function Page() {
                     borderRadius: 12,
                     border: "none",
                     cursor: savingVisibility ? "wait" : "pointer",
-                    fontWeight: 900,
+                    fontWeight: 800,
                     background: active ? "#4f46e5" : "#eef2ff",
                     color: active ? "white" : "#3730a3",
                     opacity: savingVisibility ? 0.7 : 1,
@@ -2090,7 +1612,7 @@ export default function Page() {
 
         {publicCollectors.length > 0 && (
           <section className="panelCard">
-            <div style={{ fontSize: 18, fontWeight: 1000, marginBottom: 12 }}>
+            <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 12 }}>
               Public Collectors Spotlight ✨
             </div>
 
@@ -2101,7 +1623,7 @@ export default function Page() {
                   href={`/collector/${collector.username}`}
                   className="spotlightCard"
                 >
-                  <div style={{ fontWeight: 1000, fontSize: 16, marginBottom: 6 }}>
+                  <div style={{ fontWeight: 900, fontSize: 16, marginBottom: 6 }}>
                     @{collector.username}
                   </div>
                   <div style={{ fontSize: 13, color: "#6b7280" }}>
@@ -2120,7 +1642,6 @@ export default function Page() {
             { label: "Total Doorables", value: totalCount, action: "all" },
             { label: "Owned", value: ownedCount, action: "have" },
             { label: "Still Need", value: needCount, action: "need" },
-            { label: "Extras", value: extrasCount, action: "extra" },
           ].map((stat) => (
             <button
               key={stat.label}
@@ -2135,146 +1656,120 @@ export default function Page() {
               }}
             >
               <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>{stat.label}</div>
-              <div style={{ fontSize: 30, fontWeight: 1000 }}>{stat.value}</div>
+              <div style={{ fontSize: 30, fontWeight: 900 }}>{stat.value}</div>
             </button>
           ))}
         </section>
 
-        <section className="panelCard filterPanel">
-          <div className="filterHeader">
-            <div>
-              <div style={{ fontWeight: 1000 }}>Search + Filters</div>
-              <div style={{ marginTop: 3, color: "#64748b", fontSize: 13, fontWeight: 750 }}>
-                Showing {pagedCards.length} of {filteredCards.length} • Page {safePage}/{totalPages}
-              </div>
+        <section className="panelCard">
+          <div className="filterWrap">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, series, rarity, movie, notes..."
+              className="searchBox"
+            />
+
+            <div className="collectionToggleWrap">
+              {[
+                { value: "all", label: "All" },
+                { value: "have", label: "Have" },
+                { value: "need", label: "Need" },
+                { value: "extra", label: "+Extra" },
+              ].map((option) => {
+                const active = collectionFilter === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => setCollectionFilter(option.value)}
+                    style={{
+                      padding: "9px 14px",
+                      borderRadius: 10,
+                      border: "none",
+                      cursor: "pointer",
+                      fontWeight: 800,
+                      background: active ? "#4f46e5" : "transparent",
+                      color: active ? "white" : "#3730a3",
+                      minHeight: 40,
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
 
-            <button
-              type="button"
-              className="filterToggleButton"
-              onClick={() => setShowMobileFilters((prev) => !prev)}
-            >
-              {showMobileFilters ? "Hide" : "Filters"}{activeFilterCount ? ` (${activeFilterCount})` : ""}
-            </button>
-          </div>
+            <select value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)} className="mobileSelect">
+              {seriesOptions.map((series) => (
+                <option key={series} value={series}>
+                  {series === "all" ? "All Series" : series}
+                </option>
+              ))}
+            </select>
 
-          <div className="quickMobileChips">
-            {[
-              { value: "all", label: "All" },
-              { value: "have", label: "Have" },
-              { value: "need", label: "Need" },
-              { value: "extra", label: "+Extra" },
-            ].map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={`quickChip ${collectionFilter === option.value ? "active" : ""}`}
-                onClick={() => setCollectionFilter(option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+            <select value={subcategoryFilter} onChange={(e) => setSubcategoryFilter(e.target.value)} className="mobileSelect">
+              {subcategoryOptions.map((subcategory) => (
+                <option key={subcategory} value={subcategory}>
+                  {subcategory === "all" ? "All Subcategories" : subcategory}
+                </option>
+              ))}
+            </select>
 
-          <div className={`filterBody ${showMobileFilters ? "open" : ""}`}>
-            <div className="filterWrap">
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search name, series, rarity, movie, notes..."
-                className="searchBox"
-              />
+            <select value={movieFilter} onChange={(e) => setMovieFilter(e.target.value)} className="mobileSelect">
+              {movieOptions.map((movie) => (
+                <option key={movie} value={movie}>
+                  {movie === "all" ? "All Movies" : movie}
+                </option>
+              ))}
+            </select>
 
-              <div className="collectionToggleWrap">
-                {[
-                  { value: "all", label: "All" },
-                  { value: "have", label: "Have" },
-                  { value: "need", label: "Need" },
-                  { value: "extra", label: "+Extra" },
-                ].map((option) => {
-                  const active = collectionFilter === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      onClick={() => setCollectionFilter(option.value)}
-                      style={{
-                        padding: "9px 14px",
-                        borderRadius: 10,
-                        border: "none",
-                        cursor: "pointer",
-                        fontWeight: 900,
-                        background: active ? "#4f46e5" : "transparent",
-                        color: active ? "white" : "#3730a3",
-                        minHeight: 40,
-                      }}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
+            <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} className="mobileSelect">
+              {rarityOptions.map((rarity) => (
+                <option key={rarity} value={rarity}>
+                  {rarity === "all" ? "All Rarities" : rarity}
+                </option>
+              ))}
+            </select>
 
-              <select value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)} className="mobileSelect">
-                {seriesOptions.map((series) => (
-                  <option key={series} value={series}>
-                    {series === "all" ? "All Series" : series}
-                  </option>
-                ))}
-              </select>
-
-              <select value={subcategoryFilter} onChange={(e) => setSubcategoryFilter(e.target.value)} className="mobileSelect">
-                {subcategoryOptions.map((subcategory) => (
-                  <option key={subcategory} value={subcategory}>
-                    {subcategory === "all" ? "All Subcategories" : subcategory}
-                  </option>
-                ))}
-              </select>
-
-              <select value={movieFilter} onChange={(e) => setMovieFilter(e.target.value)} className="mobileSelect">
-                {movieOptions.map((movie) => (
-                  <option key={movie} value={movie}>
-                    {movie === "all" ? "All Movies" : movie}
-                  </option>
-                ))}
-              </select>
-
-              <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} className="mobileSelect">
-                {rarityOptions.map((rarity) => (
-                  <option key={rarity} value={rarity}>
-                    {rarity === "all" ? "All Rarities" : rarity}
-                  </option>
-                ))}
-              </select>
-
-              {activeFilterCount > 0 && (
-                <button type="button" className="clearFiltersButton" onClick={clearFilters}>
-                  Clear filters
-                </button>
-              )}
+            <div style={{ fontSize: 14, color: "#4b5563", fontWeight: 700 }}>
+              Showing {pagedCards.length} of {filteredCards.length}
             </div>
           </div>
         </section>
 
         <section className="panelCard">
-          <div style={{ fontSize: 18, fontWeight: 1000, marginBottom: 12 }}>
+          <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 12 }}>
             Series Progress
           </div>
 
-          <div className="seriesProgressGrid">
-            {visibleSeriesProgress.map((entry) => (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {seriesProgress.map((entry) => (
               <button
                 key={entry.series}
                 onClick={() => jumpToSeries(entry.series)}
-                className="seriesProgressButton"
+                style={{
+                  borderRadius: 18,
+                  border: "1px solid #e5e7eb",
+                  padding: 14,
+                  background: "#ffffff",
+                  textAlign: "left",
+                  cursor: "pointer",
+                }}
               >
-                <div style={{ fontWeight: 900, marginBottom: 6 }}>
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>
                   {entry.series}
                   {entry.subcategoryLabel && (
                     <span
                       style={{
                         marginLeft: 8,
                         color: "#6366f1",
-                        fontWeight: 800,
+                        fontWeight: 700,
                       }}
                     >
                       • {entry.subcategoryLabel}
@@ -2305,16 +1800,10 @@ export default function Page() {
               </button>
             ))}
           </div>
-
-          {isMobile && seriesProgress.length > 6 && (
-            <button type="button" className="showMoreButton" onClick={() => setExpandedSeries((prev) => !prev)}>
-              {expandedSeries ? "Show fewer series" : `Show all ${seriesProgress.length} series`}
-            </button>
-          )}
         </section>
 
         <section id="cards-grid" className="cardsGrid">
-          {pagedCards.map((item, index) => {
+          {pagedCards.map((item) => {
             const rarity = rarityTheme(item.rarity);
             const subtleOverlay =
               item.qty > 0
@@ -2322,7 +1811,6 @@ export default function Page() {
                 : "linear-gradient(rgba(168,85,247,0.08), rgba(168,85,247,0.08))";
 
             const statusText = collectionStatus(item.qty);
-            const photoOpen = expandedPhotoCardId === item.id;
 
             return (
               <div
@@ -2343,7 +1831,7 @@ export default function Page() {
                     <img
                       src={item.image}
                       alt={item.name}
-                      loading={index < 2 ? "eager" : "lazy"}
+                      loading="lazy"
                       decoding="async"
                       className="cardImage"
                     />
@@ -2364,7 +1852,7 @@ export default function Page() {
                   <div style={{ minWidth: 0 }}>
                     <div
                       style={{
-                        fontWeight: 1000,
+                        fontWeight: 900,
                         fontSize: isMobile ? 18 : 20,
                         lineHeight: 1.1,
                         wordBreak: "break-word",
@@ -2379,7 +1867,7 @@ export default function Page() {
                       padding: "6px 10px",
                       borderRadius: 999,
                       fontSize: 12,
-                      fontWeight: 1000,
+                      fontWeight: 900,
                       background: rarity.badgeBg,
                       color: rarity.badgeText,
                       whiteSpace: "nowrap",
@@ -2444,7 +1932,7 @@ export default function Page() {
                   style={{
                     marginTop: 8,
                     marginBottom: 8,
-                    fontWeight: 900,
+                    fontWeight: 800,
                     color:
                       statusText === "Need"
                         ? "#7c3aed"
@@ -2468,7 +1956,7 @@ export default function Page() {
                   style={{
                     width: "100%",
                     marginTop: 8,
-                    minHeight: isMobile ? 56 : 70,
+                    minHeight: isMobile ? 64 : 70,
                     borderRadius: 12,
                     border: "1px solid " + rarity.border,
                     background: "rgba(255,255,255,0.82)",
@@ -2489,7 +1977,7 @@ export default function Page() {
                     borderRadius: 12,
                     border: "none",
                     cursor: "pointer",
-                    fontWeight: 900,
+                    fontWeight: 800,
                     background: rarity.badgeBg,
                     color: rarity.badgeText,
                     minHeight: 44,
@@ -2498,54 +1986,48 @@ export default function Page() {
                   {savingId === item.id ? "Saving Note..." : "Save Note"}
                 </button>
 
-                <button
-                  type="button"
-                  className="photoToggleButton"
-                  onClick={() => setExpandedPhotoCardId(photoOpen ? "" : item.id)}
-                >
-                  {photoOpen ? "Hide photo upload" : "Submit better photo"}
-                </button>
-
-                {photoOpen && (
-                  <div className="photoBox">
-                    <textarea
-                      value={photoNote[item.id] || ""}
-                      onChange={(e) =>
-                        setPhotoNote((prev) => ({
-                          ...prev,
-                          [item.id]: e.target.value,
-                        }))
-                      }
-                      placeholder="Optional note about this image..."
-                      style={{
-                        width: "100%",
-                        minHeight: 56,
-                        borderRadius: 10,
-                        border: "1px solid #d1d5db",
-                        padding: 8,
-                        boxSizing: "border-box",
-                        marginBottom: 8,
-                        background: "rgba(255,255,255,0.9)",
-                        color: "#111827",
-                        fontSize: 14,
-                      }}
-                    />
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => void handlePhotoSubmission(item, e.target.files?.[0] ?? null)}
-                      disabled={uploadingPhotoId === item.id}
-                      style={{ width: "100%" }}
-                    />
-
-                    <div style={{ marginTop: 6, fontSize: 12, color: "#4b5563" }}>
-                      {uploadingPhotoId === item.id
-                        ? "Submitting photo..."
-                        : "Uploads are sent for review before they replace the main image."}
-                    </div>
+                <div className="photoBox">
+                  <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>
+                    Submit a better photo
                   </div>
-                )}
+
+                  <textarea
+                    value={photoNote[item.id] || ""}
+                    onChange={(e) =>
+                      setPhotoNote((prev) => ({
+                        ...prev,
+                        [item.id]: e.target.value,
+                      }))
+                    }
+                    placeholder="Optional note about this image..."
+                    style={{
+                      width: "100%",
+                      minHeight: 56,
+                      borderRadius: 10,
+                      border: "1px solid #d1d5db",
+                      padding: 8,
+                      boxSizing: "border-box",
+                      marginBottom: 8,
+                      background: "rgba(255,255,255,0.9)",
+                      color: "#111827",
+                      fontSize: 14,
+                    }}
+                  />
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => void handlePhotoSubmission(item, e.target.files?.[0] ?? null)}
+                    disabled={uploadingPhotoId === item.id}
+                    style={{ width: "100%" }}
+                  />
+
+                  <div style={{ marginTop: 6, fontSize: 12, color: "#4b5563" }}>
+                    {uploadingPhotoId === item.id
+                      ? "Submitting photo..."
+                      : "Uploads are sent for review before they replace the main image."}
+                  </div>
+                </div>
               </div>
             );
           })}
@@ -2562,7 +2044,7 @@ export default function Page() {
               Previous
             </button>
 
-            <div style={{ fontWeight: 900 }}>
+            <div style={{ fontWeight: 800 }}>
               Page {safePage} of {totalPages}
             </div>
 
@@ -2577,48 +2059,6 @@ export default function Page() {
           </div>
         )}
       </div>
-
-      {showUpgradeModal && (
-        <div className="eliteModalOverlay" role="dialog" aria-modal="true">
-          <div className="eliteModal">
-            <button className="eliteModalClose" type="button" onClick={() => setShowUpgradeModal(false)}>
-              ×
-            </button>
-            <div className="eliteModalIcon">💜</div>
-            <h2 className="eliteModalTitle">Your free vault is full</h2>
-            <div className="eliteModalText">
-              Free accounts can save up to {FREE_LIMIT} Doorables. Upgrade to keep tracking unlimited Doorables, extras, marketplace tools, and collector features.
-            </div>
-            <div className="eliteModalPlans">
-              <div className="eliteModalPlan">
-                <div className="elitePlanName">Monthly</div>
-                <div className="elitePlanPrice">{MONTHLY_PRICE_LABEL}</div>
-                <div className="elitePlanSub">Flexible full access</div>
-              </div>
-              <div className="eliteModalPlan best">
-                <div className="eliteBestValueTag">Best value</div>
-                <div className="elitePlanName">Yearly</div>
-                <div className="elitePlanPrice">{YEARLY_PRICE_LABEL}</div>
-                <div className="elitePlanSub">Best for collectors</div>
-              </div>
-            </div>
-            <Link href="/pricing" className="eliteModalButton">Upgrade for Full Access</Link>
-            <button className="eliteModalLater" type="button" onClick={() => setShowUpgradeModal(false)}>
-              Maybe later
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!isSubscribed && (
-        <div className="eliteMobileSticky">
-          <div>
-            <div className="eliteMobileTop">{ownedCount}/{FREE_LIMIT} free saves used</div>
-            <div className="eliteMobileTrack"><div className="eliteMobileFill" style={{ width: `${Math.min(100, Math.round((ownedCount / FREE_LIMIT) * 100))}%` }} /></div>
-          </div>
-          <Link href="/pricing" className="eliteMobileButton">Upgrade</Link>
-        </div>
-      )}
     </main>
   );
 }

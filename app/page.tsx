@@ -1182,6 +1182,46 @@ export default function HomePage() {
             grid-template-columns: 1fr;
           }
         }
+
+/* FINAL HOMEPAGE LINK COLOR FIX */
+/* Makes every homepage link white except the Adorable Vault brand */
+
+.page a:not(.brand),
+.page a:not(.brand):visited {
+  color: #ffffff !important;
+  text-decoration: none !important;
+  opacity: 1 !important;
+}
+
+/* Forces text/icons inside links to stay white too */
+.page a:not(.brand) *,
+.page a:not(.brand):visited * {
+  color: #ffffff !important;
+}
+
+/* Makes button-style links readable instead of faded */
+.page .buttonRow a,
+.page .miniActions a,
+.page a.primaryButton,
+.page a.secondaryButton,
+.page a.purpleButton,
+.page a.miniAction,
+.page .featureLink {
+  color: #ffffff !important;
+  background: linear-gradient(90deg, #4f46e5, #a855f7) !important;
+  border: 1px solid rgba(255,255,255,0.5) !important;
+  box-shadow: 0 16px 34px rgba(124,58,237,0.45) !important;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.35) !important;
+}
+
+/* Keeps Adorable Vault logo/brand alone */
+.page .brand,
+.page .brand *,
+.page .brand:visited,
+.page .brand:visited * {
+  color: inherit !important;
+}
+
       `}</style>
 
       <div className="shell">

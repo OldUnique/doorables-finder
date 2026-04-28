@@ -186,7 +186,7 @@ export default function HomePage() {
         listings: listingCount ?? 0,
       });
     } catch {
-      // Optional stats should not break homepage.
+      // Optional homepage stats should never crash the page.
     }
   }
 
@@ -401,7 +401,7 @@ export default function HomePage() {
         }
 
         .navPill {
-          color: white;
+          color: white !important;
           text-decoration: none;
           font-weight: 950;
           padding: 12px 15px;
@@ -420,8 +420,7 @@ export default function HomePage() {
         }
 
         .heroCard,
-        .previewPanel,
-        .premiumPanel {
+        .previewPanel {
           border-radius: 32px;
           border: 1px solid rgba(255,255,255,0.16);
           background:
@@ -466,7 +465,7 @@ export default function HomePage() {
 
         .seoLine {
           margin-top: 14px;
-          color: rgba(255,255,255,0.76);
+          color: rgba(255,255,255,0.78);
           font-size: 13px;
           line-height: 1.55;
           font-weight: 750;
@@ -490,6 +489,72 @@ export default function HomePage() {
           box-shadow: 0 10px 20px rgba(0,0,0,0.18);
         }
 
+        .heroCtaGrid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-top: 24px;
+        }
+
+        .heroCta {
+          min-height: 76px;
+          border-radius: 22px;
+          padding: 15px;
+          text-decoration: none !important;
+          display: flex;
+          align-items: center;
+          gap: 13px;
+          border: 1px solid rgba(255,255,255,0.34);
+          box-shadow: 0 18px 38px rgba(0,0,0,0.30);
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+          color: #ffffff !important;
+        }
+
+        .heroCta:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 24px 50px rgba(0,0,0,0.38);
+        }
+
+        .heroCtaPrimary {
+          background: linear-gradient(135deg, #4f46e5, #a855f7);
+        }
+
+        .heroCtaSecondary {
+          background: linear-gradient(135deg, #0f172a, #3730a3);
+        }
+
+        .heroCtaIcon {
+          width: 48px;
+          height: 48px;
+          border-radius: 16px;
+          display: grid;
+          place-items: center;
+          font-size: 24px;
+          background: rgba(255,255,255,0.17);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+          flex: 0 0 auto;
+        }
+
+        .heroCtaText {
+          display: grid;
+          gap: 3px;
+          min-width: 0;
+        }
+
+        .heroCtaTitle {
+          color: #ffffff !important;
+          font-weight: 1000;
+          font-size: 16px;
+          line-height: 1.1;
+        }
+
+        .heroCtaSub {
+          color: rgba(255,255,255,0.86) !important;
+          font-weight: 850;
+          font-size: 12px;
+          line-height: 1.2;
+        }
+
         .buttonRow {
           display: flex;
           gap: 11px;
@@ -499,12 +564,13 @@ export default function HomePage() {
 
         .primaryButton,
         .secondaryButton,
-        .purpleButton {
+        .purpleButton,
+        .planButton {
           min-height: 50px;
           border-radius: 17px;
           padding: 13px 18px;
           font-weight: 1000;
-          text-decoration: none;
+          text-decoration: none !important;
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -512,33 +578,20 @@ export default function HomePage() {
           transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
         }
 
-        .primaryButton:hover,
-        .secondaryButton:hover,
-        .purpleButton:hover {
-          transform: translateY(-2px);
-        }
-
-        .primaryButton {
+        .primaryButton,
+        .planButton {
           background: linear-gradient(90deg, #ffffff, #fef3c7);
           color: #312e81 !important;
           border: 1px solid rgba(255,255,255,0.55);
           box-shadow: 0 18px 40px rgba(255,255,255,0.22);
-          opacity: 1;
         }
 
-        .secondaryButton {
+        .secondaryButton,
+        .purpleButton {
           background: linear-gradient(90deg, #4f46e5, #a855f7);
           color: #ffffff !important;
           border: 1px solid rgba(255,255,255,0.45);
           box-shadow: 0 16px 34px rgba(124,58,237,0.50);
-          opacity: 1;
-        }
-
-        .purpleButton {
-          background: linear-gradient(90deg, #ffffff, #fef3c7);
-          color: #312e81 !important;
-          border: 1px solid rgba(255,255,255,0.55);
-          box-shadow: 0 14px 26px rgba(255,255,255,0.18);
         }
 
         .previewPanel {
@@ -574,7 +627,7 @@ export default function HomePage() {
           box-shadow:
             0 18px 40px rgba(0,0,0,0.36),
             inset 0 1px 0 rgba(255,255,255,0.14);
-          text-decoration: none;
+          text-decoration: none !important;
           backdrop-filter: blur(12px);
           transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
           display: block;
@@ -717,7 +770,7 @@ export default function HomePage() {
           box-shadow: 0 14px 30px rgba(124,58,237,0.42);
           color: #ffffff !important;
           font-weight: 1000;
-          text-decoration: none;
+          text-decoration: none !important;
           display: flex;
           align-items: center;
           gap: 10px;
@@ -786,8 +839,8 @@ export default function HomePage() {
         }
 
         .featureCard {
-          color: white;
-          text-decoration: none;
+          color: white !important;
+          text-decoration: none !important;
           border-radius: 24px;
           padding: 18px;
           min-height: 200px;
@@ -1004,17 +1057,21 @@ export default function HomePage() {
           display: none;
         }
 
-        .heroCard a,
-        .previewPanel a,
-        .finalCta a {
-          text-decoration: none !important;
+        .page a:not(.brand),
+        .page a:not(.brand):visited {
+          color: #ffffff !important;
         }
 
-        .heroCard .buttonRow a,
-        .previewPanel .miniActions a,
-        .finalCta .buttonRow a {
-          opacity: 1 !important;
-          filter: none !important;
+        .page a:not(.brand) *,
+        .page a:not(.brand):visited * {
+          color: inherit;
+        }
+
+        .brand,
+        .brand *,
+        .brand:visited,
+        .brand:visited * {
+          color: inherit !important;
         }
 
         @media (max-width: 980px) {
@@ -1054,6 +1111,10 @@ export default function HomePage() {
             font-size: 15.5px;
           }
 
+          .heroCtaGrid {
+            grid-template-columns: 1fr;
+          }
+
           .buttonRow {
             display: grid;
             grid-template-columns: 1fr;
@@ -1061,7 +1122,8 @@ export default function HomePage() {
 
           .primaryButton,
           .secondaryButton,
-          .purpleButton {
+          .purpleButton,
+          .planButton {
             width: 100%;
           }
 
@@ -1105,7 +1167,7 @@ export default function HomePage() {
             grid-template-columns: 52px 1fr;
           }
 
-          .progressHeader .purpleButton {
+          .progressHeader .planButton {
             grid-column: 1 / -1;
           }
 
@@ -1182,46 +1244,6 @@ export default function HomePage() {
             grid-template-columns: 1fr;
           }
         }
-
-/* FINAL HOMEPAGE LINK COLOR FIX */
-/* Makes every homepage link white except the Adorable Vault brand */
-
-.page a:not(.brand),
-.page a:not(.brand):visited {
-  color: #ffffff !important;
-  text-decoration: none !important;
-  opacity: 1 !important;
-}
-
-/* Forces text/icons inside links to stay white too */
-.page a:not(.brand) *,
-.page a:not(.brand):visited * {
-  color: #ffffff !important;
-}
-
-/* Makes button-style links readable instead of faded */
-.page .buttonRow a,
-.page .miniActions a,
-.page a.primaryButton,
-.page a.secondaryButton,
-.page a.purpleButton,
-.page a.miniAction,
-.page .featureLink {
-  color: #ffffff !important;
-  background: linear-gradient(90deg, #4f46e5, #a855f7) !important;
-  border: 1px solid rgba(255,255,255,0.5) !important;
-  box-shadow: 0 16px 34px rgba(124,58,237,0.45) !important;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.35) !important;
-}
-
-/* Keeps Adorable Vault logo/brand alone */
-.page .brand,
-.page .brand *,
-.page .brand:visited,
-.page .brand:visited * {
-  color: inherit !important;
-}
-
       `}</style>
 
       <div className="shell">
@@ -1280,15 +1302,25 @@ export default function HomePage() {
               <span className="trustPill">Mobile-friendly collector hub</span>
             </div>
 
-            <div className="buttonRow">
-              <Link href="/collection" className="primaryButton">
-                🎯 Start Tracking Free
+            <div className="heroCtaGrid">
+              <Link href="/collection" className="heroCta heroCtaPrimary">
+                <span className="heroCtaIcon">🎯</span>
+                <span className="heroCtaText">
+                  <span className="heroCtaTitle">Start Tracking Free</span>
+                  <span className="heroCtaSub">
+                    Save your first 50 Doorables
+                  </span>
+                </span>
               </Link>
-              <Link href="/marketplace" className="secondaryButton">
-                🛍️ Browse Finds
-              </Link>
-              <Link href="/pricing" className="secondaryButton">
-                👑 View Plans
+
+              <Link href="/marketplace" className="heroCta heroCtaSecondary">
+                <span className="heroCtaIcon">🛍️</span>
+                <span className="heroCtaText">
+                  <span className="heroCtaTitle">Browse Marketplace</span>
+                  <span className="heroCtaSub">
+                    Find missing pieces and extras
+                  </span>
+                </span>
               </Link>
             </div>
           </div>
@@ -1308,7 +1340,9 @@ export default function HomePage() {
                 <Link href="/collection" className="statCard needed">
                   <div className="statIcon">📋</div>
                   <div className="statLabel">Still Needed</div>
-                  <div className="statValue">{stats.needed.toLocaleString()}</div>
+                  <div className="statValue">
+                    {stats.needed.toLocaleString()}
+                  </div>
                   <div className="statSub">Doorables to collect</div>
                 </Link>
               </div>
@@ -1351,7 +1385,7 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <Link href="/pricing" className="purpleButton">
+                <Link href="/pricing" className="planButton">
                   Upgrade Now
                 </Link>
               </div>
@@ -1596,7 +1630,7 @@ export default function HomePage() {
           </div>
 
           <div style={{ marginTop: 16 }}>
-            <Link href="/pricing" className="purpleButton">
+            <Link href="/pricing" className="secondaryButton">
               Compare Plans
             </Link>
           </div>
@@ -1659,3 +1693,4 @@ export default function HomePage() {
     </main>
   );
 }
+

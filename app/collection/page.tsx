@@ -195,17 +195,11 @@ function getMarketplaceTier(params: {
   const { averageRating, reviewCount, activeListings, soldListings } = params;
 
   let stars = 0;
-  if (reviewCount > 0) {
-    stars = Number(averageRating.toFixed(1));
-  } else if (soldListings >= 10) {
-    stars = 5.0;
-  } else if (soldListings >= 5) {
-    stars = 4.7;
-  } else if (soldListings >= 2) {
-    stars = 4.3;
-  } else if (activeListings >= 3) {
-    stars = 4.0;
-  }
+  if (reviewCount > 0) stars = Number(averageRating.toFixed(1));
+  else if (soldListings >= 10) stars = 5.0;
+  else if (soldListings >= 5) stars = 4.7;
+  else if (soldListings >= 2) stars = 4.3;
+  else if (activeListings >= 3) stars = 4.0;
 
   if ((reviewCount >= 10 && averageRating >= 4.8) || soldListings >= 15) {
     return {
@@ -321,12 +315,12 @@ function getCommunityTier(params: {
 
 function renderStars(value: number) {
   if (value <= 0) return "☆☆☆☆☆";
-  const rounded = Math.round(value);
+  const rounded = Math.max(0, Math.min(5, Math.round(value)));
   return "★".repeat(rounded) + "☆".repeat(5 - rounded);
 }
 
 export default function Page() {
-const router = useRouter();
+  const router = useRouter();
 
   const [cards, setCards] = useState<Card[]>([]);
   const [userId, setUserId] = useState("");
@@ -393,8 +387,10 @@ const router = useRouter();
         error: authError,
       } = await supabase.auth.getUser();
 
-      if (authError || !user) { router.replace("/login");
-return;
+      if (authError || !user) {
+        router.replace("/login");
+        return;
+      }
 
       setUserId(String(user.id));
 
@@ -463,6 +459,7 @@ return;
       const merged: Card[] = (doorables || [])
         .map((d: any) => {
           const row = userMap.get(String(d.id));
+
           return {
             id: String(d.id ?? ""),
             name: String(d.name ?? "Unknown"),
@@ -479,7 +476,10 @@ return;
         .sort((a, b) => {
           const bySeries = seriesSort(a.series, b.series);
           if (bySeries !== 0) return bySeries;
-          return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+
+          return a.name.localeCompare(b.name, undefined, {
+            sensitivity: "base",
+          });
         });
 
       setCards(merged);
@@ -527,10 +527,15 @@ return;
 
       if (listingsResult.status === "fulfilled" && !listingsResult.value.error) {
         const listings = listingsResult.value.data || [];
-        const activeListings = listings.filter((row: any) => String(row.status || "") === "active");
+
+        const activeListings = listings.filter(
+          (row: any) => String(row.status || "") === "active"
+        );
+
         const soldListings = listings.filter(
           (row: any) => String(row.status || "") === "sold" || !!row.sold_at
         );
+
         const monthListings = listings.filter((row: any) => {
           const created = row.created_at ? new Date(row.created_at).getTime() : 0;
           return created >= new Date(startOfMonthIso).getTime();
@@ -565,7 +570,11 @@ return;
 
       setLoading(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Collection page crashed while loading.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Collection page crashed while loading."
+      );
       setLoading(false);
     }
   }
@@ -582,7 +591,7 @@ return;
       } = await supabase.auth.getUser();
 
       if (!user) {
-        setSavingVisibility(false);
+        router.replace("/login");
         return;
       }
 
@@ -707,8 +716,7 @@ return;
       } = await supabase.auth.getUser();
 
       if (userError || !user) {
-        console.error("Auth error:", userError);
-        setError("You are not signed in. Refresh and log in again.");
+        router.replace("/login");
         return;
       }
 
@@ -723,7 +731,6 @@ return;
         });
 
       if (uploadError) {
-        console.error("Upload error:", uploadError);
         setError(uploadError.message);
         return;
       }
@@ -747,7 +754,6 @@ return;
         .select();
 
       if (insertError) {
-        console.error("Insert error full:", JSON.stringify(insertError, null, 2));
         setError(insertError.message || "Insert failed");
         setUploadingPhotoId("");
         return;
@@ -888,7 +894,8 @@ return;
       .sort((a, b) => seriesSort(a.series, b.series));
   }, [cards]);
 
-  const visibleSeriesProgress = isMobile && !expandedSeries ? seriesProgress.slice(0, 6) : seriesProgress;
+  const visibleSeriesProgress =
+    isMobile && !expandedSeries ? seriesProgress.slice(0, 6) : seriesProgress;
 
   function jumpToSeries(seriesName: string) {
     setSeriesFilter(seriesName);
@@ -934,31 +941,26 @@ return;
 
   if (loading) {
     return (
-      <div
-        style={{
-          padding: 24,
-          minHeight: "100vh",
-          background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)",
-          color: "white",
-        }}
-      >
-        Loading collection...
+      <div className="loadingPage">
+        <div className="loadingCard">
+          <div className="loadingIcon">💜</div>
+          <h1>Loading your vault...</h1>
+          <p>Pulling your Doorables collection together.</p>
+        </div>
       </div>
     );
   }
 
   if (error && !cards.length) {
     return (
-      <div
-        style={{
-          padding: 24,
-          minHeight: "100vh",
-          background: "radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%)",
-          color: "white",
-        }}
-      >
-        <h1>Collection Error</h1>
-        <div>{error}</div>
+      <div className="loadingPage">
+        <div className="loadingCard">
+          <h1>Collection Error</h1>
+          <p>{error}</p>
+          <Link href="/login" className="eliteUpgradeButton">
+            Go to Login
+          </Link>
+        </div>
       </div>
     );
   }
@@ -975,6 +977,50 @@ return;
             radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%),
             radial-gradient(circle at 70% 70%, rgba(236,72,153,0.18) 0%, rgba(236,72,153,0) 20%),
             linear-gradient(180deg, #09090f 0%, #111827 38%, #0f172a 65%, #020617 100%);
+        }
+
+        .loadingPage {
+          min-height: 100vh;
+          display: grid;
+          place-items: center;
+          padding: 20px;
+          color: white;
+          background: radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%);
+        }
+
+        .loadingCard {
+          width: min(520px, 100%);
+          border-radius: 28px;
+          padding: 28px;
+          background: rgba(255,255,255,0.10);
+          border: 1px solid rgba(255,255,255,0.16);
+          box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+          text-align: center;
+        }
+
+        .loadingIcon {
+          width: 64px;
+          height: 64px;
+          display: grid;
+          place-items: center;
+          margin: 0 auto 12px;
+          border-radius: 22px;
+          background: linear-gradient(135deg, #a855f7, #60a5fa);
+          font-size: 30px;
+        }
+
+        .cardsGrid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 14px;
+        }
+
+        .floatCard {
+          transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+        }
+
+        .floatCard:hover {
+          transform: translateY(-4px);
         }
 
         .galaxyStars {
@@ -999,6 +1045,411 @@ return;
             radial-gradient(1.5px 1.5px at 92% 25%, rgba(255,255,255,0.85) 40%, transparent 41%);
           opacity: 0.6;
           z-index: 0;
+        }
+
+        .heroSection {
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 30%),
+            linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
+          border-radius: 28px;
+          padding: 24px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+          margin-bottom: 18px;
+          border: 1px solid rgba(255,255,255,0.08);
+          backdrop-filter: blur(6px);
+        }
+
+        .heroTop {
+          display: flex;
+          justify-content: space-between;
+          gap: 18px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .heroTitle {
+          margin: 0;
+          font-size: clamp(2rem, 5vw, 3.1rem);
+          font-weight: 1000;
+          letter-spacing: -1px;
+          line-height: 1;
+        }
+
+        .heroSubtitle {
+          margin-top: 8px;
+          opacity: 0.92;
+          font-size: 16px;
+          font-weight: 750;
+        }
+
+        .heroProgress {
+          min-width: 250px;
+          background: rgba(255,255,255,0.08);
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 22px;
+          padding: 16px;
+          width: auto;
+          max-width: 320px;
+        }
+
+        .tierGrid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 14px;
+          margin-bottom: 18px;
+        }
+
+        .tierCard {
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          border-radius: 22px;
+          padding: 16px;
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          border: 1px solid rgba(255,255,255,0.35);
+          overflow: hidden;
+          position: relative;
+        }
+
+        .tierAccent {
+          position: absolute;
+          inset: 0 auto 0 0;
+          width: 8px;
+          border-radius: 22px 0 0 22px;
+        }
+
+        .statsSection {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 14px;
+          margin-bottom: 18px;
+        }
+
+        .statButton {
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          border-radius: 20px;
+          padding: 18px;
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          border: 1px solid rgba(255,255,255,0.35);
+          cursor: pointer;
+          text-align: left;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .statButton:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 14px 28px rgba(0,0,0,0.22);
+        }
+
+        .panelCard {
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          border-radius: 24px;
+          padding: 16px;
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          margin-bottom: 18px;
+          border: 1px solid rgba(255,255,255,0.35);
+        }
+
+        .filterPanel {
+          position: sticky;
+          top: 8px;
+          z-index: 55;
+        }
+
+        .filterHeader {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 10px;
+          align-items: center;
+        }
+
+        .filterToggleButton {
+          display: none;
+          border: none;
+          border-radius: 14px;
+          padding: 13px 14px;
+          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          color: #ffffff;
+          font-weight: 950;
+          min-height: 50px;
+          cursor: pointer;
+        }
+
+        .filterBody {
+          margin-top: 12px;
+        }
+
+        .filterWrap {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .collectionToggleWrap {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          padding: 6px;
+          border-radius: 14px;
+          background: #eef2ff;
+          border: 1px solid #c7d2fe;
+          flex-wrap: wrap;
+          width: auto;
+          justify-content: flex-start;
+        }
+
+        .quickMobileChips {
+          display: none;
+          gap: 8px;
+          overflow-x: auto;
+          padding-bottom: 2px;
+          scrollbar-width: none;
+        }
+
+        .quickMobileChips::-webkit-scrollbar {
+          display: none;
+        }
+
+        .quickChip {
+          min-height: 42px;
+          border-radius: 999px;
+          border: 1px solid #c7d2fe;
+          padding: 9px 13px;
+          font-weight: 900;
+          background: #eef2ff;
+          color: #3730a3;
+          white-space: nowrap;
+          cursor: pointer;
+        }
+
+        .quickChip.active {
+          background: #4f46e5;
+          color: #ffffff;
+        }
+
+        .clearFiltersButton {
+          border: none;
+          border-radius: 12px;
+          padding: 10px 12px;
+          background: #f1f5f9;
+          color: #334155;
+          font-weight: 900;
+          min-height: 42px;
+          cursor: pointer;
+        }
+
+        .cardImageWrap {
+          height: 180px;
+          background: rgba(255,255,255,0.92);
+          border-radius: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 12px;
+          overflow: hidden;
+          padding: 14px;
+        }
+
+        .cardImage {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          transition: transform 0.2s ease;
+        }
+
+        .cardImageWrap:hover .cardImage {
+          transform: scale(1.05);
+        }
+
+        .pager {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-top: 18px;
+        }
+
+        .pagerButton {
+          padding: 10px 14px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.16);
+          background: rgba(255,255,255,0.08);
+          color: white;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .pagerButton:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+
+        .upgradeBox {
+          margin-top: 12px;
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          border-radius: 18px;
+          padding: 14px;
+          border: 1px solid rgba(255,255,255,0.35);
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+        }
+
+        .publicProfileRow {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .publicProfileButton {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 12px 16px;
+          border-radius: 14px;
+          text-decoration: none;
+          color: white;
+          font-weight: 800;
+          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          box-shadow: 0 10px 18px rgba(79,70,229,0.28);
+          min-height: 46px;
+        }
+
+        .publicProfileMeta {
+          font-size: 13px;
+          color: #4b5563;
+          line-height: 1.5;
+        }
+
+        .spotlightGrid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .spotlightCard {
+          display: block;
+          text-decoration: none;
+          background: #ffffff;
+          color: #111827;
+          border-radius: 18px;
+          padding: 14px;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 8px 18px rgba(0,0,0,0.10);
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .spotlightCard:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 24px rgba(0,0,0,0.14);
+        }
+
+        .qtyControls {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: 8px;
+        }
+
+        .qtyButton {
+          width: 46px;
+          height: 46px;
+          min-width: 46px;
+          border-radius: 14px;
+          font-size: 22px;
+          font-weight: 900;
+          line-height: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          touch-action: manipulation;
+          user-select: none;
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        .qtyValue {
+          min-width: 44px;
+          text-align: center;
+          font-weight: 900;
+          font-size: 22px;
+        }
+
+        .photoBox {
+          margin-top: 10px;
+          padding: 10px;
+          border-radius: 12px;
+          background: rgba(255,255,255,0.55);
+          border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        .photoToggleButton {
+          width: 100%;
+          margin-top: 10px;
+          min-height: 42px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.6);
+          background: rgba(255,255,255,0.68);
+          color: #111827;
+          font-weight: 900;
+          cursor: pointer;
+        }
+
+        .mobileSelect {
+          padding: 14px;
+          border-radius: 14px;
+          border: 1px solid #d1d5db;
+          font-size: 15px;
+          background: white;
+          width: auto;
+          min-width: 180px;
+        }
+
+        .searchBox {
+          flex: 1 1 280px;
+          padding: 14px 16px;
+          border-radius: 14px;
+          border: 1px solid #d1d5db;
+          font-size: 15px;
+          min-height: 52px;
+          height: 52px;
+          max-height: 52px;
+          background: white;
+          box-sizing: border-box;
+          width: auto;
+          min-width: 280px;
+        }
+
+        .seriesProgressGrid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 12px;
+        }
+
+        .seriesProgressButton {
+          border-radius: 18px;
+          border: 1px solid #e5e7eb;
+          padding: 14px;
+          background: #ffffff;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .showMoreButton {
+          margin-top: 12px;
+          width: 100%;
+          min-height: 44px;
+          border: none;
+          border-radius: 14px;
+          background: #eef2ff;
+          color: #3730a3;
+          font-weight: 950;
+          cursor: pointer;
         }
 
         .eliteStatusStack {
@@ -1028,60 +1479,6 @@ return;
           background: #fff1f2;
           color: #9f1239;
           border: 1px solid #fecdd3;
-        }
-
-        .heroSection {
-          background: radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 32%), linear-gradient(135deg, rgba(17,24,39,0.94), rgba(67,56,202,0.88));
-          border-radius: 28px;
-          padding: 24px;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-          margin-bottom: 18px;
-          border: 1px solid rgba(255,255,255,0.10);
-          backdrop-filter: blur(6px);
-        }
-
-        .heroTop {
-          display: flex;
-          justify-content: space-between;
-          gap: 18px;
-          flex-wrap: wrap;
-          align-items: center;
-        }
-
-        .heroProgress {
-          min-width: 250px;
-          background: rgba(255,255,255,0.08);
-          border: 1px solid rgba(255,255,255,0.12);
-          border-radius: 22px;
-          padding: 16px;
-          width: auto;
-          max-width: 320px;
-        }
-
-        .heroQuickStats {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 10px;
-          margin-top: 18px;
-        }
-
-        .heroQuickStat {
-          border: 1px solid rgba(255,255,255,0.12);
-          background: rgba(255,255,255,0.08);
-          border-radius: 18px;
-          padding: 12px;
-        }
-
-        .heroQuickLabel {
-          font-size: 12px;
-          color: rgba(255,255,255,0.72);
-          font-weight: 900;
-        }
-
-        .heroQuickValue {
-          margin-top: 4px;
-          font-size: 22px;
-          font-weight: 1000;
         }
 
         .eliteUpgradeWall {
@@ -1170,367 +1567,6 @@ return;
           background: linear-gradient(90deg, #4f46e5, #7c3aed);
           color: white;
           box-shadow: 0 14px 26px rgba(79,70,229,0.26);
-        }
-
-        .tierGrid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 14px;
-          margin-bottom: 18px;
-        }
-
-        .tierCard {
-          background: rgba(255,255,255,0.94);
-          color: #111827;
-          border-radius: 22px;
-          padding: 16px;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-          border: 1px solid rgba(255,255,255,0.35);
-          overflow: hidden;
-          position: relative;
-        }
-
-        .tierAccent {
-          position: absolute;
-          inset: 0 auto 0 0;
-          width: 8px;
-          border-radius: 22px 0 0 22px;
-        }
-
-        .panelCard {
-          background: rgba(255,255,255,0.94);
-          color: #111827;
-          border-radius: 24px;
-          padding: 16px;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-          margin-bottom: 18px;
-          border: 1px solid rgba(255,255,255,0.35);
-        }
-
-        .publicProfileRow {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .publicProfileButton {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 12px 16px;
-          border-radius: 14px;
-          text-decoration: none;
-          color: white;
-          font-weight: 800;
-          background: linear-gradient(135deg, #4f46e5, #7c3aed);
-          box-shadow: 0 10px 18px rgba(79,70,229,0.28);
-          min-height: 46px;
-        }
-
-        .publicProfileMeta {
-          font-size: 14px;
-          color: #4b5563;
-          line-height: 1.5;
-        }
-
-        .spotlightGrid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 10px;
-        }
-
-        .spotlightCard {
-          display: block;
-          text-decoration: none;
-          background: #ffffff;
-          color: #111827;
-          border-radius: 18px;
-          padding: 14px;
-          border: 1px solid #e5e7eb;
-          box-shadow: 0 8px 18px rgba(0,0,0,0.10);
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .spotlightCard:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 12px 24px rgba(0,0,0,0.14);
-        }
-
-        .statsSection {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 14px;
-          margin-bottom: 18px;
-        }
-
-        .statButton {
-          background: rgba(255,255,255,0.94);
-          color: #111827;
-          border-radius: 20px;
-          padding: 18px;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-          border: 1px solid rgba(255,255,255,0.35);
-          cursor: pointer;
-          text-align: left;
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .statButton:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 14px 28px rgba(0,0,0,0.22);
-        }
-
-        .filterPanel {
-          position: sticky;
-          top: 8px;
-          z-index: 55;
-        }
-
-        .filterHeader {
-          display: grid;
-          grid-template-columns: 1fr auto;
-          gap: 10px;
-          align-items: center;
-        }
-
-        .filterToggleButton {
-          display: none;
-          border: none;
-          border-radius: 14px;
-          padding: 13px 14px;
-          background: linear-gradient(135deg, #4f46e5, #7c3aed);
-          color: #ffffff;
-          font-weight: 950;
-          min-height: 50px;
-          cursor: pointer;
-        }
-
-        .filterBody {
-          margin-top: 12px;
-        }
-
-        .filterWrap {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-          align-items: center;
-        }
-
-        .collectionToggleWrap {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          padding: 6px;
-          border-radius: 14px;
-          background: #eef2ff;
-          border: 1px solid #c7d2fe;
-          flex-wrap: wrap;
-          justify-content: flex-start;
-        }
-
-        .quickMobileChips {
-          display: none;
-          gap: 8px;
-          overflow-x: auto;
-          padding-bottom: 2px;
-          scrollbar-width: none;
-        }
-
-        .quickMobileChips::-webkit-scrollbar {
-          display: none;
-        }
-
-        .quickChip {
-          min-height: 42px;
-          border-radius: 999px;
-          border: 1px solid #c7d2fe;
-          padding: 9px 13px;
-          font-weight: 900;
-          background: #eef2ff;
-          color: #3730a3;
-          white-space: nowrap;
-          cursor: pointer;
-        }
-
-        .quickChip.active {
-          background: #4f46e5;
-          color: #ffffff;
-        }
-
-        .clearFiltersButton {
-          border: none;
-          border-radius: 12px;
-          padding: 10px 12px;
-          background: #f1f5f9;
-          color: #334155;
-          font-weight: 900;
-          min-height: 42px;
-          cursor: pointer;
-        }
-
-        .mobileSelect {
-          padding: 14px;
-          border-radius: 14px;
-          border: 1px solid #d1d5db;
-          font-size: 15px;
-          background: white;
-          min-width: 180px;
-        }
-
-        .searchBox {
-          flex: 1 1 280px;
-          padding: 14px 16px;
-          border-radius: 14px;
-          border: 1px solid #d1d5db;
-          font-size: 15px;
-          min-height: 52px;
-          height: 52px;
-          max-height: 52px;
-          background: white;
-          box-sizing: border-box;
-          min-width: 280px;
-        }
-
-        .seriesProgressGrid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 12px;
-        }
-
-        .seriesProgressButton {
-          border-radius: 18px;
-          border: 1px solid #e5e7eb;
-          padding: 14px;
-          background: #ffffff;
-          text-align: left;
-          cursor: pointer;
-        }
-
-        .showMoreButton {
-          margin-top: 12px;
-          width: 100%;
-          min-height: 44px;
-          border: none;
-          border-radius: 14px;
-          background: #eef2ff;
-          color: #3730a3;
-          font-weight: 950;
-          cursor: pointer;
-        }
-
-        .cardsGrid {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 16px;
-        }
-
-        .floatCard {
-          transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
-        }
-
-        .floatCard:hover {
-          transform: translateY(-4px);
-        }
-
-        .cardImageWrap {
-          height: 180px;
-          background: rgba(255,255,255,0.92);
-          border-radius: 18px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 12px;
-          overflow: hidden;
-          padding: 14px;
-        }
-
-        .cardImage {
-          max-width: 100%;
-          max-height: 100%;
-          object-fit: contain;
-          transition: transform 0.2s ease;
-        }
-
-        .cardImageWrap:hover .cardImage {
-          transform: scale(1.05);
-        }
-
-        .qtyControls {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          margin-top: 8px;
-        }
-
-        .qtyButton {
-          width: 46px;
-          height: 46px;
-          min-width: 46px;
-          border-radius: 14px;
-          font-size: 22px;
-          font-weight: 900;
-          line-height: 1;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          touch-action: manipulation;
-          user-select: none;
-          -webkit-tap-highlight-color: transparent;
-        }
-
-        .qtyValue {
-          min-width: 44px;
-          text-align: center;
-          font-weight: 900;
-          font-size: 22px;
-        }
-
-        .photoBox {
-          margin-top: 10px;
-          padding: 10px;
-          border-radius: 12px;
-          background: rgba(255,255,255,0.55);
-          border: 1px solid rgba(255,255,255,0.6);
-        }
-
-        .photoToggleButton {
-          width: 100%;
-          margin-top: 10px;
-          min-height: 42px;
-          border-radius: 12px;
-          border: 1px solid rgba(255,255,255,0.6);
-          background: rgba(255,255,255,0.68);
-          color: #111827;
-          font-weight: 900;
-          cursor: pointer;
-        }
-
-        .pager {
-          display: flex;
-          gap: 10px;
-          align-items: center;
-          justify-content: center;
-          flex-wrap: wrap;
-          margin-top: 18px;
-        }
-
-        .pagerButton {
-          padding: 10px 14px;
-          border-radius: 12px;
-          border: 1px solid rgba(255,255,255,0.16);
-          background: rgba(255,255,255,0.08);
-          color: white;
-          font-weight: 800;
-          cursor: pointer;
-        }
-
-        .pagerButton:disabled {
-          opacity: 0.45;
-          cursor: not-allowed;
         }
 
         .eliteModalOverlay {
@@ -1729,33 +1765,53 @@ return;
           }
         }
 
-        @media (max-width: 1199px) {
+        @media (min-width: 921px) {
           .cardsGrid {
             grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+          }
+
+          .spotlightGrid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+        }
+
+        @media (min-width: 1200px) {
+          .cardsGrid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+          }
+        }
+
+        @media (min-width: 1500px) {
+          .cardsGrid {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
           }
         }
 
         @media (max-width: 920px) {
           .collectionPage {
-            padding: 12px 12px 106px;
-          }
-
-          .galaxyStars::before {
-            opacity: 0.32;
-          }
-
-          .heroSection,
-          .panelCard,
-          .eliteUpgradeWall {
-            border-radius: 22px;
+            padding: 12px;
+            padding-bottom: 98px;
           }
 
           .heroSection {
+            border-radius: 24px;
             padding: 18px;
+            margin-bottom: 14px;
           }
 
           .heroTop {
             display: grid;
+          }
+
+          .heroTitle {
+            font-size: clamp(2rem, 11vw, 2.8rem);
+          }
+
+          .heroSubtitle {
+            font-size: 14px;
+            line-height: 1.45;
           }
 
           .heroProgress {
@@ -1765,28 +1821,93 @@ return;
             box-sizing: border-box;
           }
 
-          .heroQuickStats {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
           .eliteUpgradeWall {
             display: grid;
             padding: 16px;
+            border-radius: 22px;
           }
 
           .eliteUpgradeButton {
             width: 100%;
+          }
+
+          .eliteMobileSticky {
+            display: grid;
+          }
+
+          .eliteModalPlans {
+            grid-template-columns: 1fr;
+          }
+
+          .tierGrid {
+            gap: 10px;
+            margin-bottom: 14px;
+          }
+
+          .tierCard {
+            border-radius: 19px;
+            padding: 14px;
+          }
+
+          .statsSection {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+          }
+
+          .statButton {
+            padding: 14px;
+            border-radius: 18px;
+          }
+
+          .panelCard {
+            border-radius: 20px;
+            padding: 14px;
+            margin-bottom: 14px;
+          }
+
+          .filterPanel {
+            top: 6px;
+          }
+
+          .filterToggleButton {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .quickMobileChips {
+            display: flex;
+            margin-top: 12px;
+          }
+
+          .filterBody {
+            display: none;
+          }
+
+          .filterBody.open {
+            display: block;
+          }
+
+          .filterWrap {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .collectionToggleWrap {
+            width: 100%;
             box-sizing: border-box;
           }
 
-          .elitePlanRow {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+          .collectionToggleWrap button {
+            flex: 1 1 calc(50% - 8px);
           }
 
-          .tierGrid,
-          .statsSection {
-            grid-template-columns: 1fr;
+          .searchBox,
+          .mobileSelect {
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
           }
 
           .publicProfileRow {
@@ -1802,61 +1923,26 @@ return;
             grid-template-columns: 1fr;
           }
 
-          .filterPanel {
-            top: 6px;
-          }
-
-          .filterToggleButton {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-          }
-
-          .filterBody {
-            display: none;
-          }
-
-          .filterBody.open {
-            display: block;
-          }
-
-          .filterWrap {
-            display: grid;
-            grid-template-columns: 1fr;
-          }
-
-          .quickMobileChips {
-            display: flex;
-            margin-top: 12px;
-          }
-
-          .collectionToggleWrap {
-            display: none;
-          }
-
-          .searchBox,
-          .mobileSelect {
-            width: 100%;
-            min-width: 0;
-            box-sizing: border-box;
-          }
-
           .seriesProgressGrid {
             grid-template-columns: 1fr;
           }
 
           .seriesProgressButton {
+            border-radius: 15px;
             padding: 12px;
-            border-radius: 16px;
           }
 
           .cardsGrid {
-            grid-template-columns: 1fr;
             gap: 12px;
           }
 
+          .floatCard {
+            border-radius: 20px !important;
+            padding: 11px !important;
+          }
+
           .cardImageWrap {
-            height: 148px;
+            height: 150px;
             border-radius: 16px;
             padding: 10px;
           }
@@ -1865,31 +1951,29 @@ return;
             width: 50px;
             height: 50px;
             min-width: 50px;
-            border-radius: 16px;
           }
 
           .qtyValue {
             font-size: 24px;
           }
 
-          .eliteMobileSticky {
-            display: grid;
+          .pager {
+            margin-bottom: 14px;
           }
+        }
 
-          .eliteModalPlans {
+        @media (max-width: 420px) {
+          .statsSection {
             grid-template-columns: 1fr;
           }
-        }
 
-        @media (min-width: 921px) {
-          .publicProfileButton {
-            width: auto;
+          .eliteMobileSticky {
+            grid-template-columns: 1fr;
           }
-        }
 
-        @media (min-width: 1500px) {
-          .cardsGrid {
-            grid-template-columns: repeat(5, minmax(0, 1fr));
+          .eliteMobileButton {
+            width: 100%;
+            box-sizing: border-box;
           }
         }
       `}</style>
@@ -1903,18 +1987,9 @@ return;
         <section className="heroSection">
           <div className="heroTop">
             <div>
-              <h1
-                style={{
-                  margin: 0,
-                  fontSize: "clamp(2rem, 5vw, 3.1rem)",
-                  fontWeight: 1000,
-                  letterSpacing: -1,
-                }}
-              >
-                My Collection 💜
-              </h1>
-              <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
-                Track your vault, find your gaps, and keep your extras organized.
+              <h1 className="heroTitle">My Collection 💜</h1>
+              <div className="heroSubtitle">
+                Track what you own, what you need, and what you can trade.
               </div>
             </div>
 
@@ -1922,7 +1997,7 @@ return;
               <div style={{ fontSize: 14, opacity: 0.88, marginBottom: 8 }}>
                 Collection Completion
               </div>
-              <div style={{ fontSize: 30, fontWeight: 1000, marginBottom: 10 }}>
+              <div style={{ fontSize: 30, fontWeight: 900, marginBottom: 10 }}>
                 {completion}%
               </div>
               <div
@@ -1944,19 +2019,35 @@ return;
             </div>
           </div>
 
-          <div className="heroQuickStats">
-            {[
-              { label: "Owned", value: ownedCount },
-              { label: "Need", value: needCount },
-              { label: "Extras", value: extrasCount },
-              { label: "Showing", value: filteredCards.length },
-            ].map((stat) => (
-              <div key={stat.label} className="heroQuickStat">
-                <div className="heroQuickLabel">{stat.label}</div>
-                <div className="heroQuickValue">{stat.value.toLocaleString()}</div>
+          {!isSubscribed && (
+            <div className="upgradeBox">
+              <div style={{ fontWeight: 900, marginBottom: 4 }}>
+                Free plan: up to 50 saved Doorables
               </div>
-            ))}
-          </div>
+              <div style={{ fontSize: 14, color: "#4b5563" }}>
+                You are using {ownedCount}/50 saved Doorables. Upgrade to unlock unlimited collection, marketplace, and selling.
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <Link
+                  href="/pricing"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    background: "#4f46e5",
+                    color: "white",
+                    textDecoration: "none",
+                    fontWeight: 800,
+                    minHeight: 44,
+                  }}
+                >
+                  Upgrade
+                </Link>
+              </div>
+            </div>
+          )}
         </section>
 
         <section id="upgrade-wall" className="eliteUpgradeWall">
@@ -1976,27 +2067,33 @@ return;
             </div>
             {!isSubscribed && (
               <div className="elitePlanRow">
-                <div className="eliteMiniPlan"><span>Monthly</span><strong>{MONTHLY_PRICE_LABEL}</strong></div>
-                <div className="eliteMiniPlan best"><span>Best Value</span><strong>{YEARLY_PRICE_LABEL}</strong></div>
+                <div className="eliteMiniPlan">
+                  <span>Monthly</span>
+                  <strong>{MONTHLY_PRICE_LABEL}</strong>
+                </div>
+                <div className="eliteMiniPlan best">
+                  <span>Best Value</span>
+                  <strong>{YEARLY_PRICE_LABEL}</strong>
+                </div>
               </div>
             )}
           </div>
-          {!isSubscribed && <Link href="/pricing" className="eliteUpgradeButton">Upgrade for Full Access</Link>}
+          {!isSubscribed && (
+            <Link href="/pricing" className="eliteUpgradeButton">
+              Upgrade for Full Access
+            </Link>
+          )}
         </section>
 
         <section className="tierGrid">
-          {[
-            collectionTier,
-            marketplaceTier,
-            communityTier,
-          ].map((tier) => (
+          {[collectionTier, marketplaceTier, communityTier].map((tier) => (
             <div key={tier.title} className="tierCard">
               <div className="tierAccent" style={{ background: tier.accent }} />
               <div style={{ paddingLeft: 12 }}>
                 <div style={{ fontSize: 13, color: "#6b7280", fontWeight: 800, marginBottom: 6 }}>
                   {tier.title}
                 </div>
-                <div style={{ fontSize: 24, fontWeight: 1000, marginBottom: 6 }}>
+                <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 6 }}>
                   {tier.label}
                 </div>
                 <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.5 }}>
@@ -2028,7 +2125,7 @@ return;
           <section className="panelCard">
             <div className="publicProfileRow">
               <div>
-                <div style={{ fontWeight: 1000, marginBottom: 6 }}>Public Collector Page</div>
+                <div style={{ fontWeight: 900, marginBottom: 6 }}>Public Collector Page</div>
                 <div className="publicProfileMeta">
                   Your current visibility: <strong>{getVisibilityLabel()}</strong>
                   <br />
@@ -2044,7 +2141,7 @@ return;
         )}
 
         <section className="panelCard">
-          <div style={{ fontWeight: 1000, marginBottom: 10 }}>Collection Visibility</div>
+          <div style={{ fontWeight: 900, marginBottom: 10 }}>Collection Visibility</div>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[
@@ -2064,7 +2161,7 @@ return;
                     borderRadius: 12,
                     border: "none",
                     cursor: savingVisibility ? "wait" : "pointer",
-                    fontWeight: 900,
+                    fontWeight: 800,
                     background: active ? "#4f46e5" : "#eef2ff",
                     color: active ? "white" : "#3730a3",
                     opacity: savingVisibility ? 0.7 : 1,
@@ -2084,7 +2181,7 @@ return;
 
         {publicCollectors.length > 0 && (
           <section className="panelCard">
-            <div style={{ fontSize: 18, fontWeight: 1000, marginBottom: 12 }}>
+            <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 12 }}>
               Public Collectors Spotlight ✨
             </div>
 
@@ -2095,7 +2192,7 @@ return;
                   href={`/collector/${collector.username}`}
                   className="spotlightCard"
                 >
-                  <div style={{ fontWeight: 1000, fontSize: 16, marginBottom: 6 }}>
+                  <div style={{ fontWeight: 900, fontSize: 16, marginBottom: 6 }}>
                     @{collector.username}
                   </div>
                   <div style={{ fontSize: 13, color: "#6b7280" }}>
@@ -2129,7 +2226,7 @@ return;
               }}
             >
               <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>{stat.label}</div>
-              <div style={{ fontSize: 30, fontWeight: 1000 }}>{stat.value}</div>
+              <div style={{ fontSize: 30, fontWeight: 900 }}>{stat.value}</div>
             </button>
           ))}
         </section>
@@ -2137,9 +2234,10 @@ return;
         <section className="panelCard filterPanel">
           <div className="filterHeader">
             <div>
-              <div style={{ fontWeight: 1000 }}>Search + Filters</div>
-              <div style={{ marginTop: 3, color: "#64748b", fontSize: 13, fontWeight: 750 }}>
-                Showing {pagedCards.length} of {filteredCards.length} • Page {safePage}/{totalPages}
+              <div style={{ fontWeight: 900, fontSize: 18 }}>Find Doorables</div>
+              <div style={{ color: "#64748b", fontSize: 13, marginTop: 3 }}>
+                Showing {pagedCards.length} of {filteredCards.length}
+                {activeFilterCount > 0 ? ` • ${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} active` : ""}
               </div>
             </div>
 
@@ -2148,7 +2246,7 @@ return;
               className="filterToggleButton"
               onClick={() => setShowMobileFilters((prev) => !prev)}
             >
-              {showMobileFilters ? "Hide" : "Filters"}{activeFilterCount ? ` (${activeFilterCount})` : ""}
+              {showMobileFilters ? "Hide Filters" : "Filters"}
             </button>
           </div>
 
@@ -2157,7 +2255,7 @@ return;
               { value: "all", label: "All" },
               { value: "have", label: "Have" },
               { value: "need", label: "Need" },
-              { value: "extra", label: "+Extra" },
+              { value: "extra", label: "Extras" },
             ].map((option) => (
               <button
                 key={option.value}
@@ -2168,9 +2266,14 @@ return;
                 {option.label}
               </button>
             ))}
+            {activeFilterCount > 0 && (
+              <button type="button" className="clearFiltersButton" onClick={clearFilters}>
+                Clear
+              </button>
+            )}
           </div>
 
-          <div className={`filterBody ${showMobileFilters ? "open" : ""}`}>
+          <div className={`filterBody ${showMobileFilters || !isMobile ? "open" : ""}`}>
             <div className="filterWrap">
               <input
                 value={search}
@@ -2196,7 +2299,7 @@ return;
                         borderRadius: 10,
                         border: "none",
                         cursor: "pointer",
-                        fontWeight: 900,
+                        fontWeight: 800,
                         background: active ? "#4f46e5" : "transparent",
                         color: active ? "white" : "#3730a3",
                         minHeight: 40,
@@ -2242,7 +2345,7 @@ return;
 
               {activeFilterCount > 0 && (
                 <button type="button" className="clearFiltersButton" onClick={clearFilters}>
-                  Clear filters
+                  Clear Filters
                 </button>
               )}
             </div>
@@ -2250,8 +2353,17 @@ return;
         </section>
 
         <section className="panelCard">
-          <div style={{ fontSize: 18, fontWeight: 1000, marginBottom: 12 }}>
-            Series Progress
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+            <div style={{ fontSize: 18, fontWeight: 900 }}>Series Progress</div>
+            {isMobile && seriesProgress.length > 6 && (
+              <button
+                type="button"
+                className="clearFiltersButton"
+                onClick={() => setExpandedSeries((prev) => !prev)}
+              >
+                {expandedSeries ? "Show Less" : "Show All"}
+              </button>
+            )}
           </div>
 
           <div className="seriesProgressGrid">
@@ -2261,14 +2373,14 @@ return;
                 onClick={() => jumpToSeries(entry.series)}
                 className="seriesProgressButton"
               >
-                <div style={{ fontWeight: 900, marginBottom: 6 }}>
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>
                   {entry.series}
                   {entry.subcategoryLabel && (
                     <span
                       style={{
                         marginLeft: 8,
                         color: "#6366f1",
-                        fontWeight: 800,
+                        fontWeight: 700,
                       }}
                     >
                       • {entry.subcategoryLabel}
@@ -2301,7 +2413,11 @@ return;
           </div>
 
           {isMobile && seriesProgress.length > 6 && (
-            <button type="button" className="showMoreButton" onClick={() => setExpandedSeries((prev) => !prev)}>
+            <button
+              type="button"
+              className="showMoreButton"
+              onClick={() => setExpandedSeries((prev) => !prev)}
+            >
               {expandedSeries ? "Show fewer series" : `Show all ${seriesProgress.length} series`}
             </button>
           )}
@@ -2358,7 +2474,7 @@ return;
                   <div style={{ minWidth: 0 }}>
                     <div
                       style={{
-                        fontWeight: 1000,
+                        fontWeight: 900,
                         fontSize: isMobile ? 18 : 20,
                         lineHeight: 1.1,
                         wordBreak: "break-word",
@@ -2373,7 +2489,7 @@ return;
                       padding: "6px 10px",
                       borderRadius: 999,
                       fontSize: 12,
-                      fontWeight: 1000,
+                      fontWeight: 900,
                       background: rarity.badgeBg,
                       color: rarity.badgeText,
                       whiteSpace: "nowrap",
@@ -2438,7 +2554,7 @@ return;
                   style={{
                     marginTop: 8,
                     marginBottom: 8,
-                    fontWeight: 900,
+                    fontWeight: 800,
                     color:
                       statusText === "Need"
                         ? "#7c3aed"
@@ -2462,7 +2578,7 @@ return;
                   style={{
                     width: "100%",
                     marginTop: 8,
-                    minHeight: isMobile ? 56 : 70,
+                    minHeight: isMobile ? 58 : 70,
                     borderRadius: 12,
                     border: "1px solid " + rarity.border,
                     background: "rgba(255,255,255,0.82)",
@@ -2483,7 +2599,7 @@ return;
                     borderRadius: 12,
                     border: "none",
                     cursor: "pointer",
-                    fontWeight: 900,
+                    fontWeight: 800,
                     background: rarity.badgeBg,
                     color: rarity.badgeText,
                     minHeight: 44,
@@ -2502,6 +2618,10 @@ return;
 
                 {photoOpen && (
                   <div className="photoBox">
+                    <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>
+                      Submit a better photo
+                    </div>
+
                     <textarea
                       value={photoNote[item.id] || ""}
                       onChange={(e) =>
@@ -2556,7 +2676,7 @@ return;
               Previous
             </button>
 
-            <div style={{ fontWeight: 900 }}>
+            <div style={{ fontWeight: 800 }}>
               Page {safePage} of {totalPages}
             </div>
 
@@ -2570,49 +2690,76 @@ return;
             </button>
           </div>
         )}
+
+        {!isSubscribed && (
+          <div className="eliteMobileSticky">
+            <div>
+              <div className="eliteMobileTop">
+                {ownedCount}/{FREE_LIMIT} free saves used
+              </div>
+              <div className="eliteMobileTrack">
+                <div
+                  className="eliteMobileFill"
+                  style={{ width: `${Math.min(100, Math.round((ownedCount / FREE_LIMIT) * 100))}%` }}
+                />
+              </div>
+            </div>
+
+            <Link href="/pricing" className="eliteMobileButton">
+              Upgrade
+            </Link>
+          </div>
+        )}
+
+        {showUpgradeModal && (
+          <div className="eliteModalOverlay">
+            <div className="eliteModal">
+              <button
+                type="button"
+                className="eliteModalClose"
+                onClick={() => setShowUpgradeModal(false)}
+              >
+                ×
+              </button>
+
+              <div className="eliteModalIcon">💜</div>
+              <h2 className="eliteModalTitle">Your free vault is full</h2>
+
+              <div className="eliteModalText">
+                Free accounts can save up to {FREE_LIMIT} Doorables. Upgrade for unlimited tracking,
+                marketplace tools, selling extras, and full collector access.
+              </div>
+
+              <div className="eliteModalPlans">
+                <div className="eliteModalPlan">
+                  <div className="elitePlanName">Monthly</div>
+                  <div className="elitePlanPrice">$3</div>
+                  <div className="elitePlanSub">Flexible full access</div>
+                </div>
+
+                <div className="eliteModalPlan best">
+                  <div className="eliteBestValueTag">Best Value</div>
+                  <div className="elitePlanName">Yearly</div>
+                  <div className="elitePlanPrice">$15</div>
+                  <div className="elitePlanSub">Best for collectors</div>
+                </div>
+              </div>
+
+              <Link href="/pricing" className="eliteModalButton">
+                Upgrade for Full Access
+              </Link>
+
+              <button
+                type="button"
+                className="eliteModalLater"
+                onClick={() => setShowUpgradeModal(false)}
+              >
+                Maybe later
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-
-      {showUpgradeModal && (
-        <div className="eliteModalOverlay" role="dialog" aria-modal="true">
-          <div className="eliteModal">
-            <button className="eliteModalClose" type="button" onClick={() => setShowUpgradeModal(false)}>
-              ×
-            </button>
-            <div className="eliteModalIcon">💜</div>
-            <h2 className="eliteModalTitle">Your free vault is full</h2>
-            <div className="eliteModalText">
-              Free accounts can save up to {FREE_LIMIT} Doorables. Upgrade to keep tracking unlimited Doorables, extras, marketplace tools, and collector features.
-            </div>
-            <div className="eliteModalPlans">
-              <div className="eliteModalPlan">
-                <div className="elitePlanName">Monthly</div>
-                <div className="elitePlanPrice">{MONTHLY_PRICE_LABEL}</div>
-                <div className="elitePlanSub">Flexible full access</div>
-              </div>
-              <div className="eliteModalPlan best">
-                <div className="eliteBestValueTag">Best value</div>
-                <div className="elitePlanName">Yearly</div>
-                <div className="elitePlanPrice">{YEARLY_PRICE_LABEL}</div>
-                <div className="elitePlanSub">Best for collectors</div>
-              </div>
-            </div>
-            <Link href="/pricing" className="eliteModalButton">Upgrade for Full Access</Link>
-            <button className="eliteModalLater" type="button" onClick={() => setShowUpgradeModal(false)}>
-              Maybe later
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!isSubscribed && (
-        <div className="eliteMobileSticky">
-          <div>
-            <div className="eliteMobileTop">{ownedCount}/{FREE_LIMIT} free saves used</div>
-            <div className="eliteMobileTrack"><div className="eliteMobileFill" style={{ width: `${Math.min(100, Math.round((ownedCount / FREE_LIMIT) * 100))}%` }} /></div>
-          </div>
-          <Link href="/pricing" className="eliteMobileButton">Upgrade</Link>
-        </div>
-      )}
     </main>
   );
 }

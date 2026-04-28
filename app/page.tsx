@@ -517,18 +517,22 @@ export default function HomePage() {
           transform: translateY(-2px);
         }
 
-        .primaryButton {
-          background: white;
-          color: #312e81;
-          box-shadow: 0 14px 28px rgba(255,255,255,0.16);
-        }
+       .primaryButton {
+  background: linear-gradient(90deg, #ffffff, #fef3c7) !important;
+  color: #312e81 !important;
+  border: 1px solid rgba(255,255,255,0.55) !important;
+  box-shadow: 0 18px 40px rgba(255,255,255,0.22) !important;
+  opacity: 1 !important;
+}
 
 .secondaryButton {
-  background: rgba(15,23,42,0.72);
-  color: #ffffff;
-  border: 1px solid rgba(255,255,255,0.28);
-  box-shadow: 0 10px 22px rgba(0,0,0,0.22);
+  background: linear-gradient(90deg, #4f46e5, #a855f7) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,0.45) !important;
+  box-shadow: 0 16px 34px rgba(124,58,237,0.50) !important;
+  opacity: 1 !important;
 }
+
 
 .purpleButton {
   background: linear-gradient(90deg, #ffffff, #fef3c7);

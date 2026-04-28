@@ -484,9 +484,10 @@ export default function HomePage() {
           padding: 8px 11px;
           font-size: 12px;
           font-weight: 1000;
-          color: rgba(255,255,255,0.92);
-          background: rgba(255,255,255,0.1);
-          border: 1px solid rgba(255,255,255,0.12);
+          color: rgba(255,255,255,0.96);
+          background: rgba(15,23,42,0.62);
+          border: 1px solid rgba(255,255,255,0.24);
+          box-shadow: 0 10px 20px rgba(0,0,0,0.18);
         }
 
         .buttonRow {
@@ -508,7 +509,7 @@ export default function HomePage() {
           align-items: center;
           justify-content: center;
           gap: 8px;
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
+          transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
         }
 
         .primaryButton:hover,
@@ -517,64 +518,28 @@ export default function HomePage() {
           transform: translateY(-2px);
         }
 
-       .primaryButton {
-  background: linear-gradient(90deg, #ffffff, #fef3c7) !important;
-  color: #312e81 !important;
-  border: 1px solid rgba(255,255,255,0.55) !important;
-  box-shadow: 0 18px 40px rgba(255,255,255,0.22) !important;
-  opacity: 1 !important;
-}
+        .primaryButton {
+          background: linear-gradient(90deg, #ffffff, #fef3c7);
+          color: #312e81 !important;
+          border: 1px solid rgba(255,255,255,0.55);
+          box-shadow: 0 18px 40px rgba(255,255,255,0.22);
+          opacity: 1;
+        }
 
-.secondaryButton {
-  background: linear-gradient(90deg, #4f46e5, #a855f7) !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(255,255,255,0.45) !important;
-  box-shadow: 0 16px 34px rgba(124,58,237,0.50) !important;
-  opacity: 1 !important;
-}
+        .secondaryButton {
+          background: linear-gradient(90deg, #4f46e5, #a855f7);
+          color: #ffffff !important;
+          border: 1px solid rgba(255,255,255,0.45);
+          box-shadow: 0 16px 34px rgba(124,58,237,0.50);
+          opacity: 1;
+        }
 
-
-.purpleButton {
-  background: linear-gradient(90deg, #ffffff, #fef3c7);
-  color: #312e81;
-  box-shadow: 0 14px 26px rgba(255,255,255,0.18);
-}
-
-.trustPill {
-  color: #ffffff;
-  background: rgba(15,23,42,0.52);
-  border: 1px solid rgba(255,255,255,0.24);
-}
-
-.miniAction {
-  background: linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
-  backdrop-filter: blur(10px);
-  color: #ffffff;
-  border: 1px solid rgba(255,255,255,0.35);
-  box-shadow: 0 12px 28px rgba(0,0,0,0.25);
-  font-weight: 900;
-  text-decoration: none;
-  transition: all 0.2s ease;
-}
-
-.miniAction:hover {
-  background: linear-gradient(90deg, #6366f1, #a855f7);
-  color: #ffffff;
-  box-shadow: 0 16px 34px rgba(124,58,237,0.45);
-  transform: translateY(-2px);
-}
-
-.heroActions a:first-child {
-  background: linear-gradient(90deg, #4f46e5, #a855f7);
-  box-shadow: 0 18px 40px rgba(124,58,237,0.55);
-}
-.statSub {
-  color: #ffffff;
-}
-
-.statValue {
-  color: #ffffff;
-}
+        .purpleButton {
+          background: linear-gradient(90deg, #ffffff, #fef3c7);
+          color: #312e81 !important;
+          border: 1px solid rgba(255,255,255,0.55);
+          box-shadow: 0 14px 26px rgba(255,255,255,0.18);
+        }
 
         .previewPanel {
           padding: 18px;
@@ -602,7 +567,7 @@ export default function HomePage() {
           min-height: 148px;
           border-radius: 24px;
           padding: 16px;
-          color: white;
+          color: white !important;
           position: relative;
           overflow: hidden;
           border: 1px solid rgba(255,255,255,0.2);
@@ -657,7 +622,8 @@ export default function HomePage() {
           text-transform: uppercase;
           letter-spacing: 0.07em;
           font-weight: 1000;
-          opacity: 0.94;
+          color: #fef3c7 !important;
+          opacity: 1;
         }
 
         .statValue {
@@ -667,18 +633,30 @@ export default function HomePage() {
           letter-spacing: -1px;
           margin: 7px 0;
           text-shadow: 0 2px 14px rgba(0,0,0,0.48);
+          color: #ffffff !important;
         }
 
         .statSub {
           font-size: 13px;
-          color: rgba(255,255,255,0.9);
+          color: #ffffff !important;
           font-weight: 850;
         }
 
-        .owned { background: linear-gradient(135deg, #7e22ce, #4c1d95); }
-        .needed { background: linear-gradient(135deg, #0369a1, #1d4ed8); }
-        .extras { background: linear-gradient(135deg, #92400e, #78350f); }
-        .market { background: linear-gradient(135deg, #166534, #14532d); }
+        .owned {
+          background: linear-gradient(135deg, #7e22ce, #4c1d95);
+        }
+
+        .needed {
+          background: linear-gradient(135deg, #0369a1, #1d4ed8);
+        }
+
+        .extras {
+          background: linear-gradient(135deg, #92400e, #78350f);
+        }
+
+        .market {
+          background: linear-gradient(135deg, #166534, #14532d);
+        }
 
         .progressPanel {
           margin-top: 12px;
@@ -731,17 +709,38 @@ export default function HomePage() {
         }
 
         .miniAction {
-          text-decoration: none;
-          color: white;
+          min-height: 72px;
           border-radius: 18px;
           padding: 13px;
-          min-height: 72px;
-          background: rgba(255,255,255,0.09);
-          border: 1px solid rgba(255,255,255,0.13);
+          background: linear-gradient(90deg, rgba(79,70,229,0.96), rgba(168,85,247,0.96));
+          border: 1px solid rgba(255,255,255,0.45);
+          box-shadow: 0 14px 30px rgba(124,58,237,0.42);
+          color: #ffffff !important;
+          font-weight: 1000;
+          text-decoration: none;
           display: flex;
           align-items: center;
           gap: 10px;
+          opacity: 1;
+        }
+
+        .miniActionText {
+          display: grid;
+          gap: 2px;
+        }
+
+        .miniActionTitle {
+          color: #ffffff !important;
+          font-size: 15px;
           font-weight: 1000;
+          line-height: 1.1;
+        }
+
+        .miniActionSub {
+          color: rgba(255,255,255,0.86) !important;
+          font-size: 12px;
+          font-weight: 800;
+          line-height: 1.2;
         }
 
         .section {
@@ -830,9 +829,15 @@ export default function HomePage() {
         }
 
         .featureLink {
-          color: #c4b5fd;
+          color: #ffffff !important;
           font-weight: 1000;
           font-size: 13px;
+          text-decoration: none;
+          display: inline-flex;
+          padding: 8px 11px;
+          border-radius: 999px;
+          background: rgba(99,102,241,0.55);
+          border: 1px solid rgba(255,255,255,0.18);
         }
 
         .splitGrid {
@@ -999,37 +1004,18 @@ export default function HomePage() {
           display: none;
         }
 
-.heroCard a,
-.previewPanel a,
-.finalCta a {
-  color: inherit;
-}
+        .heroCard a,
+        .previewPanel a,
+        .finalCta a {
+          text-decoration: none !important;
+        }
 
-.previewPanel a:not(.statCard),
-.heroCard a:not(.primaryButton),
-.finalCta a:not(.primaryButton) {
-  color: #ffffff;
-}
-.heroCard .buttonRow a {
-  color: #ffffff !important;
-  text-decoration: none !important;
-  background: linear-gradient(90deg, #4f46e5, #a855f7) !important;
-  border: 1px solid rgba(255,255,255,0.45) !important;
-  box-shadow: 0 16px 34px rgba(124,58,237,0.50) !important;
-  opacity: 1 !important;
-}
-
-.heroCard .buttonRow a:first-child {
-  background: linear-gradient(90deg, #ffffff, #fef3c7) !important;
-  color: #312e81 !important;
-}
-
-.heroCard .buttonRow a span,
-.heroCard .buttonRow a {
-  text-shadow: none !important;
-  font-weight: 1000 !important;
-}
-
+        .heroCard .buttonRow a,
+        .previewPanel .miniActions a,
+        .finalCta .buttonRow a {
+          opacity: 1 !important;
+          filter: none !important;
+        }
 
         @media (max-width: 980px) {
           .shell {
@@ -1196,44 +1182,6 @@ export default function HomePage() {
             grid-template-columns: 1fr;
           }
         }
-/* FINAL BUTTON VISIBILITY OVERRIDE */
-.heroCard .buttonRow a,
-.heroCard a.primaryButton,
-.heroCard a.secondaryButton,
-.heroCard a.purpleButton,
-.previewPanel .miniActions a,
-.previewPanel a.miniAction,
-.finalCta .buttonRow a {
-  color: #ffffff !important;
-  text-decoration: none !important;
-  opacity: 1 !important;
-  font-weight: 1000 !important;
-  background: linear-gradient(90deg, #4f46e5, #a855f7) !important;
-  border: 1px solid rgba(255,255,255,0.55) !important;
-  box-shadow: 0 16px 34px rgba(124,58,237,0.55) !important;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.35) !important;
-}
-
-.heroCard .buttonRow a:first-child,
-.heroCard a.primaryButton,
-.finalCta a.primaryButton {
-  color: #312e81 !important;
-  background: linear-gradient(90deg, #ffffff, #fef3c7) !important;
-  text-shadow: none !important;
-}
-
-.heroCard .buttonRow a:visited,
-.previewPanel .miniActions a:visited,
-.finalCta .buttonRow a:visited {
-  color: #ffffff !important;
-}
-
-.heroCard .buttonRow a:first-child:visited,
-.heroCard a.primaryButton:visited,
-.finalCta a.primaryButton:visited {
-  color: #312e81 !important;
-}
-
       `}</style>
 
       <div className="shell">
@@ -1247,29 +1195,43 @@ export default function HomePage() {
           </Link>
 
           <div className="navActions">
-            <Link href="/collection" className="navPill">Tracker</Link>
-            <Link href="/marketplace" className="navPill">Marketplace</Link>
-            <Link href="/pricing" className="navPill">Plans</Link>
-            <Link href="/feedback" className="navPill menuPill">Feedback</Link>
+            <Link href="/collection" className="navPill">
+              Tracker
+            </Link>
+            <Link href="/marketplace" className="navPill">
+              Marketplace
+            </Link>
+            <Link href="/pricing" className="navPill">
+              Plans
+            </Link>
+            <Link href="/feedback" className="navPill menuPill">
+              Feedback
+            </Link>
           </div>
         </nav>
 
         <section className="hero">
           <div className="heroCard">
-            <div className="badge">✨ Premium Doorables tracker • fan-made collector vault ✨</div>
+            <div className="badge">
+              ✨ Premium Doorables tracker • fan-made collector vault ✨
+            </div>
 
             <h1 className="headline">
               The Doorables tracker for collectors who are done guessing.
             </h1>
 
             <div className="heroText">
-              Welcome{username ? ` back, ${username}` : ""}! Adorable Vault helps you track your Doorables collection,
-              build a wishlist, organize extras, find missing pieces, browse marketplace listings, and complete more sets with less chaos.
+              Welcome{username ? ` back, ${username}` : ""}! Adorable Vault
+              helps you track your Doorables collection, build a wishlist,
+              organize extras, find missing pieces, browse marketplace listings,
+              and complete more sets with less chaos.
             </div>
 
             <div className="seoLine">
-              Built as a Doorables collection tracker, Disney Doorables checklist, Doorables wishlist,
-              Doorables inventory manager, Doorables rarity tracker, Doorables series tracker, and marketplace companion.
+              Built as a Doorables collection tracker, Disney Doorables
+              checklist, Doorables wishlist, Doorables inventory manager,
+              Doorables rarity tracker, Doorables series tracker, and marketplace
+              companion.
             </div>
 
             <div className="trustRow">
@@ -1279,9 +1241,15 @@ export default function HomePage() {
             </div>
 
             <div className="buttonRow">
-              <Link href="/collection" className="primaryButton">🎯 Start Tracking Free</Link>
-              <Link href="/marketplace" className="secondaryButton">🛍️ Browse Finds</Link>
-              <Link href="/pricing" className="secondaryButton">👑 View Plans</Link>
+              <Link href="/collection" className="primaryButton">
+                🎯 Start Tracking Free
+              </Link>
+              <Link href="/marketplace" className="secondaryButton">
+                🛍️ Browse Finds
+              </Link>
+              <Link href="/pricing" className="secondaryButton">
+                👑 View Plans
+              </Link>
             </div>
           </div>
 
@@ -1332,26 +1300,57 @@ export default function HomePage() {
                   <div style={{ fontWeight: 1000, fontSize: 19 }}>
                     Free collector plan
                   </div>
-                  <div style={{ color: "#d8b4fe", fontWeight: 900, marginTop: 4 }}>
+                  <div
+                    style={{
+                      color: "#d8b4fe",
+                      fontWeight: 900,
+                      marginTop: 4,
+                    }}
+                  >
                     Save up to 50 Doorables • {remainingFree} free saves left
                   </div>
                 </div>
 
-                <Link href="/pricing" className="purpleButton">Upgrade Now</Link>
+                <Link href="/pricing" className="purpleButton">
+                  Upgrade Now
+                </Link>
               </div>
 
               <div className="progressTrack">
-                <div className="progressFill" style={{ width: `${freePercent}%` }} />
+                <div
+                  className="progressFill"
+                  style={{ width: `${freePercent}%` }}
+                />
               </div>
 
-              <div style={{ marginTop: 10, color: "rgba(255,255,255,0.80)", fontWeight: 800, fontSize: 13 }}>
+              <div
+                style={{
+                  marginTop: 10,
+                  color: "rgba(255,255,255,0.80)",
+                  fontWeight: 800,
+                  fontSize: 13,
+                }}
+              >
                 {freeUsed} / 50 free saved Doorables used
               </div>
             </div>
 
             <div className="miniActions">
-              <Link href="/collection" className="miniAction">🎯 Open tracker</Link>
-              <Link href="/feedback" className="miniAction">💬 Send feedback</Link>
+              <Link href="/collection" className="miniAction">
+                <span aria-hidden="true">🎯</span>
+                <span className="miniActionText">
+                  <span className="miniActionTitle">Open tracker</span>
+                  <span className="miniActionSub">View your collection</span>
+                </span>
+              </Link>
+
+              <Link href="/feedback" className="miniAction">
+                <span aria-hidden="true">💬</span>
+                <span className="miniActionText">
+                  <span className="miniActionTitle">Send feedback</span>
+                  <span className="miniActionSub">Help us improve</span>
+                </span>
+              </Link>
             </div>
           </div>
         </section>
@@ -1361,13 +1360,15 @@ export default function HomePage() {
             <div>
               <div className="eyebrow">What you can do</div>
               <h2 className="sectionTitle">
-                One collector hub instead of screenshots, spreadsheets, and memory.
+                One collector hub instead of screenshots, spreadsheets, and
+                memory.
               </h2>
             </div>
 
             <div className="sectionText">
-              A premium Doorables tracker for owned figures, needed figures, extras, rarities, movies, series,
-              duplicates, trades, and collector marketplace finds.
+              A premium Doorables tracker for owned figures, needed figures,
+              extras, rarities, movies, series, duplicates, trades, and
+              collector marketplace finds.
             </div>
           </div>
 
@@ -1376,7 +1377,8 @@ export default function HomePage() {
               <div className="featureIcon">💜</div>
               <div className="featureTitle">Track your collection</div>
               <div className="featureText">
-                Mark owned, needed, extras, custom notes, rarity, movie, subcategory, and series progress.
+                Mark owned, needed, extras, custom notes, rarity, movie,
+                subcategory, and series progress.
               </div>
               <div className="featureLink">Open tracker →</div>
             </Link>
@@ -1385,7 +1387,8 @@ export default function HomePage() {
               <div className="featureIcon">🔎</div>
               <div className="featureTitle">Find what you need</div>
               <div className="featureText">
-                Search your Doorables checklist before buying, trading, or joining another live sale.
+                Search your Doorables checklist before buying, trading, or
+                joining another live sale.
               </div>
               <div className="featureLink">Find gaps →</div>
             </Link>
@@ -1394,7 +1397,8 @@ export default function HomePage() {
               <div className="featureIcon">🔁</div>
               <div className="featureTitle">Trade or sell extras</div>
               <div className="featureText">
-                Turn duplicate Doorables into organized extras so other collectors can discover them.
+                Turn duplicate Doorables into organized extras so other
+                collectors can discover them.
               </div>
               <div className="featureLink">List extras →</div>
             </Link>
@@ -1403,7 +1407,8 @@ export default function HomePage() {
               <div className="featureIcon">🛍️</div>
               <div className="featureTitle">Browse marketplace</div>
               <div className="featureText">
-                Use collector listings to search for missing Doorables and complete more sets.
+                Use collector listings to search for missing Doorables and
+                complete more sets.
               </div>
               <div className="featureLink">Browse marketplace →</div>
             </Link>
@@ -1417,7 +1422,8 @@ export default function HomePage() {
               {loading ? "Loading updates..." : title}
             </h2>
             <div className="sectionText">
-              Weekly updates, feature drops, secret codes, collector news, promos, and launch notes.
+              Weekly updates, feature drops, secret codes, collector news,
+              promos, and launch notes.
             </div>
 
             <div className="announcementBody">{announcementText}</div>
@@ -1466,22 +1472,32 @@ export default function HomePage() {
               It answers: “Do I already have this one?”
             </h2>
             <div className="sectionText">
-              Adorable Vault is made for real collector habits: shopping, live sales, blind bags,
-              trades, duplicates, wishlists, and set completion.
+              Adorable Vault is made for real collector habits: shopping, live
+              sales, blind bags, trades, duplicates, wishlists, and set
+              completion.
             </div>
 
             <div className="miniList">
               <div className="miniListItem">
                 <span>✅</span>
-                <span>Track owned Doorables, still-needed Doorables, and extras in one place.</span>
+                <span>
+                  Track owned Doorables, still-needed Doorables, and extras in
+                  one place.
+                </span>
               </div>
               <div className="miniListItem">
                 <span>✅</span>
-                <span>Use filters for series, rarity, movie, subcategory, notes, have, need, and extra.</span>
+                <span>
+                  Use filters for series, rarity, movie, subcategory, notes,
+                  have, need, and extra.
+                </span>
               </div>
               <div className="miniListItem">
                 <span>✅</span>
-                <span>Upgrade from a free Doorables checklist to unlimited collector access.</span>
+                <span>
+                  Upgrade from a free Doorables checklist to unlimited collector
+                  access.
+                </span>
               </div>
             </div>
           </div>
@@ -1497,8 +1513,9 @@ export default function HomePage() {
             </div>
 
             <div className="sectionText">
-              Free accounts can save up to 50 Doorables. Paid plans unlock unlimited Doorables collection tracking,
-              marketplace tools, selling extras, and full collector features.
+              Free accounts can save up to 50 Doorables. Paid plans unlock
+              unlimited Doorables collection tracking, marketplace tools,
+              selling extras, and full collector features.
             </div>
           </div>
 
@@ -1509,7 +1526,8 @@ export default function HomePage() {
                 $0 <span>/ free</span>
               </div>
               <div className="finePrint">
-                Save up to 50 Doorables, try the checklist, and start organizing your collection.
+                Save up to 50 Doorables, try the checklist, and start
+                organizing your collection.
               </div>
             </div>
 
@@ -1519,7 +1537,8 @@ export default function HomePage() {
                 $3 <span>/ month</span>
               </div>
               <div className="finePrint">
-                Unlimited tracking, marketplace tools, and full collector access with flexible billing.
+                Unlimited tracking, marketplace tools, and full collector access
+                with flexible billing.
               </div>
             </div>
 
@@ -1530,7 +1549,8 @@ export default function HomePage() {
                 $15 <span>/ year</span>
               </div>
               <div className="finePrint">
-                The best plan for serious collectors who want the full Doorables vault all year.
+                The best plan for serious collectors who want the full Doorables
+                vault all year.
               </div>
             </div>
           </div>
@@ -1546,12 +1566,14 @@ export default function HomePage() {
           <div className="whiteCard">
             <div className="eyebrow">SEO-friendly collector tool</div>
             <h2 className="sectionTitle">
-              A Doorables tracker, checklist, wishlist, inventory, and marketplace hub.
+              A Doorables tracker, checklist, wishlist, inventory, and
+              marketplace hub.
             </h2>
             <div className="sectionText">
-              Use Adorable Vault as a Disney Doorables collection tracker, Doorables checklist,
-              Doorables wishlist, Doorables inventory manager, Doorables rarity tracker, Doorables series tracker,
-              and Doorables marketplace companion.
+              Use Adorable Vault as a Disney Doorables collection tracker,
+              Doorables checklist, Doorables wishlist, Doorables inventory
+              manager, Doorables rarity tracker, Doorables series tracker, and
+              Doorables marketplace companion.
             </div>
           </div>
 
@@ -1559,8 +1581,9 @@ export default function HomePage() {
             <div className="eyebrow">Fan-made disclaimer</div>
             <h2 className="sectionTitle">Made for collectors.</h2>
             <div className="sectionText">
-              Adorable Vault is a fan-made collector tracking and marketplace tool. It is not affiliated with,
-              sponsored by, or endorsed by Disney or Just Play. Character names and references are used only
+              Adorable Vault is a fan-made collector tracking and marketplace
+              tool. It is not affiliated with, sponsored by, or endorsed by
+              Disney or Just Play. Character names and references are used only
               to help collectors organize and identify their collections.
             </div>
           </div>
@@ -1570,7 +1593,8 @@ export default function HomePage() {
           <div className="eyebrow">Ready to organize the chaos?</div>
           <h2 className="sectionTitle">Start your collection today 💜</h2>
           <div className="sectionText" style={{ margin: "10px auto 0" }}>
-            Open your vault, save your first Doorables, and see exactly what you own, need, and can trade.
+            Open your vault, save your first Doorables, and see exactly what you
+            own, need, and can trade.
           </div>
 
           <div className="buttonRow" style={{ justifyContent: "center" }}>

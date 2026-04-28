@@ -544,21 +544,27 @@ export default function HomePage() {
 
 .featureLink,
 .miniAction {
+  background: linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+  backdrop-filter: blur(10px);
   color: #ffffff;
-  font-weight: 1000;
+  border: 1px solid rgba(255,255,255,0.35);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.25);
+  font-weight: 900;
   text-decoration: none;
+  transition: all 0.2s ease;
 }
 
-.miniAction {
-  background: rgba(15,23,42,0.65);
-  border: 1px solid rgba(255,255,255,0.25);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+.miniAction:hover {
+  background: linear-gradient(90deg, #6366f1, #a855f7);
+  color: #ffffff;
+  box-shadow: 0 16px 34px rgba(124,58,237,0.45);
+  transform: translateY(-2px);
 }
 
-.statLabel {
-  color: #fef3c7;
+.heroActions a:first-child {
+  background: linear-gradient(90deg, #4f46e5, #a855f7);
+  box-shadow: 0 18px 40px rgba(124,58,237,0.55);
 }
-
 .statSub {
   color: #ffffff;
 }

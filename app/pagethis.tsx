@@ -13,6 +13,15 @@ type Announcement = {
   updated_at: string | null;
 };
 
+type HomeStats = {
+  owned: number;
+  needed: number;
+  extras: number;
+  total: number;
+  progress: number;
+  listings: number;
+};
+
 type FeatureCard = {
   icon: string;
   title: string;
@@ -126,6 +135,14 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [stats, setStats] = useState<HomeStats>({
+    owned: 0,
+    needed: 0,
+    extras: 0,
+    total: 0,
+    progress: 0,
+    listings: 0,
+  });
 
   const isAdmin = useMemo(
     () => ADMIN_EMAILS.includes(userEmail.toLowerCase()),
@@ -160,6 +177,8 @@ export default function HomePage() {
         setUsername(String(profile?.username ?? ""));
       }
 
+      await loadHomeStats(user?.id);
+
       const { data, error } = await supabase
         .from("site_announcements")
         .select("*")
@@ -183,6 +202,71 @@ export default function HomePage() {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not load homepage.");
       setLoading(false);
+    }
+  }
+
+
+  async function loadHomeStats(userId?: string) {
+    try {
+      const supabase = getSupabase();
+
+      const { data: doorables, error: doorablesError } = await supabase
+        .from("doorables")
+        .select("id");
+
+      if (doorablesError) {
+        return;
+      }
+
+      const total = doorables?.length ?? 0;
+
+      let owned = 0;
+      let extras = 0;
+
+      if (userId) {
+        const { data: userRows } = await supabase
+          .from("user_doorables")
+          .select("doorable_id, qty_owned")
+          .eq("user_id", userId);
+
+        const ownedIds = new Set<string>();
+
+        (userRows ?? []).forEach((row: any) => {
+          const qty = Number(row?.qty_owned ?? 0);
+
+          if (qty > 0 && row?.doorable_id) {
+            ownedIds.add(String(row.doorable_id));
+          }
+
+          if (qty > 1) {
+            extras += qty - 1;
+          }
+        });
+
+        owned = ownedIds.size;
+      }
+
+      let listings = 0;
+
+      const { count: listingCount } = await supabase
+        .from("marketplace_listings")
+        .select("id", { count: "exact", head: true });
+
+      listings = listingCount ?? 0;
+
+      const needed = Math.max(total - owned, 0);
+      const progress = total > 0 ? Math.round((owned / total) * 100) : 0;
+
+      setStats({
+        owned,
+        needed,
+        extras,
+        total,
+        progress,
+        listings,
+      });
+    } catch {
+      // Keep homepage usable even if stats are unavailable.
     }
   }
 
@@ -536,6 +620,14 @@ export default function HomePage() {
           margin-bottom: 4px;
         }
 
+        .miniCount {
+          font-size: 25px;
+          line-height: 1;
+          font-weight: 1000;
+          color: #312e81;
+          margin-bottom: 6px;
+        }
+
         .miniMeta {
           font-size: 12px;
           color: #6b7280;
@@ -594,6 +686,158 @@ export default function HomePage() {
           color: rgba(255,255,255,0.78);
           font-size: 14px;
           line-height: 1.45;
+        }
+
+
+        .liveStatsGrid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 14px;
+          margin-bottom: 18px;
+        }
+
+        .liveStatCard {
+          display: flex;
+          gap: 14px;
+          align-items: center;
+          border-radius: 24px;
+          padding: 18px;
+          text-decoration: none;
+          color: #111827;
+          background: linear-gradient(180deg, #ffffff, #f8fafc);
+          border: 1px solid rgba(255,255,255,0.58);
+          box-shadow: 0 16px 32px rgba(0,0,0,0.16);
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .liveStatCard:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 22px 42px rgba(0,0,0,0.22);
+        }
+
+        .liveIcon {
+          width: 54px;
+          height: 54px;
+          border-radius: 17px;
+          display: grid;
+          place-items: center;
+          font-size: 24px;
+          flex: 0 0 auto;
+        }
+
+        .liveIcon.purple { background: linear-gradient(135deg, #ddd6fe, #a78bfa); }
+        .liveIcon.blue { background: linear-gradient(135deg, #dbeafe, #93c5fd); }
+        .liveIcon.orange { background: linear-gradient(135deg, #ffedd5, #fdba74); }
+        .liveIcon.green { background: linear-gradient(135deg, #dcfce7, #86efac); }
+
+        .liveLabel {
+          font-weight: 1000;
+          font-size: 15px;
+        }
+
+        .liveNumber {
+          font-size: 32px;
+          line-height: 1;
+          font-weight: 1000;
+          color: #0f172a;
+          margin: 7px 0 5px;
+        }
+
+        .liveSub {
+          color: #64748b;
+          font-size: 13px;
+          font-weight: 800;
+          line-height: 1.35;
+        }
+
+        .realProgressCard {
+          position: relative;
+          margin-bottom: 18px;
+          border-radius: 28px;
+          padding: 24px;
+          color: #111827;
+          background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(248,250,252,0.97));
+          border: 1px solid rgba(255,255,255,0.56);
+          box-shadow: 0 18px 38px rgba(0,0,0,0.19);
+        }
+
+        .realProgressTop {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 14px;
+          margin-bottom: 16px;
+        }
+
+        .overallProgress {
+          font-weight: 1000;
+          color: #312e81;
+          white-space: nowrap;
+          padding: 10px 12px;
+          border-radius: 999px;
+          background: #eef2ff;
+          border: 1px solid #c7d2fe;
+        }
+
+        .realProgressTrack {
+          height: 34px;
+          border-radius: 999px;
+          background: #e5e7eb;
+          overflow: hidden;
+          box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);
+        }
+
+        .realProgressFill {
+          min-width: 0;
+          height: 100%;
+          border-radius: inherit;
+          background: linear-gradient(90deg, #7c3aed, #2563eb);
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          color: white;
+          font-weight: 1000;
+          font-size: 14px;
+          transition: width 0.45s ease;
+        }
+
+        .realProgressFill span {
+          padding-right: 12px;
+        }
+
+        .realProgressText {
+          margin-top: 14px;
+          color: #475569;
+          line-height: 1.6;
+          font-weight: 750;
+        }
+
+        .realProgressLegend {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 16px;
+          margin-top: 16px;
+          color: #334155;
+          font-size: 14px;
+          font-weight: 900;
+        }
+
+        .dot {
+          display: inline-block;
+          width: 9px;
+          height: 9px;
+          border-radius: 999px;
+          margin-right: 7px;
+        }
+
+        .ownedDot { background: #10b981; }
+        .neededDot { background: #2563eb; }
+        .extrasDot { background: #f59e0b; }
+        .totalDot { background: #8b5cf6; }
+
+        .realProgressButton {
+          margin-top: 18px;
+          width: fit-content;
         }
 
         .grid2 {
@@ -923,11 +1167,258 @@ export default function HomePage() {
           display: none;
         }
 
+
+        .mobileHeroDashboard {
+          display: none;
+        }
+
+        .mobileDashCard {
+          text-decoration: none;
+          color: white;
+          border-radius: 24px;
+          padding: 18px;
+          display: grid;
+          grid-template-columns: 82px 1fr 86px;
+          gap: 16px;
+          align-items: center;
+          border: 1px solid rgba(255,255,255,0.14);
+          box-shadow: 0 18px 36px rgba(0,0,0,0.25);
+          overflow: hidden;
+          position: relative;
+        }
+
+        .mobileDashCard::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 34%);
+          pointer-events: none;
+        }
+
+        .mobileDashIcon {
+          position: relative;
+          width: 82px;
+          height: 82px;
+          border-radius: 22px;
+          display: grid;
+          place-items: center;
+          font-size: 42px;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.24);
+        }
+
+        .mobileDashInfo {
+          position: relative;
+          min-width: 0;
+        }
+
+        .mobileDashLabel {
+          font-size: 14px;
+          font-weight: 1000;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          opacity: 0.92;
+        }
+
+        .mobileDashNumber {
+          font-size: 46px;
+          line-height: 0.95;
+          font-weight: 1000;
+          color: white;
+          letter-spacing: -1.2px;
+          margin: 9px 0 6px;
+          text-shadow: 0 10px 28px rgba(0,0,0,0.28);
+        }
+
+        .mobileDashSub {
+          font-size: 14px;
+          color: rgba(255,255,255,0.78);
+          font-weight: 850;
+          line-height: 1.3;
+        }
+
+        .mobileRing {
+          position: relative;
+          width: 82px;
+          height: 82px;
+          border-radius: 999px;
+          display: grid;
+          place-items: center;
+          background: conic-gradient(var(--ringColor) calc(var(--ringPercent) * 1%), rgba(255,255,255,0.15) 0);
+        }
+
+        .mobileRing::after {
+          content: "";
+          position: absolute;
+          inset: 10px;
+          border-radius: 999px;
+          background: rgba(2,6,23,0.76);
+          box-shadow: inset 0 0 18px rgba(0,0,0,0.35);
+        }
+
+        .mobileRingText {
+          position: relative;
+          z-index: 1;
+          text-align: center;
+          color: white;
+          font-weight: 1000;
+          line-height: 1.05;
+          font-size: 19px;
+        }
+
+        .mobileRingText span {
+          display: block;
+          font-size: 10px;
+          color: rgba(255,255,255,0.75);
+          margin-top: 3px;
+        }
+
+        .mobileActionGrid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          padding: 12px;
+          border-radius: 25px;
+          background: rgba(15,23,42,0.62);
+          border: 1px solid rgba(255,255,255,0.10);
+          box-shadow: 0 16px 34px rgba(0,0,0,0.20);
+        }
+
+        .mobileActionCard {
+          min-height: 78px;
+          border-radius: 20px;
+          text-decoration: none;
+          color: white;
+          padding: 14px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: linear-gradient(135deg, #4f46e5, #a855f7);
+          box-shadow: 0 12px 24px rgba(79,70,229,0.22);
+        }
+
+        .mobileActionCard.blue {
+          background: linear-gradient(135deg, #2563eb, #9333ea);
+        }
+
+        .mobileActionIcon {
+          font-size: 31px;
+          flex: 0 0 auto;
+        }
+
+        .mobileActionTitle {
+          font-weight: 1000;
+          font-size: 17px;
+          line-height: 1.1;
+        }
+
+        .mobileActionSub {
+          color: rgba(255,255,255,0.78);
+          font-size: 12px;
+          font-weight: 800;
+          margin-top: 4px;
+        }
+
+        .mobileFreePlan {
+          display: none;
+          border-radius: 25px;
+          padding: 18px;
+          color: white;
+          background:
+            radial-gradient(circle at top right, rgba(244,114,182,0.26), transparent 34%),
+            linear-gradient(135deg, rgba(88,28,135,0.84), rgba(15,23,42,0.92));
+          border: 1px solid rgba(217,70,239,0.38);
+          box-shadow: 0 16px 34px rgba(0,0,0,0.22);
+          margin-bottom: 18px;
+        }
+
+        .mobileFreeInner {
+          display: grid;
+          grid-template-columns: 66px 1fr auto;
+          gap: 14px;
+          align-items: center;
+        }
+
+        .mobileGem {
+          width: 62px;
+          height: 62px;
+          border-radius: 999px;
+          display: grid;
+          place-items: center;
+          font-size: 30px;
+          background: linear-gradient(135deg, #7c3aed, #22d3ee);
+          box-shadow: 0 12px 24px rgba(124,58,237,0.28);
+        }
+
+        .mobileFreeTitle {
+          font-size: 18px;
+          font-weight: 1000;
+        }
+
+        .mobileFreeText {
+          margin-top: 4px;
+          color: #d8b4fe;
+          font-weight: 900;
+          font-size: 13px;
+          line-height: 1.35;
+        }
+
+        .mobileUpgradeNow {
+          border-radius: 16px;
+          min-height: 46px;
+          padding: 11px 14px;
+          background: white;
+          color: #6d28d9;
+          font-weight: 1000;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+
         @media (max-width: 980px) {
           .shell {
             padding: 14px;
             padding-bottom: 104px;
           }
+
+          .hero {
+            display: none;
+          }
+
+          .trustStrip,
+          .liveStatsGrid,
+          .realProgressCard {
+            display: none;
+          }
+
+          .mobileHeroDashboard {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 18px;
+          }
+
+          .mobileFreePlan {
+            display: block;
+          }
+
+          .mobileDashCard.owned {
+            background: linear-gradient(135deg, rgba(126,34,206,0.86), rgba(30,41,59,0.92));
+            --ringColor: #a855f7;
+          }
+
+          .mobileDashCard.needed {
+            background: linear-gradient(135deg, rgba(29,78,216,0.86), rgba(15,23,42,0.92));
+            --ringColor: #38bdf8;
+          }
+
+          .mobileDashCard.extras {
+            background: linear-gradient(135deg, rgba(146,64,14,0.86), rgba(15,23,42,0.92));
+            --ringColor: #fbbf24;
+          }
+
+          .mobileDashCard.market {
+            background: linear-gradient(135deg, rgba(22,101,52,0.86), rgba(15,23,42,0.92));
+            --ringColor: #4ade80;
+          }
+
 
           .topNav {
             align-items: flex-start;
@@ -970,8 +1461,22 @@ export default function HomePage() {
 
           .trustStrip,
           .grid2,
-          .grid3 {
+          .grid3,
+          .liveStatsGrid {
             grid-template-columns: 1fr;
+          }
+
+          .realProgressTop {
+            display: grid;
+          }
+
+          .overallProgress {
+            white-space: normal;
+            width: fit-content;
+          }
+
+          .realProgressButton {
+            width: 100%;
           }
 
           .featureGrid {
@@ -1033,6 +1538,50 @@ export default function HomePage() {
             display: none;
           }
 
+          .mobileDashCard {
+            grid-template-columns: 70px 1fr 74px;
+            gap: 12px;
+            padding: 14px;
+          }
+
+          .mobileDashIcon {
+            width: 70px;
+            height: 70px;
+            border-radius: 20px;
+            font-size: 35px;
+          }
+
+          .mobileDashNumber {
+            font-size: 39px;
+          }
+
+          .mobileRing {
+            width: 74px;
+            height: 74px;
+          }
+
+          .mobileRingText {
+            font-size: 17px;
+          }
+
+          .mobileFreeInner {
+            grid-template-columns: 54px 1fr;
+          }
+
+          .mobileGem {
+            width: 54px;
+            height: 54px;
+            font-size: 26px;
+          }
+
+          .mobileUpgradeNow {
+            grid-column: 1 / -1;
+            text-align: center;
+            justify-content: center;
+            display: inline-flex;
+          }
+
+
           .heroTitle {
             letter-spacing: -1.4px;
           }
@@ -1080,6 +1629,113 @@ export default function HomePage() {
           </div>
         </nav>
 
+        <section className="mobileHeroDashboard" aria-label="Mobile collection dashboard">
+          <Link
+            href="/collection"
+            className="mobileDashCard owned"
+            style={{ "--ringPercent": stats.total > 0 ? stats.progress : 0 } as React.CSSProperties}
+          >
+            <div className="mobileDashIcon" style={{ background: "linear-gradient(135deg,#c084fc,#8b5cf6)" }}>📦</div>
+            <div className="mobileDashInfo">
+              <div className="mobileDashLabel">Total Owned</div>
+              <div className="mobileDashNumber">{stats.owned}</div>
+              <div className="mobileDashSub">Doorables you own</div>
+            </div>
+            <div className="mobileRing">
+              <div className="mobileRingText">
+                {stats.progress}%<span>of collection</span>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/collection"
+            className="mobileDashCard needed"
+            style={{ "--ringPercent": stats.total > 0 ? Math.max(0, 100 - stats.progress) : 0 } as React.CSSProperties}
+          >
+            <div className="mobileDashIcon" style={{ background: "linear-gradient(135deg,#bfdbfe,#60a5fa)" }}>📋</div>
+            <div className="mobileDashInfo">
+              <div className="mobileDashLabel">Still Needed</div>
+              <div className="mobileDashNumber">{stats.needed.toLocaleString()}</div>
+              <div className="mobileDashSub">Doorables to collect</div>
+            </div>
+            <div className="mobileRing">
+              <div className="mobileRingText">
+                {stats.total > 0 ? Math.max(0, 100 - stats.progress) : 0}%<span>remaining</span>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/sell"
+            className="mobileDashCard extras"
+            style={{ "--ringPercent": stats.total > 0 ? Math.min(100, Math.round((stats.extras / stats.total) * 100)) : 0 } as React.CSSProperties}
+          >
+            <div className="mobileDashIcon" style={{ background: "linear-gradient(135deg,#fed7aa,#f59e0b)" }}>⭐</div>
+            <div className="mobileDashInfo">
+              <div className="mobileDashLabel">Extras</div>
+              <div className="mobileDashNumber">{stats.extras}</div>
+              <div className="mobileDashSub">Ready to trade or sell</div>
+            </div>
+            <div className="mobileRing">
+              <div className="mobileRingText">
+                {stats.total > 0 ? Math.min(100, Math.round((stats.extras / stats.total) * 100)) : 0}%<span>extras</span>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/marketplace"
+            className="mobileDashCard market"
+            style={{ "--ringPercent": Math.min(100, stats.listings * 10) } as React.CSSProperties}
+          >
+            <div className="mobileDashIcon" style={{ background: "linear-gradient(135deg,#bbf7d0,#22c55e)" }}>🛍️</div>
+            <div className="mobileDashInfo">
+              <div className="mobileDashLabel">Marketplace</div>
+              <div className="mobileDashNumber">{stats.listings}</div>
+              <div className="mobileDashSub">Current listings</div>
+            </div>
+            <div className="mobileRing">
+              <div className="mobileRingText">
+                {stats.listings}<span>live</span>
+              </div>
+            </div>
+          </Link>
+
+          <div className="mobileActionGrid">
+            <Link href="/collection" className="mobileActionCard">
+              <div className="mobileActionIcon">🎯</div>
+              <div>
+                <div className="mobileActionTitle">Start Tracking</div>
+                <div className="mobileActionSub">Add to your collection</div>
+              </div>
+            </Link>
+
+            <Link href="/pricing" className="mobileActionCard blue">
+              <div className="mobileActionIcon">📈</div>
+              <div>
+                <div className="mobileActionTitle">View Plans</div>
+                <div className="mobileActionSub">Upgrade & unlock more</div>
+              </div>
+            </Link>
+          </div>
+        </section>
+
+        <section className="mobileFreePlan">
+          <div className="mobileFreeInner">
+            <div className="mobileGem">💎</div>
+            <div>
+              <div className="mobileFreeTitle">Free Plan</div>
+              <div className="mobileFreeText">
+                Save up to 50 Doorables • You’re using {stats.owned} / 50
+              </div>
+            </div>
+            <Link href="/pricing" className="mobileUpgradeNow">
+              Upgrade Now
+            </Link>
+          </div>
+        </section>
+
         <section className="hero">
           <div className="heroContent">
             <div className="badge">✨ Built by collectors, for collectors ✨</div>
@@ -1117,7 +1773,7 @@ export default function HomePage() {
             <div className="phoneMock">
               <div className="phoneTop">
                 <span>Open Your Real Vault</span>
-                <span>Tap →</span>
+                <span>{stats.progress}%</span>
               </div>
 
               <div className="searchMock">Search by name, series, movie...</div>
@@ -1126,21 +1782,25 @@ export default function HomePage() {
                 <div className="miniCard">
                   <div className="miniImage">💜</div>
                   <div className="miniTitle">Owned</div>
+                  <div className="miniCount">{stats.owned}</div>
                   <div className="miniMeta">Track your favorites</div>
                 </div>
                 <div className="miniCard">
                   <div className="miniImage">🔎</div>
                   <div className="miniTitle">Needed</div>
+                  <div className="miniCount">{stats.needed}</div>
                   <div className="miniMeta">Find collection gaps</div>
                 </div>
                 <div className="miniCard">
                   <div className="miniImage">✨</div>
                   <div className="miniTitle">Extras</div>
+                  <div className="miniCount">{stats.extras}</div>
                   <div className="miniMeta">Ready to trade or sell</div>
                 </div>
                 <div className="miniCard">
                   <div className="miniImage">🛍️</div>
                   <div className="miniTitle">Marketplace</div>
+                  <div className="miniCount">{stats.listings}</div>
                   <div className="miniMeta">Browse collector finds</div>
                 </div>
               </div>
@@ -1148,10 +1808,12 @@ export default function HomePage() {
               <div className="progressBlock">
                 <div className="progressTitle">Series progress</div>
                 <div className="progressBar">
-                  <div className="progressFill" />
+                  <div className="progressFill" style={{ width: `${stats.progress}%` }} />
                 </div>
                 <div style={{ marginTop: 9, fontSize: 13, fontWeight: 850, opacity: 0.9 }}>
-                  Keep going — your vault is getting closer.
+                  {stats.total > 0
+                    ? `${stats.owned} of ${stats.total} Doorables collected`
+                    : "Open your collection to start tracking."}
                 </div>
               </div>
             </div>
@@ -1165,6 +1827,78 @@ export default function HomePage() {
               <div className="statLabel">{stat.label}</div>
             </div>
           ))}
+        </section>
+
+
+        <section className="liveStatsGrid" aria-label="Live collection stats">
+          <Link href="/collection" className="liveStatCard">
+            <div className="liveIcon purple">📦</div>
+            <div>
+              <div className="liveLabel">Owned</div>
+              <div className="liveNumber">{stats.owned}</div>
+              <div className="liveSub">Total owned</div>
+            </div>
+          </Link>
+
+          <Link href="/collection" className="liveStatCard">
+            <div className="liveIcon blue">📋</div>
+            <div>
+              <div className="liveLabel">Needed</div>
+              <div className="liveNumber">{stats.needed}</div>
+              <div className="liveSub">Still needed</div>
+            </div>
+          </Link>
+
+          <Link href="/sell" className="liveStatCard">
+            <div className="liveIcon orange">⭐</div>
+            <div>
+              <div className="liveLabel">Extras</div>
+              <div className="liveNumber">{stats.extras}</div>
+              <div className="liveSub">Ready to trade or sell</div>
+            </div>
+          </Link>
+
+          <Link href="/marketplace" className="liveStatCard">
+            <div className="liveIcon green">🛍️</div>
+            <div>
+              <div className="liveLabel">Marketplace</div>
+              <div className="liveNumber">{stats.listings}</div>
+              <div className="liveSub">Current listings</div>
+            </div>
+          </Link>
+        </section>
+
+        <section className="realProgressCard">
+          <div className="realProgressTop">
+            <div>
+              <div className="sectionEyebrow">Real collection progress</div>
+              <div className="sectionTitle">Series Progress</div>
+            </div>
+            <div className="overallProgress">Overall Progress: {stats.progress}%</div>
+          </div>
+
+          <div className="realProgressTrack">
+            <div className="realProgressFill" style={{ width: `${stats.progress}%` }}>
+              <span>{stats.progress}%</span>
+            </div>
+          </div>
+
+          <div className="realProgressText">
+            {stats.total > 0
+              ? `You’ve collected ${stats.owned} of ${stats.total} Doorables across your vault.`
+              : "Once your Doorables are added, this bar will update automatically from your real collection."}
+          </div>
+
+          <div className="realProgressLegend">
+            <span><b className="dot ownedDot" /> {stats.owned} Owned</span>
+            <span><b className="dot neededDot" /> {stats.needed} Needed</span>
+            <span><b className="dot extrasDot" /> {stats.extras} Extras</span>
+            <span><b className="dot totalDot" /> {stats.total} Total</span>
+          </div>
+
+          <Link href="/collection" className="darkButton realProgressButton">
+            View Collection
+          </Link>
         </section>
 
         <section className="grid2">

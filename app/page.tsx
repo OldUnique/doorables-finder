@@ -542,7 +542,6 @@ export default function HomePage() {
   border: 1px solid rgba(255,255,255,0.24);
 }
 
-.featureLink,
 .miniAction {
   background: linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
   backdrop-filter: blur(10px);

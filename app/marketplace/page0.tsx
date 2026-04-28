@@ -22,23 +22,9 @@ type Listing = {
   created_at: string | null;
 };
 
-const MARKETPLACE_SAFETY_NOTE =
-  "Adorable Vault helps collectors connect, but buyers and sellers are responsible for their own purchases, payments, shipping, pickup, item condition, refunds, returns, and completed transactions. Adorable Vault does not process payments, hold funds, guarantee items, verify sellers, insure packages, or take responsibility for private buyer/seller agreements.";
-
 function formatMoney(value: number | null) {
   if (value === null || Number.isNaN(Number(value))) return "No price listed";
   return `$${Number(value).toFixed(2)}`;
-}
-
-function formatDate(value: string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 export default function MarketplacePage() {
@@ -57,7 +43,6 @@ export default function MarketplacePage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   useEffect(() => {
     void loadPage();
@@ -136,10 +121,6 @@ export default function MarketplacePage() {
 
     return listings.filter((item) => {
       const isMine = !!userId && item.user_id === userId;
-      const listingStatus = item.status || "active";
-
-      // Safety/privacy: visitors only see active listings. Owners can see their own pending/sold listings.
-      if (!isMine && listingStatus !== "active") return false;
 
       const matchesSearch =
         !q ||
@@ -159,30 +140,23 @@ export default function MarketplacePage() {
               : !!item.shipping_available && !!item.local_pickup_available;
 
       const matchesStatus =
-        statusFilter === "all" ? true : listingStatus === statusFilter;
+        statusFilter === "all"
+          ? true
+          : isMine
+            ? (item.status || "active") === statusFilter
+            : (item.status || "active") === "active";
 
       return matchesSearch && matchesDelivery && matchesStatus;
     });
   }, [listings, search, deliveryFilter, statusFilter, userId]);
 
-  const activeFilterCount =
-    (search.trim() ? 1 : 0) +
-    (deliveryFilter !== "all" ? 1 : 0) +
-    (statusFilter !== "all" ? 1 : 0);
-
-  const cardsPerPage = isMobile ? 6 : 12;
+  const cardsPerPage = isMobile ? 8 : 12;
   const totalPages = Math.max(1, Math.ceil(filteredListings.length / cardsPerPage));
   const safePage = Math.min(page, totalPages);
   const pagedListings = filteredListings.slice(
     (safePage - 1) * cardsPerPage,
     safePage * cardsPerPage
   );
-
-  function clearFilters() {
-    setSearch("");
-    setDeliveryFilter("all");
-    setStatusFilter("all");
-  }
 
   async function handleStartConversation(listing: Listing) {
     try {
@@ -325,170 +299,81 @@ export default function MarketplacePage() {
 
   if (loading) {
     return (
-      <main className="loadingPage">
-        <style jsx>{`
-          .loadingPage {
-            min-height: 100vh;
-            display: grid;
-            place-items: center;
-            padding: 24px;
-            color: white;
-            background:
-              radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%),
-              radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%),
-              linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%);
-          }
-
-          .loadingCard {
-            width: min(520px, 100%);
-            text-align: center;
-            padding: 28px;
-            border-radius: 28px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.16);
-            box-shadow: 0 22px 52px rgba(0,0,0,0.35);
-            font-weight: 900;
-          }
-        `}</style>
-
-        <div className="loadingCard">Loading marketplace...</div>
+      <main
+        style={{
+          minHeight: "100vh",
+          padding: 24,
+          color: "white",
+          background:
+            "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
+        }}
+      >
+        Loading marketplace...
       </main>
     );
   }
 
   if (!isSubscribed) {
     return (
-      <main className="gatePage">
-        <style jsx>{`
-          .gatePage {
-            min-height: 100vh;
-            padding: 24px;
-            color: white;
-            background:
-              radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%),
-              radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%),
-              linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%);
-          }
-
-          .gateShell {
-            max-width: 900px;
-            margin: 0 auto;
-          }
-
-          .gateHero {
-            background:
-              radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 34%),
-              linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
-            border-radius: 28px;
-            padding: 24px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.30);
-            margin-bottom: 18px;
-            border: 1px solid rgba(255,255,255,0.12);
-          }
-
-          .gateCard {
-            background: rgba(255,255,255,0.96);
-            color: #111827;
-            border-radius: 24px;
-            padding: 22px;
-            box-shadow: 0 12px 28px rgba(0,0,0,0.14);
-            margin-bottom: 14px;
-          }
-
-          .safetyGate {
-            background: #f8fafc;
-            border: 1px solid #e5e7eb;
-            border-radius: 18px;
-            padding: 14px;
-            color: #475569;
-            line-height: 1.55;
-            font-size: 14px;
-            margin-top: 14px;
-          }
-
-          .buttonRow {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 14px;
-          }
-
-          .primaryLink,
-          .secondaryLink {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 12px 16px;
-            border-radius: 14px;
-            text-decoration: none;
-            font-weight: 900;
-            min-height: 46px;
-          }
-
-          .primaryLink {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            color: white;
-            box-shadow: 0 12px 22px rgba(79,70,229,0.28);
-          }
-
-          .secondaryLink {
-            background: #eef2ff;
-            color: #3730a3;
-            border: 1px solid #c7d2fe;
-          }
-
-          @media (max-width: 720px) {
-            .gatePage {
-              padding: 14px;
-            }
-
-            .gateHero,
-            .gateCard {
-              border-radius: 22px;
-              padding: 18px;
-            }
-
-            .primaryLink,
-            .secondaryLink {
-              width: 100%;
-            }
-          }
-        `}</style>
-
-        <div className="gateShell">
-          <section className="gateHero">
-            <h1 style={{ margin: 0, fontSize: "clamp(2rem, 6vw, 2.9rem)", fontWeight: 1000 }}>
+      <main
+        style={{
+          minHeight: "100vh",
+          padding: 24,
+          color: "white",
+          background:
+            "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
+        }}
+      >
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+          <section
+            style={{
+              background: "linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88))",
+              borderRadius: 28,
+              padding: 24,
+              boxShadow: "0 20px 40px rgba(0,0,0,0.30)",
+              marginBottom: 18,
+            }}
+          >
+            <h1 style={{ margin: 0, fontSize: "clamp(2rem, 6vw, 2.9rem)", fontWeight: 900 }}>
               Marketplace
             </h1>
             <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
-              Browse collector listings, message sellers, and find pieces your vault still needs.
+              Marketplace access is included with the paid plan.
             </div>
           </section>
 
-          <section className="gateCard">
-            <div style={{ fontSize: 24, fontWeight: 1000, marginBottom: 8 }}>
+          <section
+            style={{
+              background: "rgba(255,255,255,0.96)",
+              color: "#111827",
+              borderRadius: 24,
+              padding: 22,
+              boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
+            }}
+          >
+            <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 8 }}>
               Upgrade to unlock Marketplace 💜
             </div>
-            <div style={{ color: "#4b5563", lineHeight: 1.6 }}>
-              Free accounts can save up to 50 Doorables in collection. Upgrade to browse Marketplace,
-              message through listings, and unlock selling.
+            <div style={{ color: "#4b5563", lineHeight: 1.6, marginBottom: 14 }}>
+              Free accounts can save up to 50 Doorables in collection. Upgrade to browse Marketplace, message through listings, and unlock selling.
             </div>
 
-            <div className="buttonRow">
-              <Link href="/pricing" className="primaryLink">
-                Upgrade Now
-              </Link>
-
-              {!userId && (
-                <Link href="/login" className="secondaryLink">
-                  Log In / Sign Up
-                </Link>
-              )}
-            </div>
-
-            <div className="safetyGate">
-              <strong>Marketplace safety note:</strong> {MARKETPLACE_SAFETY_NOTE}
-            </div>
+            <Link
+              href="/pricing"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "12px 16px",
+                borderRadius: 14,
+                background: "#4f46e5",
+                color: "white",
+                textDecoration: "none",
+                fontWeight: 900,
+              }}
+            >
+              Upgrade Now
+            </Link>
           </section>
         </div>
       </main>
@@ -496,108 +381,28 @@ export default function MarketplacePage() {
   }
 
   return (
-    <main className="marketplacePage">
+    <main
+      style={{
+        minHeight: "100vh",
+        padding: 24,
+        color: "white",
+        background:
+          "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
+      }}
+    >
       <style jsx>{`
-        .marketplacePage {
-          min-height: 100vh;
-          padding: 24px;
-          color: white;
-          background:
-            radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%),
-            radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%),
-            radial-gradient(circle at 75% 88%, rgba(236,72,153,0.16) 0%, rgba(236,72,153,0) 24%),
-            linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%);
-        }
-
         .shell {
           max-width: 1280px;
           margin: 0 auto;
         }
 
         .hero {
-          background:
-            radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 34%),
-            linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
+          background: linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
           border-radius: 28px;
           padding: 24px;
           box-shadow: 0 20px 40px rgba(0,0,0,0.30);
           margin-bottom: 18px;
           border: 1px solid rgba(255,255,255,0.08);
-          display: grid;
-          grid-template-columns: 1fr auto;
-          gap: 16px;
-          align-items: center;
-        }
-
-        .heroBadge {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          border-radius: 999px;
-          padding: 7px 11px;
-          background: rgba(255,255,255,0.12);
-          border: 1px solid rgba(255,255,255,0.16);
-          font-weight: 1000;
-          font-size: 13px;
-          margin-bottom: 10px;
-        }
-
-        .heroAction {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 50px;
-          padding: 12px 16px;
-          border-radius: 16px;
-          background: linear-gradient(135deg, #ffffff, #fef3c7);
-          color: #312e81;
-          text-decoration: none;
-          font-weight: 1000;
-          box-shadow: 0 18px 34px rgba(255,255,255,0.18);
-          white-space: nowrap;
-        }
-
-        .safetyCard {
-          background:
-            radial-gradient(circle at top right, rgba(196,181,253,0.34), transparent 28%),
-            rgba(255,255,255,0.96);
-          color: #111827;
-          border-radius: 24px;
-          padding: 18px;
-          box-shadow: 0 12px 28px rgba(0,0,0,0.14);
-          margin-bottom: 18px;
-          border: 1px solid rgba(255,255,255,0.50);
-        }
-
-        .safetyTitle {
-          font-size: 18px;
-          font-weight: 1000;
-          margin-bottom: 7px;
-          color: #312e81;
-        }
-
-        .safetyText {
-          color: #475569;
-          line-height: 1.6;
-          font-size: 14px;
-        }
-
-        .safetyTips {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 10px;
-          margin-top: 14px;
-        }
-
-        .safetyTip {
-          border-radius: 16px;
-          padding: 12px;
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
-          color: #334155;
-          font-size: 13px;
-          font-weight: 850;
-          line-height: 1.4;
         }
 
         .filterCard {
@@ -607,35 +412,6 @@ export default function MarketplacePage() {
           padding: 18px;
           box-shadow: 0 12px 28px rgba(0,0,0,0.14);
           margin-bottom: 18px;
-          position: sticky;
-          top: 8px;
-          z-index: 40;
-          border: 1px solid rgba(255,255,255,0.45);
-        }
-
-        .filterTop {
-          display: grid;
-          grid-template-columns: 1fr auto;
-          gap: 12px;
-          align-items: center;
-        }
-
-        .filterToggle {
-          display: none;
-          border: none;
-          border-radius: 14px;
-          padding: 12px 14px;
-          background: linear-gradient(135deg, #4f46e5, #7c3aed);
-          color: #ffffff;
-          font-weight: 950;
-          cursor: pointer;
-          min-height: 46px;
-        }
-
-        .filterBody {
-          display: grid;
-          gap: 12px;
-          margin-top: 12px;
         }
 
         .field {
@@ -674,13 +450,6 @@ export default function MarketplacePage() {
           display: flex;
           flex-direction: column;
           gap: 12px;
-          border: 1px solid rgba(255,255,255,0.45);
-          transition: transform 0.18s ease, box-shadow 0.18s ease;
-        }
-
-        .card:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 18px 38px rgba(0,0,0,0.20);
         }
 
         .imageBox {
@@ -713,7 +482,6 @@ export default function MarketplacePage() {
           color: white;
           font-weight: 900;
           cursor: pointer;
-          min-height: 46px;
         }
 
         .secondaryButton {
@@ -727,8 +495,6 @@ export default function MarketplacePage() {
           color: #111827;
           text-decoration: none;
           font-weight: 800;
-          min-height: 46px;
-          box-sizing: border-box;
         }
 
         .dangerButton {
@@ -739,22 +505,6 @@ export default function MarketplacePage() {
           color: #b91c1c;
           font-weight: 800;
           cursor: pointer;
-          min-height: 46px;
-        }
-
-        .reportLink {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 38px;
-          padding: 8px 10px;
-          border-radius: 12px;
-          text-decoration: none;
-          background: #fff7ed;
-          color: #9a3412;
-          border: 1px solid #fed7aa;
-          font-size: 12px;
-          font-weight: 900;
         }
 
         .pillRow {
@@ -789,7 +539,6 @@ export default function MarketplacePage() {
           color: #3730a3;
           font-weight: 800;
           cursor: pointer;
-          min-height: 42px;
         }
 
         .toggleButtonActive {
@@ -828,88 +577,24 @@ export default function MarketplacePage() {
           cursor: not-allowed;
         }
 
-        .messageBox {
-          background: rgba(255,255,255,0.96);
-          color: #b91c1c;
-          border-radius: 18px;
-          padding: 14px;
-          margin-bottom: 18px;
-          font-weight: 700;
-        }
-
-        .emptyBox {
-          background: rgba(255,255,255,0.96);
-          color: #111827;
-          border-radius: 24px;
-          padding: 24px;
-          box-shadow: 0 12px 28px rgba(0,0,0,0.14);
-        }
-
-        .cardSafetyNote {
-          margin-top: auto;
-          padding: 10px;
-          border-radius: 14px;
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
-          color: #64748b;
-          font-size: 12px;
-          line-height: 1.45;
-          font-weight: 750;
-        }
-
         @media (max-width: 920px) {
-          .marketplacePage {
-            padding: 14px;
+          main {
+            padding: 16px !important;
           }
 
           .hero {
-            grid-template-columns: 1fr;
             padding: 18px;
             border-radius: 22px;
           }
 
-          .heroAction {
-            width: 100%;
-            box-sizing: border-box;
-          }
-
-          .safetyCard,
-          .filterCard,
-          .card,
-          .emptyBox {
+          .filterCard {
+            padding: 14px;
             border-radius: 20px;
           }
 
-          .safetyCard,
-          .filterCard,
           .card {
             padding: 14px;
-          }
-
-          .safetyTips {
-            grid-template-columns: 1fr;
-          }
-
-          .filterTop {
-            grid-template-columns: 1fr auto;
-          }
-
-          .filterToggle {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-          }
-
-          .filterBody {
-            display: none;
-          }
-
-          .filterBody.open {
-            display: grid;
-          }
-
-          .field {
-            min-height: 50px;
+            border-radius: 20px;
           }
 
           .imageBox {
@@ -926,68 +611,21 @@ export default function MarketplacePage() {
           .dangerButton {
             width: 100%;
           }
-
-          .toggleWrap {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-          }
-        }
-
-        @media (max-width: 440px) {
-          .toggleWrap {
-            grid-template-columns: 1fr;
-          }
         }
       `}</style>
 
       <div className="shell">
         <section className="hero">
-          <div>
-            <div className="heroBadge">🛍️ Collector marketplace</div>
-            <h1 style={{ margin: 0, fontSize: "clamp(2rem, 6vw, 2.9rem)", fontWeight: 1000 }}>
-              Marketplace
-            </h1>
-            <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16, lineHeight: 1.5 }}>
-              Browse listings, check shipping or pickup options, and message sellers directly.
-            </div>
-          </div>
-
-          <Link href="/sell" className="heroAction">
-            Create Listing
-          </Link>
-        </section>
-
-        <section className="safetyCard">
-          <div className="safetyTitle">Marketplace safety note</div>
-          <div className="safetyText">{MARKETPLACE_SAFETY_NOTE}</div>
-
-          <div className="safetyTips">
-            <div className="safetyTip">💬 Keep deal details clear in messages before paying.</div>
-            <div className="safetyTip">📦 Confirm shipping, pickup, condition, and price first.</div>
-            <div className="safetyTip">⚠️ Report suspicious listings or behavior through Feedback.</div>
+          <h1 style={{ margin: 0, fontSize: "clamp(2rem, 6vw, 2.9rem)", fontWeight: 900 }}>
+            Marketplace
+          </h1>
+          <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
+            Browse listings, check shipping or pickup options, and message sellers directly.
           </div>
         </section>
 
         <section className="filterCard">
-          <div className="filterTop">
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 1000 }}>Find listings</div>
-              <div style={{ fontSize: 13, color: "#64748b", marginTop: 3, fontWeight: 750 }}>
-                Showing {pagedListings.length} of {filteredListings.length}
-                {activeFilterCount > 0 ? ` • ${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} active` : ""}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="filterToggle"
-              onClick={() => setShowMobileFilters((prev) => !prev)}
-            >
-              {showMobileFilters ? "Hide" : "Filters"}
-            </button>
-          </div>
-
-          <div className={`filterBody ${showMobileFilters || !isMobile ? "open" : ""}`}>
+          <div style={{ display: "grid", gap: 12 }}>
             <input
               className="field"
               placeholder="Search by title, description, seller, or pickup location"
@@ -1016,10 +654,10 @@ export default function MarketplacePage() {
             {!!userId && (
               <div className="toggleWrap">
                 {[
-                  { value: "all", label: "All Statuses" },
                   { value: "active", label: "Active" },
                   { value: "pending", label: "Pending" },
                   { value: "sold", label: "Sold" },
+                  { value: "all", label: "All Statuses" },
                 ].map((option) => (
                   <button
                     key={option.value}
@@ -1034,47 +672,58 @@ export default function MarketplacePage() {
             )}
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Link href="/sell" className="secondaryButton">
-                Create Listing
+              <Link href={'/sell?edit=${listing.id}' } className="secondaryButton">
+                Edit Listing
               </Link>
-              {userId ? (
+
                 <Link href="/messages" className="secondaryButton">
                   Open Messages
                 </Link>
-              ) : (
-                <Link href="/login" className="secondaryButton">
-                  Log In / Sign Up
-                </Link>
-              )}
 
-              {activeFilterCount > 0 && (
-                <button type="button" className="secondaryButton" onClick={clearFilters}>
-                  Clear Filters
-                </button>
-              )}
+                 <Link href="/sell" className="secondaryButton">
+                  New Listing
+                </Link>          
+            </div>
+
+            <div style={{ fontSize: 14, color: "#4b5563", fontWeight: 700 }}>
+              Showing {pagedListings.length} of {filteredListings.length} listings
             </div>
           </div>
         </section>
 
-        {!!message && <div className="messageBox">{message}</div>}
+        {!!message && (
+          <div
+            style={{
+              background: "rgba(255,255,255,0.96)",
+              color: "#b91c1c",
+              borderRadius: 18,
+              padding: 14,
+              marginBottom: 18,
+              fontWeight: 700,
+            }}
+          >
+            {message}
+          </div>
+        )}
 
         {filteredListings.length === 0 ? (
-          <div className="emptyBox">
-            <div style={{ fontSize: 24, fontWeight: 1000, marginBottom: 6 }}>
-              No listings found yet.
-            </div>
-            <div style={{ color: "#64748b", lineHeight: 1.5 }}>
-              Try clearing filters, searching another keyword, or creating the first listing.
-            </div>
+          <div
+            style={{
+              background: "rgba(255,255,255,0.96)",
+              color: "#111827",
+              borderRadius: 24,
+              padding: 24,
+              boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
+            }}
+          >
+            No listings found yet.
           </div>
         ) : (
           <>
             <section className="listingGrid">
-              {pagedListings.map((listing, index) => {
+              {pagedListings.map((listing) => {
                 const isOwnListing = !!userId && listing.user_id === userId;
                 const listingStatus = listing.status || "active";
-                const soldDate = formatDate(listing.sold_at);
-                const createdDate = formatDate(listing.created_at);
 
                 return (
                   <article key={listing.id} className="card">
@@ -1083,7 +732,7 @@ export default function MarketplacePage() {
                         <img
                           src={listing.image_url}
                           alt={listing.title}
-                          loading={index < 2 ? "eager" : "lazy"}
+                          loading="lazy"
                           decoding="async"
                           className="listingImage"
                         />
@@ -1093,23 +742,15 @@ export default function MarketplacePage() {
                     </div>
 
                     <div>
-                      <div style={{ fontSize: 24, fontWeight: 1000, lineHeight: 1.1 }}>
-                        {listing.title}
-                      </div>
-                      <div style={{ marginTop: 6, fontSize: 21, fontWeight: 1000, color: "#1d4ed8" }}>
+                      <div style={{ fontSize: 24, fontWeight: 900 }}>{listing.title}</div>
+                      <div style={{ marginTop: 4, fontSize: 20, fontWeight: 800, color: "#1d4ed8" }}>
                         {formatMoney(listing.price)}
                       </div>
-                      {createdDate && (
-                        <div style={{ marginTop: 4, color: "#94a3b8", fontSize: 12, fontWeight: 800 }}>
-                          Listed {createdDate}
-                        </div>
-                      )}
                     </div>
 
                     <div className="pillRow">
                       <span className="pill">
                         {listingStatus === "sold" ? "✅ Sold" : listingStatus === "pending" ? "⏳ Pending" : "🟢 Active"}
-                        {listingStatus === "sold" && soldDate ? ` • ${soldDate}` : ""}
                       </span>
 
                       {listing.shipping_available ? (
@@ -1132,12 +773,6 @@ export default function MarketplacePage() {
                     <div style={{ color: "#6b7280", fontSize: 14 }}>
                       Seller: <strong>{listing.seller_name || "Unknown seller"}</strong>
                     </div>
-
-                    {!isOwnListing && (
-                      <div className="cardSafetyNote">
-                        Buyer and seller handle payment, pickup/shipping, item condition, and any refunds directly.
-                      </div>
-                    )}
 
                     {isOwnListing ? (
                       <div style={{ display: "grid", gap: 10, marginTop: "auto" }}>
@@ -1182,10 +817,6 @@ export default function MarketplacePage() {
                         </div>
 
                         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                          <Link href={`/sell?edit=${listing.id}`} className="secondaryButton">
-                            Edit Listing
-                          </Link>
-
                           <Link href="/messages" className="secondaryButton">
                             Open Messages
                           </Link>
@@ -1207,10 +838,6 @@ export default function MarketplacePage() {
 
                         <Link href="/sell" className="secondaryButton">
                           Sell Similar
-                        </Link>
-
-                        <Link href="/feedback" className="reportLink">
-                          Report Concern
                         </Link>
                       </div>
                     )}
@@ -1246,14 +873,6 @@ export default function MarketplacePage() {
             )}
           </>
         )}
-
-        <section className="safetyCard" style={{ marginTop: 18 }}>
-          <div className="safetyTitle">Transaction responsibility</div>
-          <div className="safetyText">
-            {MARKETPLACE_SAFETY_NOTE} Use your best judgment, keep communication clear,
-            and only complete transactions in a way you are comfortable with.
-          </div>
-        </section>
       </div>
     </main>
   );

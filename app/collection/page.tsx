@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
 
 type Card = {
@@ -325,6 +326,8 @@ function renderStars(value: number) {
 }
 
 export default function Page() {
+const router = useRouter();
+
   const [cards, setCards] = useState<Card[]>([]);
   const [userId, setUserId] = useState("");
   const [username, setUsername] = useState("");
@@ -390,17 +393,8 @@ export default function Page() {
         error: authError,
       } = await supabase.auth.getUser();
 
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (!user) {
-        setError("You must be signed in.");
-        setLoading(false);
-        return;
-      }
+      if (authError || !user) { router.replace("/login");
+return;
 
       setUserId(String(user.id));
 

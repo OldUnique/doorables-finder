@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
 
@@ -18,6 +19,19 @@ function sanitizeUsernameInput(value: string) {
 
 function normalizeUsernameForStorage(value: string) {
   return sanitizeUsernameInput(value).toLowerCase();
+}
+
+function getSafeNextPath() {
+  if (typeof window === "undefined") return "/";
+
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get("next") || "";
+
+  if (!next || !next.startsWith("/") || next.startsWith("//")) {
+    return "/";
+  }
+
+  return next;
 }
 
 function getPasswordStrength(password: string) {
@@ -48,6 +62,7 @@ export default function LoginPage() {
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
 
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
   const [usernameHelp, setUsernameHelp] = useState("");
@@ -59,8 +74,11 @@ export default function LoginPage() {
       } = await supabase.auth.getUser();
 
       if (user) {
-        router.replace("/");
+        router.replace(getSafeNextPath());
+        return;
       }
+
+      setCheckingSession(false);
     };
 
     void checkUser();
@@ -135,7 +153,9 @@ export default function LoginPage() {
         ? normalizeUsernameForStorage(user.user_metadata.username)
         : "";
 
-    const cleanUsername = normalizeUsernameForStorage(desiredUsername || metadataUsername || "");
+    const cleanUsername = normalizeUsernameForStorage(
+      desiredUsername || metadataUsername || ""
+    );
 
     if (!existing) {
       const payload = {
@@ -263,11 +283,11 @@ export default function LoginPage() {
           }
 
           setLoading(false);
-          router.push("/");
+          router.push(getSafeNextPath());
           return;
         }
 
-        setMessage("Account created! Now sign in with your email and password.");
+        setMessage("Account created! Check your email if confirmation is required, then sign in.");
         setMode("signin");
         setPassword("");
         setShowPassword(false);
@@ -300,7 +320,7 @@ export default function LoginPage() {
       }
 
       setLoading(false);
-      router.push("/");
+      router.push(getSafeNextPath());
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not continue.");
       setLoading(false);
@@ -316,10 +336,10 @@ export default function LoginPage() {
         return;
       }
 
-const redirectTo =
-  typeof window !== "undefined"
-    ? `${window.location.origin}/reset-password`
-    : "https://www.mydoorables.com/reset-password";
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/reset-password`
+          : "https://www.mydoorables.com/reset-password";
 
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo,
@@ -347,95 +367,396 @@ const redirectTo =
           ? "#4338ca"
           : "#6b7280";
 
+  const messageIsSuccess =
+    message.toLowerCase().includes("created") ||
+    message.toLowerCase().includes("sent") ||
+    message.toLowerCase().includes("check your email");
+
+  if (checkingSession) {
+    return (
+      <main className="page">
+        <style jsx>{`
+          .page {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 22px;
+            color: white;
+            background:
+              radial-gradient(circle at 10% 10%, rgba(168,85,247,0.35) 0%, transparent 28%),
+              radial-gradient(circle at 90% 12%, rgba(59,130,246,0.26) 0%, transparent 26%),
+              linear-gradient(180deg, #030712 0%, #111827 48%, #020617 100%);
+          }
+
+          .loadingCard {
+            width: min(520px, 100%);
+            border-radius: 28px;
+            padding: 28px;
+            text-align: center;
+            background: rgba(255,255,255,0.10);
+            border: 1px solid rgba(255,255,255,0.16);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+          }
+        `}</style>
+
+        <div className="loadingCard">
+          <div style={{ fontSize: 34, marginBottom: 10 }}>💜</div>
+          <div style={{ fontWeight: 1000, fontSize: 22 }}>Checking your vault...</div>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
-        padding: 24,
-        color: "white",
-      }}
-    >
+    <main className="page">
       <style jsx>{`
-        .pageWrap {
-          max-width: 980px;
+        .page {
+          min-height: 100vh;
+          color: white;
+          background:
+            radial-gradient(circle at 8% 4%, rgba(168, 85, 247, 0.42) 0%, transparent 28%),
+            radial-gradient(circle at 88% 10%, rgba(59, 130, 246, 0.30) 0%, transparent 27%),
+            radial-gradient(circle at 70% 94%, rgba(236, 72, 153, 0.22) 0%, transparent 30%),
+            linear-gradient(180deg, #030712 0%, #080b1f 45%, #020617 100%);
+          overflow-x: hidden;
+        }
+
+        .page::before {
+          content: "";
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          background-image:
+            radial-gradient(2px 2px at 18% 22%, rgba(255,255,255,0.78) 35%, transparent 36%),
+            radial-gradient(1.5px 1.5px at 78% 16%, rgba(255,255,255,0.65) 35%, transparent 36%),
+            radial-gradient(1.8px 1.8px at 48% 72%, rgba(255,255,255,0.58) 35%, transparent 36%),
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+          background-size: auto, auto, auto, 46px 46px, 46px 46px;
+          opacity: 0.7;
+          mask-image: linear-gradient(to bottom, rgba(0,0,0,0.92), transparent 80%);
+        }
+
+        .shell {
+          position: relative;
+          z-index: 1;
+          max-width: 1180px;
           margin: 0 auto;
+          padding: 22px;
+          padding-bottom: 80px;
         }
 
-        .hero {
-          background: linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
-          border-radius: 28px;
-          padding: 24px;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.30);
+        .topNav {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 14px;
           margin-bottom: 18px;
-          border: 1px solid rgba(255,255,255,0.08);
         }
 
-        .card {
-          background: rgba(255,255,255,0.96);
-          color: #111827;
+        .brand {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          color: white;
+          text-decoration: none;
+          min-width: 0;
+        }
+
+        .brandIcon {
+          width: 58px;
+          height: 58px;
+          border-radius: 20px;
+          display: grid;
+          place-items: center;
+          font-size: 31px;
+          background: radial-gradient(circle at top left, #fef3c7, #a855f7 48%, #020617);
+          box-shadow: 0 18px 38px rgba(168, 85, 247, 0.42);
+          flex: 0 0 auto;
+        }
+
+        .brandTitle {
+          display: block;
+          font-size: clamp(1.45rem, 4vw, 2.15rem);
+          font-weight: 1000;
+          line-height: 0.95;
+          letter-spacing: -0.8px;
+          background: linear-gradient(90deg, #fef3c7, #f0abfc, #bfdbfe);
+          -webkit-background-clip: text;
+          color: transparent;
+        }
+
+        .brandSub {
+          display: block;
+          margin-top: 5px;
+          color: #d8b4fe;
+          font-weight: 950;
+          font-size: 14px;
+        }
+
+        .navActions {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+
+        .navPill,
+        .navPill:visited {
+          color: white;
+          text-decoration: none;
+          font-weight: 950;
+          padding: 11px 14px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.10);
+          border: 1px solid rgba(255,255,255,0.14);
+          box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+        }
+
+        .layout {
+          display: grid;
+          grid-template-columns: 0.98fr 1.02fr;
+          gap: 20px;
+          align-items: stretch;
+        }
+
+        .heroPanel,
+        .authCard {
+          border-radius: 32px;
+          border: 1px solid rgba(255,255,255,0.16);
+          box-shadow: 0 26px 64px rgba(0,0,0,0.36);
+        }
+
+        .heroPanel {
+          padding: 28px;
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
+            linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
+          display: grid;
+          align-content: center;
+          gap: 17px;
+        }
+
+        .badge {
+          display: inline-flex;
+          width: fit-content;
+          align-items: center;
+          gap: 8px;
+          padding: 9px 13px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.15);
+          font-size: 13px;
+          font-weight: 1000;
+        }
+
+        .headline {
+          margin: 0;
+          font-size: clamp(2.15rem, 5.6vw, 4.1rem);
+          line-height: 0.94;
+          letter-spacing: -2px;
+          font-weight: 1000;
+          text-wrap: balance;
+        }
+
+        .heroText {
+          color: rgba(255,255,255,0.90);
+          font-size: 16px;
+          line-height: 1.65;
+          max-width: 720px;
+        }
+
+        .benefitGrid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          margin-top: 4px;
+        }
+
+        .benefit {
+          border-radius: 19px;
+          padding: 13px;
+          background: rgba(15,23,42,0.55);
+          border: 1px solid rgba(255,255,255,0.14);
+          box-shadow: 0 14px 28px rgba(0,0,0,0.20);
+        }
+
+        .benefitIcon {
+          font-size: 22px;
+          margin-bottom: 6px;
+        }
+
+        .benefitTitle {
+          color: #fde68a;
+          font-weight: 1000;
+          line-height: 1.15;
+          margin-bottom: 4px;
+        }
+
+        .benefitText {
+          color: rgba(255,255,255,0.78);
+          line-height: 1.4;
+          font-size: 12.5px;
+          font-weight: 750;
+        }
+
+        .sampleCard {
+          margin-top: 3px;
           border-radius: 24px;
-          padding: 20px;
-          box-shadow: 0 12px 28px rgba(0,0,0,0.14);
-          max-width: 620px;
+          padding: 15px;
+          background: rgba(255,255,255,0.10);
+          border: 1px solid rgba(255,255,255,0.16);
+        }
+
+        .sampleTop {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          align-items: center;
+          margin-bottom: 12px;
+        }
+
+        .sampleDoorable {
+          display: grid;
+          grid-template-columns: 68px 1fr;
+          gap: 12px;
+          align-items: center;
+          border-radius: 18px;
+          padding: 12px;
+          background: rgba(255,255,255,0.92);
+          color: #111827;
+        }
+
+        .sampleImage {
+          width: 68px;
+          height: 68px;
+          border-radius: 18px;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(135deg, #ede9fe, #bfdbfe);
+          font-size: 30px;
+        }
+
+        .sampleProgress {
+          height: 9px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.18);
+          overflow: hidden;
+          margin-top: 12px;
+        }
+
+        .sampleFill {
+          height: 100%;
+          width: 62%;
+          border-radius: inherit;
+          background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
+        }
+
+        .authCard {
+          background: linear-gradient(180deg, #ffffff, #f8fafc);
+          color: #111827;
+          padding: 22px;
         }
 
         .modeSwitch {
-          display: inline-flex;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
           gap: 8px;
           padding: 6px;
-          border-radius: 14px;
+          border-radius: 17px;
           background: #eef2ff;
           border: 1px solid #c7d2fe;
           margin-bottom: 16px;
-          flex-wrap: wrap;
         }
 
         .modeButton {
+          min-height: 46px;
           padding: 10px 14px;
-          border-radius: 10px;
+          border-radius: 13px;
           border: none;
           cursor: pointer;
-          font-weight: 800;
+          font-weight: 950;
           background: transparent;
           color: #3730a3;
         }
 
         .modeButtonActive {
-          background: #4f46e5;
+          background: linear-gradient(135deg, #4f46e5, #7c3aed);
           color: white;
+          box-shadow: 0 10px 18px rgba(79,70,229,0.22);
+        }
+
+        .formTitle {
+          font-size: clamp(1.7rem, 4vw, 2.35rem);
+          font-weight: 1000;
+          letter-spacing: -1px;
+          line-height: 1;
+          margin-bottom: 7px;
+        }
+
+        .formSub {
+          color: #64748b;
+          line-height: 1.5;
+          font-weight: 750;
+          margin-bottom: 16px;
+        }
+
+        .fieldLabel {
+          display: block;
+          font-size: 13px;
+          font-weight: 950;
+          color: #334155;
+          margin-bottom: 6px;
         }
 
         .field {
           width: 100%;
           padding: 14px;
-          border-radius: 14px;
+          border-radius: 15px;
           border: 1px solid #d1d5db;
           box-sizing: border-box;
           font-size: 15px;
           background: white;
           color: #111827;
+          outline: none;
         }
 
-        .primaryButton {
+        .field:focus {
+          border-color: #8b5cf6;
+          box-shadow: 0 0 0 4px rgba(139,92,246,0.12);
+        }
+
+        .primaryButton,
+        .secondaryButton,
+        .primaryButton:visited,
+        .secondaryButton:visited {
+          min-height: 50px;
           padding: 12px 16px;
-          border-radius: 14px;
+          border-radius: 999px;
+          text-decoration: none;
+          font-weight: 1000;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
           border: none;
-          background: #4f46e5;
-          color: white;
-          font-weight: 900;
-          cursor: pointer;
+          box-sizing: border-box;
         }
 
-        .secondaryButton {
-          padding: 12px 16px;
-          border-radius: 14px;
-          border: 1px solid #d1d5db;
-          background: #f3f4f6;
-          color: #111827;
-          font-weight: 800;
-          cursor: pointer;
+        .primaryButton,
+        .primaryButton:visited {
+          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          color: white;
+          box-shadow: 0 14px 26px rgba(79,70,229,0.26);
+        }
+
+        .secondaryButton,
+        .secondaryButton:visited {
+          border: 1px solid #c7d2fe;
+          background: #eef2ff;
+          color: #3730a3;
         }
 
         .togglePasswordButton {
@@ -446,25 +767,97 @@ const redirectTo =
           border: 1px solid #d1d5db;
           background: #f8fafc;
           color: #111827;
-          border-radius: 10px;
+          border-radius: 999px;
           padding: 8px 10px;
-          font-weight: 700;
+          font-weight: 850;
           cursor: pointer;
         }
 
-        @media (max-width: 920px) {
-          main {
-            padding: 16px !important;
+        .messageBox {
+          margin-top: 4px;
+          font-size: 14px;
+          border-radius: 16px;
+          padding: 12px 13px;
+          font-weight: 850;
+          line-height: 1.45;
+        }
+
+        .successBox {
+          color: #166534;
+          background: #ecfdf5;
+          border: 1px solid #bbf7d0;
+        }
+
+        .errorBox {
+          color: #b91c1c;
+          background: #fff1f2;
+          border: 1px solid #fecdd3;
+        }
+
+        .trustStrip {
+          margin-top: 16px;
+          display: grid;
+          gap: 9px;
+        }
+
+        .trustItem {
+          display: grid;
+          grid-template-columns: 30px 1fr;
+          gap: 8px;
+          align-items: start;
+          padding: 11px;
+          border-radius: 16px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          color: #475569;
+          font-weight: 800;
+          line-height: 1.4;
+          font-size: 13px;
+        }
+
+        @media (max-width: 960px) {
+          .shell {
+            padding: 14px;
+            padding-bottom: 58px;
           }
 
-          .hero {
+          .topNav {
+            align-items: flex-start;
+          }
+
+          .brandIcon {
+            width: 54px;
+            height: 54px;
+            font-size: 29px;
+          }
+
+          .navPill:not(.homePill) {
+            display: none;
+          }
+
+          .layout {
+            grid-template-columns: 1fr;
+          }
+
+          .heroPanel,
+          .authCard {
+            border-radius: 25px;
+          }
+
+          .heroPanel {
+            padding: 21px;
+          }
+
+          .headline {
+            font-size: clamp(2rem, 11vw, 3.05rem);
+          }
+
+          .benefitGrid {
+            grid-template-columns: 1fr;
+          }
+
+          .authCard {
             padding: 18px;
-            border-radius: 22px;
-          }
-
-          .card {
-            padding: 16px;
-            border-radius: 20px;
           }
 
           .primaryButton,
@@ -472,172 +865,313 @@ const redirectTo =
             width: 100%;
           }
         }
+
+        @media (max-width: 440px) {
+          .sampleDoorable {
+            grid-template-columns: 1fr;
+            text-align: center;
+          }
+
+          .sampleImage {
+            margin: 0 auto;
+          }
+        }
       `}</style>
 
-      <div className="pageWrap">
-        <section className="hero">
-          <h1 style={{ margin: 0, fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 900 }}>
-            {mode === "signin" ? "Sign In 🔐" : "Create Account ✨"}
-          </h1>
-          <div style={{ marginTop: 8, opacity: 0.92 }}>
-            {mode === "signin"
-              ? "Sign in with your email and password."
-              : "Choose your email, username, and password to start collecting."}
+      <div className="shell">
+        <nav className="topNav">
+          <Link href="/" className="brand">
+            <span className="brandIcon">💎</span>
+            <span>
+              <span className="brandTitle">Adorable Vault</span>
+              <span className="brandSub">track • trade • showcase</span>
+            </span>
+          </Link>
+
+          <div className="navActions">
+            <Link href="/" className="navPill homePill">
+              Home
+            </Link>
+            <Link href="/pricing" className="navPill">
+              Plans
+            </Link>
+            <Link href="/about" className="navPill">
+              About
+            </Link>
           </div>
-        </section>
+        </nav>
 
-        <section className="card">
-          <div className="modeSwitch">
-            <button
-              type="button"
-              onClick={() => setMode("signin")}
-              className={`modeButton ${mode === "signin" ? "modeButtonActive" : ""}`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("signup")}
-              className={`modeButton ${mode === "signup" ? "modeButtonActive" : ""}`}
-            >
-              Sign Up
-            </button>
-          </div>
+        <div className="layout">
+          <section className="heroPanel">
+            <div className="badge">
+              ✨ Free collector vault • save up to 50 Doorables ✨
+            </div>
 
-          <div style={{ display: "grid", gap: 12 }}>
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="field"
-            />
+            <h1 className="headline">
+              Your Doorables checklist, wishlist, and extras tracker in one place.
+            </h1>
 
-            {mode === "signup" && (
-              <div>
-                <input
-                  value={username}
-                  onChange={(e) => setUsername(sanitizeUsernameInput(e.target.value))}
-                  placeholder="Username"
-                  className="field"
-                />
-                <div
-                  style={{
-                    marginTop: 6,
-                    fontSize: 13,
-                    color: usernameHelpColor,
-                    fontWeight: usernameStatus === "available" || usernameStatus === "taken" ? 700 : 500,
-                  }}
-                >
-                  {usernameHelp || "Letters, numbers, and underscores only."}
-                </div>
-                <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
-                  Capitals are allowed while typing. Usernames are saved case-insensitive so duplicates do not happen.
-                </div>
-              </div>
-            )}
+            <div className="heroText">
+              Sign in or create a free vault to track what you own, find what you still need,
+              organize duplicates, and unlock marketplace tools when you are ready.
+            </div>
 
-            <div>
-              <div style={{ position: "relative" }}>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
-                  className="field"
-                  style={{ padding: "14px 92px 14px 14px" }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="togglePasswordButton"
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
+            <div className="benefitGrid">
+              <div className="benefit">
+                <div className="benefitIcon">📦</div>
+                <div className="benefitTitle">Track collection</div>
+                <div className="benefitText">Owned, needed, notes, rarity, movies, series, and extras.</div>
               </div>
 
-              {password && (
-                <div style={{ marginTop: 10 }}>
-                  <div
-                    style={{
-                      height: 10,
-                      borderRadius: 999,
-                      background: "#e5e7eb",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: "100%",
-                        width: passwordStrength.width,
-                        background: passwordStrength.color,
-                        transition: "width 0.2s ease",
-                      }}
-                    />
+              <div className="benefit">
+                <div className="benefitIcon">🔎</div>
+                <div className="benefitTitle">Search fast</div>
+                <div className="benefitText">Check your vault from your phone while shopping or watching lives.</div>
+              </div>
+
+              <div className="benefit">
+                <div className="benefitIcon">🛍️</div>
+                <div className="benefitTitle">Marketplace</div>
+                <div className="benefitText">Browse, list extras, and message collectors with full access.</div>
+              </div>
+
+              <div className="benefit">
+                <div className="benefitIcon">💜</div>
+                <div className="benefitTitle">Fan-made</div>
+                <div className="benefitText">Built for collectors who want less chaos and more checklist magic.</div>
+              </div>
+            </div>
+
+            <div className="sampleCard">
+              <div className="sampleTop">
+                <div>
+                  <div style={{ color: "#fde68a", fontWeight: 1000, fontSize: 13 }}>
+                    SAMPLE COLLECTION CARD
                   </div>
+                  <div style={{ fontWeight: 1000, fontSize: 20, marginTop: 3 }}>
+                    See how tracking feels
+                  </div>
+                </div>
+                <div style={{ fontWeight: 1000, color: "#d8b4fe" }}>62%</div>
+              </div>
+
+              <div className="sampleDoorable">
+                <div className="sampleImage">💎</div>
+                <div>
+                  <div style={{ fontWeight: 1000, fontSize: 17 }}>
+                    Mystery Doorable
+                  </div>
+                  <div style={{ color: "#64748b", fontSize: 13, fontWeight: 800, marginTop: 3 }}>
+                    Series Tracker • Rare • Wishlist
+                  </div>
+                  <div style={{ marginTop: 8, display: "flex", gap: 7, flexWrap: "wrap" }}>
+                    <span style={{ borderRadius: 999, padding: "5px 8px", background: "#dcfce7", color: "#166534", fontWeight: 900, fontSize: 12 }}>
+                      Have: 1
+                    </span>
+                    <span style={{ borderRadius: 999, padding: "5px 8px", background: "#eef2ff", color: "#3730a3", fontWeight: 900, fontSize: 12 }}>
+                      Need more
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="sampleProgress">
+                <div className="sampleFill" />
+              </div>
+            </div>
+          </section>
+
+          <section className="authCard">
+            <div className="modeSwitch">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("signin");
+                  setMessage("");
+                }}
+                className={`modeButton ${mode === "signin" ? "modeButtonActive" : ""}`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("signup");
+                  setMessage("");
+                }}
+                className={`modeButton ${mode === "signup" ? "modeButtonActive" : ""}`}
+              >
+                Sign Up Free
+              </button>
+            </div>
+
+            <div className="formTitle">
+              {mode === "signin" ? "Welcome back 💜" : "Create your free vault ✨"}
+            </div>
+            <div className="formSub">
+              {mode === "signin"
+                ? "Sign in to open your collection, messages, marketplace tools, and saved progress."
+                : "Start free with up to 50 saved Doorables. Upgrade later only when you are ready."}
+            </div>
+
+            <div style={{ display: "grid", gap: 13 }}>
+              <div>
+                <label className="fieldLabel">Email</label>
+                <input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="field"
+                  type="email"
+                  autoComplete="email"
+                />
+              </div>
+
+              {mode === "signup" && (
+                <div>
+                  <label className="fieldLabel">Username</label>
+                  <input
+                    value={username}
+                    onChange={(e) => setUsername(sanitizeUsernameInput(e.target.value))}
+                    placeholder="Collector username"
+                    className="field"
+                    autoComplete="username"
+                  />
                   <div
                     style={{
                       marginTop: 6,
                       fontSize: 13,
-                      fontWeight: 700,
-                      color: passwordStrength.color,
+                      color: usernameHelpColor,
+                      fontWeight:
+                        usernameStatus === "available" || usernameStatus === "taken"
+                          ? 800
+                          : 600,
                     }}
                   >
-                    Password strength: {passwordStrength.label}
+                    {usernameHelp || "Letters, numbers, and underscores only."}
                   </div>
-                  {mode === "signup" && (
-                    <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
-                      Stronger passwords usually use 8+ characters, uppercase, lowercase, numbers, and symbols.
+                  <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
+                    Usernames are saved lowercase so duplicates do not happen.
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="fieldLabel">Password</label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Password"
+                    className="field"
+                    autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                    style={{ padding: "14px 92px 14px 14px" }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        void handleSubmit();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="togglePasswordButton"
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+
+                {password && (
+                  <div style={{ marginTop: 10 }}>
+                    <div
+                      style={{
+                        height: 10,
+                        borderRadius: 999,
+                        background: "#e5e7eb",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: "100%",
+                          width: passwordStrength.width,
+                          background: passwordStrength.color,
+                          transition: "width 0.2s ease",
+                        }}
+                      />
                     </div>
-                  )}
+                    <div
+                      style={{
+                        marginTop: 6,
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: passwordStrength.color,
+                      }}
+                    >
+                      Password strength: {passwordStrength.label}
+                    </div>
+                    {mode === "signup" && (
+                      <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
+                        Use at least 8 characters. Stronger passwords usually include uppercase,
+                        lowercase, numbers, and symbols.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => void handleSubmit()}
+                  disabled={loading}
+                  className="primaryButton"
+                  style={{ opacity: loading ? 0.7 : 1 }}
+                >
+                  {loading
+                    ? mode === "signin"
+                      ? "Signing In..."
+                      : "Creating Account..."
+                    : mode === "signin"
+                      ? "Open My Vault"
+                      : "Create Free Vault"}
+                </button>
+
+                {mode === "signin" && (
+                  <button
+                    type="button"
+                    onClick={() => void handleForgotPassword()}
+                    className="secondaryButton"
+                  >
+                    Forgot Password
+                  </button>
+                )}
+              </div>
+
+              {!!message && (
+                <div className={`messageBox ${messageIsSuccess ? "successBox" : "errorBox"}`}>
+                  {message}
                 </div>
               )}
             </div>
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={() => void handleSubmit()}
-                disabled={loading}
-                className="primaryButton"
-              >
-                {loading
-                  ? mode === "signin"
-                    ? "Signing In..."
-                    : "Creating Account..."
-                  : mode === "signin"
-                    ? "Sign In"
-                    : "Create Account"}
-              </button>
-
-              {mode === "signin" && (
-                <button
-                  type="button"
-                  onClick={() => void handleForgotPassword()}
-                  className="secondaryButton"
-                >
-                  Forgot Password
-                </button>
-              )}
-            </div>
-
-            {!!message && (
-              <div
-                style={{
-                  marginTop: 4,
-                  fontSize: 14,
-                  color:
-                    message.toLowerCase().includes("created") ||
-                    message.toLowerCase().includes("sent")
-                      ? "#166534"
-                      : "#b91c1c",
-                  fontWeight: 700,
-                }}
-              >
-                {message}
+            <div className="trustStrip">
+              <div className="trustItem">
+                <span>✅</span>
+                <span>Free accounts can save up to 50 Doorables before upgrading.</span>
               </div>
-            )}
-          </div>
-        </section>
+              <div className="trustItem">
+                <span>🔐</span>
+                <span>Your login is handled through secure Supabase authentication.</span>
+              </div>
+              <div className="trustItem">
+                <span>💜</span>
+                <span>Adorable Vault is fan-made and built for collector organization.</span>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     </main>
   );

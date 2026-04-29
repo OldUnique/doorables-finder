@@ -29,7 +29,7 @@ export default function MessagesPage() {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const [userId, setUserId] = useState("");
-  const [userEmail, setUserEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -37,10 +37,10 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const [showConversationList, setShowConversationList] = useState(true);
 
-  const [newCollectorEmail, setNewCollectorEmail] = useState("");
+  const [newCollectorUsername, setNewCollectorUsername] = useState("");
   const [creatingCollectorChat, setCreatingCollectorChat] = useState(false);
+  const [showConversationList, setShowConversationList] = useState(true);
 
   useEffect(() => {
     void initialize();
@@ -62,12 +62,13 @@ export default function MessagesPage() {
         async () => {
           await loadMessages(selectedConversationId);
           await markConversationRead(selectedConversationId, userId);
+          await refreshConversationsQuietly();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [selectedConversationId, supabase, userId]);
 
@@ -93,7 +94,18 @@ export default function MessagesPage() {
 
       const currentUserId = String(user.id);
       setUserId(currentUserId);
-      setUserEmail(String(user.email ?? ""));
+
+      const { data: profile, error: profileError } = await supabase
+        .from("users")
+        .select("username")
+        .eq("id", currentUserId)
+        .maybeSingle();
+
+      if (profileError) {
+        setError(profileError.message);
+      }
+
+      setUsername(String(profile?.username ?? "").toLowerCase());
 
       const params =
         typeof window !== "undefined"
@@ -115,6 +127,11 @@ export default function MessagesPage() {
     }
   }
 
+  async function refreshConversationsQuietly() {
+    if (!userId) return;
+    await loadConversations(userId, selectedConversationId, true);
+  }
+
   async function ensureMarketplaceConversation(currentUserId: string, listingId: string) {
     const { data: listing, error: listingError } = await supabase
       .from("marketplace_listings")
@@ -124,6 +141,16 @@ export default function MessagesPage() {
 
     if (listingError || !listing) return;
     if (String(listing.user_id) === currentUserId) return;
+
+    const { data: sellerProfile } = await supabase
+      .from("users")
+      .select("username")
+      .eq("id", String(listing.user_id))
+      .maybeSingle();
+
+    const sellerDisplayName =
+      String(sellerProfile?.username ?? "") ||
+      String(listing.seller_name ?? "Collector");
 
     const { data: existing } = await supabase
       .from("marketplace_conversations")
@@ -148,7 +175,7 @@ export default function MessagesPage() {
           seller_id: String(listing.user_id),
           listing_title: String(listing.title ?? "Listing"),
           conversation_type: "marketplace",
-          collector_name: String(listing.seller_name ?? "Collector"),
+          collector_name: sellerDisplayName,
         },
       ])
       .select("id")
@@ -159,7 +186,11 @@ export default function MessagesPage() {
     }
   }
 
-  async function loadConversations(currentUserId: string, conversationIdFromUrl?: string) {
+  async function loadConversations(
+    currentUserId: string,
+    conversationIdFromUrl?: string,
+    keepCurrentView?: boolean
+  ) {
     const { data, error } = await supabase
       .from("marketplace_conversations")
       .select(`
@@ -211,7 +242,8 @@ export default function MessagesPage() {
     if (preferredId) {
       await loadMessages(preferredId);
       await markConversationRead(preferredId, currentUserId);
-      if (typeof window !== "undefined" && window.innerWidth <= 920) {
+
+      if (!keepCurrentView && typeof window !== "undefined" && window.innerWidth <= 920) {
         setShowConversationList(false);
       }
     } else {
@@ -265,6 +297,7 @@ export default function MessagesPage() {
 
     try {
       setSending(true);
+      setError("");
 
       const { error } = await supabase.from("marketplace_messages").insert([
         {
@@ -284,22 +317,21 @@ export default function MessagesPage() {
       setDraft("");
       setSending(false);
       await loadMessages(selectedConversationId);
+      await refreshConversationsQuietly();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Could not send message.");
       setSending(false);
     }
   }
 
-  const activeConversation =
-    conversations.find((item) => item.id === selectedConversationId) ?? null;
-
-
   async function startCollectorChat() {
     try {
       setError("");
 
-      if (!newCollectorEmail.trim()) {
-        setError("Enter an email first.");
+      const cleanUsername = newCollectorUsername.trim().toLowerCase();
+
+      if (!cleanUsername) {
+        setError("Enter a username first.");
         return;
       }
 
@@ -308,7 +340,7 @@ export default function MessagesPage() {
         return;
       }
 
-      if (newCollectorEmail.trim().toLowerCase() === userEmail.trim().toLowerCase()) {
+      if (cleanUsername === username.trim().toLowerCase()) {
         setError("You cannot start a collector chat with yourself.");
         return;
       }
@@ -317,8 +349,8 @@ export default function MessagesPage() {
 
       const { data: userRow, error: userRowError } = await supabase
         .from("users")
-        .select("id, email")
-        .ilike("email", newCollectorEmail.trim())
+        .select("id, username")
+        .ilike("username", cleanUsername)
         .maybeSingle();
 
       if (userRowError) {
@@ -328,13 +360,13 @@ export default function MessagesPage() {
       }
 
       if (!userRow?.id) {
-        setError("No collector account found with that email.");
+        setError("No collector account found with that username.");
         setCreatingCollectorChat(false);
         return;
       }
 
       const otherUserId = String(userRow.id);
-      const otherEmail = String(userRow.email ?? newCollectorEmail.trim());
+      const otherUsername = String(userRow.username ?? cleanUsername);
 
       const { data: existing, error: existingError } = await supabase
         .from("marketplace_conversations")
@@ -365,7 +397,7 @@ export default function MessagesPage() {
               seller_id: otherUserId,
               listing_title: null,
               conversation_type: "collector",
-              collector_name: otherEmail,
+              collector_name: otherUsername,
             },
           ])
           .select("id")
@@ -380,7 +412,7 @@ export default function MessagesPage() {
         conversationId = String(created.id);
       }
 
-      setNewCollectorEmail("");
+      setNewCollectorUsername("");
       setCreatingCollectorChat(false);
       await loadConversations(userId, conversationId);
       setShowConversationList(false);
@@ -390,6 +422,9 @@ export default function MessagesPage() {
     }
   }
 
+  const activeConversation =
+    conversations.find((item) => item.id === selectedConversationId) ?? null;
+
   function getConversationTitle(conversation: Conversation | null) {
     if (!conversation) return "Conversation";
 
@@ -397,7 +432,7 @@ export default function MessagesPage() {
       return conversation.collector_name || conversation.seller_name || "Collector Chat";
     }
 
-    return `${conversation.seller_name || "Seller"} — ${conversation.listing_title || "Listing"}`;
+    return `${conversation.collector_name || conversation.seller_name || "Seller"} — ${conversation.listing_title || "Listing"}`;
   }
 
   return (
@@ -406,13 +441,41 @@ export default function MessagesPage() {
         minHeight: "100vh",
         background:
           "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
+        padding: 16,
       }}
     >
       <style jsx>{`
         .messagesLayout {
           display: grid;
-          grid-template-columns: 320px 1fr;
+          grid-template-columns: 340px 1fr;
           gap: 16px;
+        }
+
+        .conversationSidebar,
+        .messagePanel {
+          background: rgba(255,255,255,0.96);
+          color: #111827;
+          border-radius: 22px;
+          padding: 14px;
+          box-shadow: 0 12px 28px rgba(0,0,0,0.14);
+          min-height: 640px;
+        }
+
+        .messageList {
+          flex: 1;
+          border: 1px solid #e5e7eb;
+          border-radius: 16px;
+          padding: 12px;
+          background: #fafafa;
+          overflow: auto;
+          display: grid;
+          gap: 10px;
+          min-height: 420px;
+          max-height: 420px;
+        }
+
+        .mobileBackButton {
+          display: none;
         }
 
         @media (max-width: 920px) {
@@ -423,10 +486,26 @@ export default function MessagesPage() {
           .mobileHidden {
             display: none !important;
           }
+
+          .conversationSidebar,
+          .messagePanel {
+            min-height: auto;
+            padding: 12px;
+            border-radius: 18px;
+          }
+
+          .messageList {
+            min-height: 50vh;
+            max-height: 50vh;
+          }
+
+          .mobileBackButton {
+            display: inline-flex;
+          }
         }
       `}</style>
 
-      <div style={{ maxWidth: 1320, margin: "0 auto", padding: 24, color: "white" }}>
+      <div style={{ maxWidth: 1320, margin: "0 auto", color: "white" }}>
         <section
           style={{
             background: "linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88))",
@@ -452,15 +531,7 @@ export default function MessagesPage() {
         ) : (
           <div className="messagesLayout">
             <aside
-              className={!showConversationList ? "mobileHidden" : ""}
-              style={{
-                background: "rgba(255,255,255,0.96)",
-                color: "#111827",
-                borderRadius: 22,
-                padding: 14,
-                boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
-                minHeight: 640,
-              }}
+              className={`conversationSidebar ${!showConversationList ? "mobileHidden" : ""}`}
             >
               <div style={{ fontWeight: 900, marginBottom: 10 }}>Conversations</div>
 
@@ -475,9 +546,9 @@ export default function MessagesPage() {
               >
                 <div style={{ fontWeight: 800, marginBottom: 8 }}>Start Collector Chat</div>
                 <input
-                  value={newCollectorEmail}
-                  onChange={(e) => setNewCollectorEmail(e.target.value)}
-                  placeholder="Collector email"
+                  value={newCollectorUsername}
+                  onChange={(e) => setNewCollectorUsername(e.target.value)}
+                  placeholder="Collector username"
                   style={{
                     width: "100%",
                     padding: 12,
@@ -533,7 +604,7 @@ export default function MessagesPage() {
                       <div style={{ fontWeight: 800 }}>
                         {item.conversation_type === "collector"
                           ? item.collector_name || item.seller_name || "Collector Chat"
-                          : `${item.seller_name || "Seller"} — ${item.listing_title || "Listing"}`}
+                          : `${item.collector_name || item.seller_name || "Seller"} — ${item.listing_title || "Listing"}`}
                       </div>
                       <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
                         {item.conversation_type === "collector" ? "Collector Chat" : "Marketplace Chat"}
@@ -545,14 +616,8 @@ export default function MessagesPage() {
             </aside>
 
             <section
-              className={showConversationList && conversations.length > 0 ? "mobileHidden" : ""}
+              className={`messagePanel ${showConversationList && conversations.length > 0 ? "mobileHidden" : ""}`}
               style={{
-                background: "rgba(255,255,255,0.96)",
-                color: "#111827",
-                borderRadius: 22,
-                padding: 14,
-                boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
-                minHeight: 640,
                 display: "flex",
                 flexDirection: "column",
               }}
@@ -574,6 +639,7 @@ export default function MessagesPage() {
                 <button
                   type="button"
                   onClick={() => setShowConversationList(true)}
+                  className="mobileBackButton"
                   style={{
                     padding: "10px 14px",
                     borderRadius: 12,
@@ -584,24 +650,11 @@ export default function MessagesPage() {
                     cursor: "pointer",
                   }}
                 >
-                  Back to Conversations
+                  Back
                 </button>
               </div>
 
-              <div
-                style={{
-                  flex: 1,
-                  border: "1px solid #e5e7eb",
-                  borderRadius: 16,
-                  padding: 12,
-                  background: "#fafafa",
-                  overflow: "auto",
-                  display: "grid",
-                  gap: 10,
-                  minHeight: 420,
-                  maxHeight: 420,
-                }}
-              >
+              <div className="messageList">
                 {messages.length === 0 ? (
                   <div style={{ color: "#6b7280" }}>No messages yet.</div>
                 ) : (
@@ -635,7 +688,14 @@ export default function MessagesPage() {
                 <div ref={bottomRef} />
               </div>
 
-              <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  marginTop: 12,
+                  flexWrap: "wrap",
+                }}
+              >
                 <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}

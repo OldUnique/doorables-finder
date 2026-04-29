@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
 
 type Conversation = {
@@ -24,8 +26,22 @@ type Message = {
   created_at: string | null;
 };
 
+function formatMessageTime(value: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export default function MessagesPage() {
   const supabase = useMemo(() => getSupabase(), []);
+  const router = useRouter();
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const [userId, setUserId] = useState("");
@@ -41,13 +57,21 @@ export default function MessagesPage() {
   const [newCollectorUsername, setNewCollectorUsername] = useState("");
   const [creatingCollectorChat, setCreatingCollectorChat] = useState(false);
   const [showConversationList, setShowConversationList] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     void initialize();
   }, []);
 
   useEffect(() => {
-    if (!selectedConversationId) return;
+    const updateMobile = () => setIsMobile(window.innerWidth <= 920);
+    updateMobile();
+    window.addEventListener("resize", updateMobile);
+    return () => window.removeEventListener("resize", updateMobile);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedConversationId || !userId) return;
 
     const channel = supabase
       .channel(`messages-live-${selectedConversationId}`)
@@ -87,8 +111,12 @@ export default function MessagesPage() {
       } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        setError(authError?.message || "Please sign in first.");
-        setLoading(false);
+        const nextPath =
+          typeof window !== "undefined"
+            ? `${window.location.pathname}${window.location.search}`
+            : "/messages";
+
+        router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
         return;
       }
 
@@ -115,11 +143,20 @@ export default function MessagesPage() {
       const listingId = params?.get("listing") || "";
       const conversationIdFromUrl = params?.get("conversation") || "";
 
+      let preferredConversationId = conversationIdFromUrl;
+
       if (listingId) {
-        await ensureMarketplaceConversation(currentUserId, listingId);
+        const marketplaceConversationId = await ensureMarketplaceConversation(
+          currentUserId,
+          listingId
+        );
+
+        if (marketplaceConversationId) {
+          preferredConversationId = marketplaceConversationId;
+        }
       }
 
-      await loadConversations(currentUserId, conversationIdFromUrl);
+      await loadConversations(currentUserId, preferredConversationId);
       setLoading(false);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Could not load messages.");
@@ -132,15 +169,18 @@ export default function MessagesPage() {
     await loadConversations(userId, selectedConversationId, true);
   }
 
-  async function ensureMarketplaceConversation(currentUserId: string, listingId: string) {
+  async function ensureMarketplaceConversation(
+    currentUserId: string,
+    listingId: string
+  ): Promise<string> {
     const { data: listing, error: listingError } = await supabase
       .from("marketplace_listings")
       .select("id, user_id, title, seller_name")
       .eq("id", listingId)
       .single();
 
-    if (listingError || !listing) return;
-    if (String(listing.user_id) === currentUserId) return;
+    if (listingError || !listing) return "";
+    if (String(listing.user_id) === currentUserId) return "";
 
     const { data: sellerProfile } = await supabase
       .from("users")
@@ -162,8 +202,7 @@ export default function MessagesPage() {
       .maybeSingle();
 
     if (existing?.id) {
-      setSelectedConversationId(String(existing.id));
-      return;
+      return String(existing.id);
     }
 
     const { data: created } = await supabase
@@ -181,9 +220,7 @@ export default function MessagesPage() {
       .select("id")
       .single();
 
-    if (created?.id) {
-      setSelectedConversationId(String(created.id));
-    }
+    return created?.id ? String(created.id) : "";
   }
 
   async function loadConversations(
@@ -232,9 +269,10 @@ export default function MessagesPage() {
 
     setConversations(mapped);
 
+    const currentStillExists = mapped.some((item) => item.id === selectedConversationId);
     const preferredId =
       conversationIdFromUrl ||
-      selectedConversationId ||
+      (currentStillExists ? selectedConversationId : "") ||
       (mapped[0] ? mapped[0].id : "");
 
     setSelectedConversationId(preferredId);
@@ -336,7 +374,7 @@ export default function MessagesPage() {
       }
 
       if (!userId) {
-        setError("Please sign in first.");
+        router.replace("/login?next=/messages");
         return;
       }
 
@@ -432,22 +470,134 @@ export default function MessagesPage() {
       return conversation.collector_name || conversation.seller_name || "Collector Chat";
     }
 
-    return `${conversation.collector_name || conversation.seller_name || "Seller"} — ${conversation.listing_title || "Listing"}`;
+    return `${conversation.collector_name || conversation.seller_name || "Seller"} — ${
+      conversation.listing_title || "Listing"
+    }`;
+  }
+
+  function getConversationTypeLabel(conversation: Conversation) {
+    return conversation.conversation_type === "collector"
+      ? "Collector Chat"
+      : "Marketplace Chat";
+  }
+
+  function getConversationIcon(conversation: Conversation) {
+    return conversation.conversation_type === "collector" ? "💜" : "🛍️";
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
-        padding: 16,
-      }}
-    >
+    <main className="messagesPage">
       <style jsx>{`
+        .messagesPage {
+          min-height: 100vh;
+          background:
+            radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%),
+            radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%),
+            radial-gradient(circle at 70% 80%, rgba(236,72,153,0.16) 0%, rgba(236,72,153,0) 24%),
+            linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%);
+          padding: 16px;
+        }
+
+        .shell {
+          max-width: 1320px;
+          margin: 0 auto;
+          color: white;
+        }
+
+        .hero {
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
+            linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
+          border-radius: 28px;
+          padding: 24px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.30);
+          margin-bottom: 18px;
+          border: 1px solid rgba(255,255,255,0.12);
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 14px;
+          align-items: center;
+        }
+
+        .heroTitle {
+          font-size: clamp(2rem, 5vw, 3rem);
+          font-weight: 1000;
+          letter-spacing: -1px;
+          line-height: 1;
+        }
+
+        .heroSub {
+          margin-top: 8px;
+          opacity: 0.92;
+          line-height: 1.5;
+        }
+
+        .heroActions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+
+        .bubbleLink,
+        .bubbleLink:visited,
+        .bubbleButton {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-height: 46px;
+          padding: 11px 16px;
+          border-radius: 999px;
+          border: 1px solid transparent;
+          text-decoration: none !important;
+          font-weight: 950;
+          cursor: pointer;
+          box-sizing: border-box;
+          white-space: nowrap;
+        }
+
+        .bubblePrimary,
+        .bubblePrimary:visited {
+          background: linear-gradient(135deg, #60a5fa, #8b5cf6);
+          color: #ffffff !important;
+          box-shadow: 0 14px 28px rgba(79,70,229,0.34);
+        }
+
+        .bubbleLight,
+        .bubbleLight:visited {
+          background: rgba(255,255,255,0.12);
+          color: #ffffff !important;
+          border-color: rgba(255,255,255,0.18);
+        }
+
+        .bubbleSoft,
+        .bubbleSoft:visited {
+          background: #eef2ff;
+          color: #3730a3 !important;
+          border-color: #c7d2fe;
+        }
+
+        .bubbleNeutral,
+        .bubbleNeutral:visited {
+          background: #f8fafc;
+          color: #111827 !important;
+          border-color: #d1d5db;
+        }
+
+        .errorBox {
+          margin-top: 12px;
+          border-radius: 16px;
+          padding: 12px 14px;
+          background: rgba(254, 226, 226, 0.14);
+          border: 1px solid rgba(254, 202, 202, 0.28);
+          color: #fecaca;
+          font-weight: 850;
+        }
+
         .messagesLayout {
           display: grid;
-          grid-template-columns: 340px 1fr;
+          grid-template-columns: 360px 1fr;
           gap: 16px;
         }
 
@@ -455,30 +605,236 @@ export default function MessagesPage() {
         .messagePanel {
           background: rgba(255,255,255,0.96);
           color: #111827;
-          border-radius: 22px;
+          border-radius: 24px;
           padding: 14px;
           box-shadow: 0 12px 28px rgba(0,0,0,0.14);
           min-height: 640px;
+          border: 1px solid rgba(255,255,255,0.50);
+        }
+
+        .conversationSidebar {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .sidebarTitle {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          font-weight: 1000;
+          font-size: 18px;
+        }
+
+        .startBox {
+          background:
+            radial-gradient(circle at top right, rgba(196,181,253,0.28), transparent 30%),
+            #f8fafc;
+          border: 1px solid #e5e7eb;
+          border-radius: 18px;
+          padding: 12px;
+        }
+
+        .input {
+          width: 100%;
+          padding: 12px;
+          border-radius: 12px;
+          border: 1px solid #d1d5db;
+          box-sizing: border-box;
+          font-size: 14px;
+        }
+
+        .conversationList {
+          display: grid;
+          gap: 8px;
+          overflow: auto;
+          max-height: 448px;
+          padding-right: 2px;
+        }
+
+        .conversationButton {
+          width: 100%;
+          text-align: left;
+          padding: 13px 14px;
+          border-radius: 16px;
+          border: 1px solid #e5e7eb;
+          background: white;
+          cursor: pointer;
+          transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+
+        .conversationButton:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 20px rgba(15,23,42,0.08);
+        }
+
+        .conversationButton.active {
+          background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+          border-color: #a78bfa;
+        }
+
+        .conversationTopLine {
+          display: flex;
+          gap: 8px;
+          align-items: start;
+        }
+
+        .conversationIcon {
+          width: 34px;
+          height: 34px;
+          min-width: 34px;
+          display: grid;
+          place-items: center;
+          border-radius: 12px;
+          background: #eef2ff;
+        }
+
+        .conversationTitle {
+          font-weight: 950;
+          line-height: 1.25;
+          word-break: break-word;
+          display: block;
+        }
+
+        .conversationMeta {
+          font-size: 12px;
+          color: #6b7280;
+          margin-top: 4px;
+          font-weight: 750;
+          display: block;
+        }
+
+        .messagePanel {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .messageHeader {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          align-items: center;
+          margin-bottom: 10px;
+          flex-wrap: wrap;
+        }
+
+        .messageTitle {
+          font-weight: 1000;
+          line-height: 1.25;
+        }
+
+        .messageSubtitle {
+          color: #64748b;
+          font-size: 13px;
+          font-weight: 800;
+          margin-top: 4px;
         }
 
         .messageList {
           flex: 1;
           border: 1px solid #e5e7eb;
-          border-radius: 16px;
+          border-radius: 18px;
           padding: 12px;
-          background: #fafafa;
+          background:
+            radial-gradient(circle at top right, rgba(221,214,254,0.34), transparent 30%),
+            #fafafa;
           overflow: auto;
           display: grid;
+          align-content: start;
           gap: 10px;
-          min-height: 420px;
-          max-height: 420px;
+          min-height: 430px;
+          max-height: 430px;
+        }
+
+        .emptyState {
+          color: #6b7280;
+          padding: 16px;
+          border-radius: 16px;
+          background: white;
+          border: 1px dashed #d1d5db;
+          font-weight: 850;
+          text-align: center;
+        }
+
+        .messageBubble {
+          max-width: min(86%, 680px);
+          padding: 11px 13px;
+          border-radius: 18px;
+          box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+        }
+
+        .messageMine {
+          justify-self: end;
+          background: linear-gradient(135deg, #2563eb, #7c3aed);
+          color: white;
+          border-bottom-right-radius: 6px;
+        }
+
+        .messageTheirs {
+          justify-self: start;
+          background: white;
+          color: #111827;
+          border: 1px solid #e5e7eb;
+          border-bottom-left-radius: 6px;
+        }
+
+        .composer {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 10px;
+          margin-top: 12px;
+          align-items: end;
+        }
+
+        .draftBox {
+          width: 100%;
+          min-height: 92px;
+          border: 1px solid #d1d5db;
+          border-radius: 16px;
+          padding: 12px;
+          box-sizing: border-box;
+          resize: vertical;
+          font-size: 14px;
         }
 
         .mobileBackButton {
           display: none;
         }
 
+        .loadingCard {
+          background: rgba(255,255,255,0.10);
+          border: 1px solid rgba(255,255,255,0.16);
+          box-shadow: 0 20px 44px rgba(0,0,0,0.28);
+          border-radius: 24px;
+          padding: 22px;
+          color: white;
+          font-weight: 950;
+          text-align: center;
+        }
+
         @media (max-width: 920px) {
+          .messagesPage {
+            padding: 12px;
+          }
+
+          .hero {
+            grid-template-columns: 1fr;
+            border-radius: 22px;
+            padding: 18px;
+          }
+
+          .heroActions {
+            display: grid;
+            grid-template-columns: 1fr;
+            justify-content: stretch;
+          }
+
+          .bubbleLink,
+          .bubbleButton {
+            width: 100%;
+          }
+
           .messagesLayout {
             display: block;
           }
@@ -491,195 +847,184 @@ export default function MessagesPage() {
           .messagePanel {
             min-height: auto;
             padding: 12px;
-            border-radius: 18px;
+            border-radius: 20px;
+          }
+
+          .conversationList {
+            max-height: none;
           }
 
           .messageList {
-            min-height: 50vh;
-            max-height: 50vh;
+            min-height: 52vh;
+            max-height: 52vh;
+          }
+
+          .composer {
+            grid-template-columns: 1fr;
           }
 
           .mobileBackButton {
             display: inline-flex;
+            width: auto;
           }
         }
       `}</style>
 
-      <div style={{ maxWidth: 1320, margin: "0 auto", color: "white" }}>
-        <section
-          style={{
-            background: "linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88))",
-            borderRadius: 28,
-            padding: 24,
-            boxShadow: "0 20px 40px rgba(0,0,0,0.30)",
-            marginBottom: 18,
-          }}
-        >
-          <div style={{ fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 900, letterSpacing: -1 }}>
-            Messages 💬
+      <div className="shell">
+        <section className="hero">
+          <div>
+            <div className="heroTitle">Messages 💬</div>
+            <div className="heroSub">
+              Marketplace chats and collector-to-collector chats all in one place.
+            </div>
+            {!!error && <div className="errorBox">{error}</div>}
           </div>
-          <div style={{ marginTop: 8, opacity: 0.92 }}>
-            Marketplace chats and collector-to-collector chats all in one place.
+
+          <div className="heroActions">
+            <Link href="/marketplace" className="bubbleLink bubbleLight">
+              🛍️ Marketplace
+            </Link>
+            <Link href="/collection" className="bubbleLink bubbleLight">
+              💎 Collection
+            </Link>
           </div>
-          {!!error && (
-            <div style={{ marginTop: 10, color: "#fecaca", fontWeight: 700 }}>{error}</div>
-          )}
         </section>
 
         {loading ? (
-          <div style={{ color: "white", padding: 20 }}>Loading messages...</div>
+          <div className="loadingCard">Loading messages...</div>
         ) : (
           <div className="messagesLayout">
             <aside
               className={`conversationSidebar ${!showConversationList ? "mobileHidden" : ""}`}
             >
-              <div style={{ fontWeight: 900, marginBottom: 10 }}>Conversations</div>
+              <div className="sidebarTitle">
+                <span>Conversations</span>
+                <span style={{ color: "#64748b", fontSize: 13 }}>
+                  {conversations.length}
+                </span>
+              </div>
 
-              <div
-                style={{
-                  background: "#f8fafc",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: 16,
-                  padding: 12,
-                  marginBottom: 12,
-                }}
-              >
-                <div style={{ fontWeight: 800, marginBottom: 8 }}>Start Collector Chat</div>
+              <div className="startBox">
+                <div style={{ fontWeight: 950, marginBottom: 8 }}>
+                  Start Collector Chat
+                </div>
+                <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.45, marginBottom: 10 }}>
+                  Enter a collector username to start a direct chat.
+                </div>
                 <input
                   value={newCollectorUsername}
                   onChange={(e) => setNewCollectorUsername(e.target.value)}
                   placeholder="Collector username"
-                  style={{
-                    width: "100%",
-                    padding: 12,
-                    borderRadius: 12,
-                    border: "1px solid #d1d5db",
-                    boxSizing: "border-box",
-                    marginBottom: 8,
+                  className="input"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      void startCollectorChat();
+                    }
                   }}
                 />
                 <button
                   type="button"
                   onClick={() => void startCollectorChat()}
                   disabled={creatingCollectorChat}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    borderRadius: 12,
-                    border: "none",
-                    background: "#4f46e5",
-                    color: "white",
-                    fontWeight: 900,
-                    cursor: "pointer",
-                  }}
+                  className="bubbleButton bubblePrimary"
+                  style={{ marginTop: 8 }}
                 >
-                  {creatingCollectorChat ? "Starting..." : "Start Chat"}
+                  {creatingCollectorChat ? "Starting..." : "💜 Start Chat"}
                 </button>
               </div>
 
               {conversations.length === 0 ? (
-                <div style={{ color: "#6b7280" }}>No conversations yet.</div>
+                <div className="emptyState">
+                  No conversations yet. Start a collector chat or message a seller from Marketplace.
+                </div>
               ) : (
-                <div style={{ display: "grid", gap: 8 }}>
-                  {conversations.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        setSelectedConversationId(item.id);
-                        void loadMessages(item.id);
-                        void markConversationRead(item.id, userId);
-                        if (typeof window !== "undefined" && window.innerWidth <= 920) {
-                          setShowConversationList(false);
-                        }
-                      }}
-                      style={{
-                        textAlign: "left",
-                        padding: "12px 14px",
-                        borderRadius: 14,
-                        border: "1px solid #e5e7eb",
-                        background: selectedConversationId === item.id ? "#eef2ff" : "white",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <div style={{ fontWeight: 800 }}>
-                        {item.conversation_type === "collector"
-                          ? item.collector_name || item.seller_name || "Collector Chat"
-                          : `${item.collector_name || item.seller_name || "Seller"} — ${item.listing_title || "Listing"}`}
-                      </div>
-                      <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
-                        {item.conversation_type === "collector" ? "Collector Chat" : "Marketplace Chat"}
-                      </div>
-                    </button>
-                  ))}
+                <div className="conversationList">
+                  {conversations.map((item) => {
+                    const active = selectedConversationId === item.id;
+
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setSelectedConversationId(item.id);
+                          void loadMessages(item.id);
+                          void markConversationRead(item.id, userId);
+                          if (typeof window !== "undefined" && window.innerWidth <= 920) {
+                            setShowConversationList(false);
+                          }
+                        }}
+                        className={`conversationButton ${active ? "active" : ""}`}
+                      >
+                        <div className="conversationTopLine">
+                          <span className="conversationIcon">
+                            {getConversationIcon(item)}
+                          </span>
+                          <span style={{ minWidth: 0 }}>
+                            <span className="conversationTitle">
+                              {getConversationTitle(item)}
+                            </span>
+                            <span className="conversationMeta">
+                              {getConversationTypeLabel(item)}
+                              {item.created_at ? ` • ${formatMessageTime(item.created_at)}` : ""}
+                            </span>
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </aside>
 
             <section
-              className={`messagePanel ${showConversationList && conversations.length > 0 ? "mobileHidden" : ""}`}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-              }}
+              className={`messagePanel ${
+                showConversationList && conversations.length > 0 ? "mobileHidden" : ""
+              }`}
             >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  alignItems: "center",
-                  marginBottom: 10,
-                  flexWrap: "wrap",
-                }}
-              >
-                <div style={{ fontWeight: 900 }}>
-                  {getConversationTitle(activeConversation)}
+              <div className="messageHeader">
+                <div>
+                  <div className="messageTitle">
+                    {getConversationTitle(activeConversation)}
+                  </div>
+                  <div className="messageSubtitle">
+                    {activeConversation
+                      ? activeConversation.conversation_type === "collector"
+                        ? "Collector-to-collector chat"
+                        : "Marketplace listing chat"
+                      : "Select or start a conversation"}
+                  </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setShowConversationList(true)}
-                  className="mobileBackButton"
-                  style={{
-                    padding: "10px 14px",
-                    borderRadius: 12,
-                    border: "1px solid #d1d5db",
-                    background: "#f8fafc",
-                    color: "#111827",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                  }}
+                  className="bubbleButton bubbleNeutral mobileBackButton"
                 >
-                  Back
+                  ← Back
                 </button>
               </div>
 
               <div className="messageList">
                 {messages.length === 0 ? (
-                  <div style={{ color: "#6b7280" }}>No messages yet.</div>
+                  <div className="emptyState">
+                    No messages yet. Start the conversation when you are ready.
+                  </div>
                 ) : (
                   messages.map((msg) => {
                     const mine = msg.sender_id === userId;
                     return (
                       <div
                         key={msg.id}
-                        style={{
-                          justifySelf: mine ? "end" : "start",
-                          maxWidth: "85%",
-                          padding: "10px 12px",
-                          borderRadius: 16,
-                          background: mine ? "#2563eb" : "white",
-                          color: mine ? "white" : "#111827",
-                          border: mine ? "none" : "1px solid #e5e7eb",
-                          boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
-                        }}
+                        className={`messageBubble ${mine ? "messageMine" : "messageTheirs"}`}
                       >
-                        <div style={{ fontSize: 12, fontWeight: 900, opacity: 0.86, marginBottom: 4 }}>
+                        <div style={{ fontSize: 12, fontWeight: 950, opacity: 0.86, marginBottom: 4 }}>
                           {mine ? "You" : activeConversation?.collector_name || activeConversation?.seller_name || "Them"}
                         </div>
-                        <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{msg.body}</div>
-                        <div style={{ fontSize: 11, opacity: 0.78, marginTop: 4 }}>
-                          {msg.created_at ? new Date(msg.created_at).toLocaleString() : ""}
+                        <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.45 }}>
+                          {msg.body}
+                        </div>
+                        <div style={{ fontSize: 11, opacity: 0.78, marginTop: 5 }}>
+                          {formatMessageTime(msg.created_at)}
                         </div>
                       </div>
                     );
@@ -688,45 +1033,38 @@ export default function MessagesPage() {
                 <div ref={bottomRef} />
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: 10,
-                  marginTop: 12,
-                  flexWrap: "wrap",
-                }}
-              >
+              <div className="composer">
                 <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Type a message..."
-                  style={{
-                    flex: 1,
-                    minHeight: 92,
-                    border: "1px solid #d1d5db",
-                    borderRadius: 14,
-                    padding: 12,
-                    boxSizing: "border-box",
-                    resize: "vertical",
+                  placeholder={
+                    selectedConversationId
+                      ? "Type a message..."
+                      : "Select a conversation first..."
+                  }
+                  disabled={!selectedConversationId}
+                  className="draftBox"
+                  onKeyDown={(event) => {
+                    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                      void sendMessage();
+                    }
                   }}
                 />
                 <button
                   onClick={() => void sendMessage()}
-                  disabled={sending || !selectedConversationId}
+                  disabled={sending || !selectedConversationId || !draft.trim()}
+                  className="bubbleButton bubblePrimary"
                   style={{
-                    alignSelf: "end",
-                    padding: "12px 18px",
-                    borderRadius: 14,
-                    border: "none",
-                    background: "#4f46e5",
-                    color: "white",
-                    fontWeight: 900,
-                    cursor: "pointer",
-                    minWidth: 120,
+                    opacity: sending || !selectedConversationId || !draft.trim() ? 0.55 : 1,
+                    cursor: sending || !selectedConversationId || !draft.trim() ? "not-allowed" : "pointer",
                   }}
                 >
                   {sending ? "Sending..." : "Send"}
                 </button>
+              </div>
+
+              <div style={{ color: "#64748b", fontSize: 12, marginTop: 8, lineHeight: 1.45 }}>
+                Tip: Press Ctrl + Enter, or Command + Enter on Mac, to send quickly.
               </div>
             </section>
           </div>

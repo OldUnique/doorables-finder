@@ -310,9 +310,10 @@ export default function PricingPage() {
         .planGrid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 22px;
-          align-items: stretch;
-          margin-bottom: 18px;
+          gap: 24px;
+          align-items: start;
+          margin-top: 8px;
+          margin-bottom: 24px;
         }
 
         .planCard {
@@ -326,19 +327,19 @@ export default function PricingPage() {
           border-radius: 32px;
           padding: 26px;
           box-shadow:
-            0 24px 54px rgba(0,0,0,0.30),
+            0 20px 42px rgba(0,0,0,0.24),
             inset 0 1px 0 rgba(255,255,255,0.85);
           border: 1px solid rgba(255,255,255,0.72);
           overflow: hidden;
-          min-height: 100%;
+          min-height: 0;
+          height: auto;
         }
 
         .planCard.popular {
           border: 3px solid #f59e0b;
-          transform: translateY(-6px);
           box-shadow:
-            0 28px 64px rgba(245,158,11,0.24),
-            0 24px 54px rgba(0,0,0,0.30),
+            0 24px 50px rgba(245,158,11,0.18),
+            0 20px 42px rgba(0,0,0,0.24),
             inset 0 1px 0 rgba(255,255,255,0.90);
         }
 
@@ -351,9 +352,10 @@ export default function PricingPage() {
         }
 
         .popularTag {
-          position: absolute;
-          top: 14px;
-          right: 14px;
+          display: inline-flex;
+          align-items: center;
+          width: fit-content;
+          margin-bottom: 12px;
           background: linear-gradient(135deg, #f59e0b, #facc15);
           color: #111827;
           border-radius: 999px;
@@ -437,7 +439,7 @@ export default function PricingPage() {
 
         .button,
         .button:visited {
-          margin-top: auto;
+          margin-top: 24px;
           min-height: 52px;
           width: 100%;
           border: none;

@@ -81,7 +81,7 @@ export default function PricingPage() {
 
   return (
     <main className="page">
-      <style jsx global>{`
+      <style jsx>{`
         .page {
           min-height: 100vh;
           color: white;
@@ -310,7 +310,7 @@ export default function PricingPage() {
         .planGrid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 22px;
+          gap: 18px;
           align-items: stretch;
           margin-bottom: 18px;
         }
@@ -319,27 +319,18 @@ export default function PricingPage() {
           position: relative;
           display: flex;
           flex-direction: column;
-          background:
-            radial-gradient(circle at top right, rgba(196,181,253,0.22), transparent 34%),
-            linear-gradient(180deg, #ffffff, #f8fafc);
+          background: linear-gradient(180deg, #ffffff, #f8fafc);
           color: #0f172a;
-          border-radius: 32px;
-          padding: 26px;
-          box-shadow:
-            0 24px 54px rgba(0,0,0,0.30),
-            inset 0 1px 0 rgba(255,255,255,0.85);
-          border: 1px solid rgba(255,255,255,0.72);
+          border-radius: 30px;
+          padding: 24px;
+          box-shadow: 0 22px 50px rgba(0,0,0,0.28);
+          border: 1px solid rgba(255,255,255,0.62);
           overflow: hidden;
-          min-height: 100%;
         }
 
         .planCard.popular {
           border: 3px solid #f59e0b;
           transform: translateY(-6px);
-          box-shadow:
-            0 28px 64px rgba(245,158,11,0.24),
-            0 24px 54px rgba(0,0,0,0.30),
-            inset 0 1px 0 rgba(255,255,255,0.90);
         }
 
         .planCard.popular::before {

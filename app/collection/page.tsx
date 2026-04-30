@@ -778,7 +778,7 @@ export default function Page() {
       const publicUrl = publicUrlData.publicUrl;
 
       const insertPayload = {
-        user_id: user.id,
+        submitted_by: user.id,
         doorable_id: card.id,
         image_url: publicUrl,
         status: "pending",
@@ -790,11 +790,12 @@ export default function Page() {
         .select();
 
       if (insertError) {
-        setError(insertError.message || "Insert failed");
+        setError("Photo uploaded, but it could not be added to the review queue: " + (insertError.message || "Insert failed"));
         setUploadingPhotoId("");
         return;
       }
 
+      setError("");
       setNotice("Photo submitted for review 💜");
       setPhotoNote((prev) => ({ ...prev, [card.id]: "" }));
       setExpandedPhotoCardId("");

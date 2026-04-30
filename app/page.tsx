@@ -36,6 +36,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
   const [checkoutError, setCheckoutError] = useState("");
   const [stats, setStats] = useState<HomeStats>({
@@ -162,11 +163,12 @@ export default function HomePage() {
       if (user?.id) {
         const { data: profile } = await supabase
           .from("users")
-          .select("username")
+          .select("username, is_subscribed")
           .eq("id", user.id)
           .maybeSingle();
 
         setUsername(String(profile?.username ?? ""));
+        setIsSubscribed(!!profile?.is_subscribed);
       }
 
       await loadHomeStats(user?.id);
@@ -599,6 +601,88 @@ export default function HomePage() {
             0 16px 34px rgba(168,85,247,0.58),
             inset 0 1px 0 rgba(255,255,255,0.20);
           white-space: nowrap;
+        }
+
+        .premiumActivePanel {
+          margin-top: 12px;
+          border-radius: 24px;
+          padding: 18px;
+          background:
+            radial-gradient(circle at 10% 20%, rgba(34,211,238,0.28), transparent 30%),
+            radial-gradient(circle at 90% 0%, rgba(244,114,182,0.24), transparent 34%),
+            linear-gradient(135deg, rgba(49,46,129,0.96), rgba(88,28,135,0.92));
+          border: 1px solid rgba(255,255,255,0.22);
+          box-shadow:
+            0 18px 40px rgba(124,58,237,0.24),
+            0 0 34px rgba(34,211,238,0.14),
+            inset 0 1px 0 rgba(255,255,255,0.16);
+          overflow: hidden;
+          position: relative;
+        }
+
+        .premiumActivePanel::before {
+          content: "";
+          position: absolute;
+          inset: -40%;
+          background: conic-gradient(from 90deg, transparent, rgba(255,255,255,0.16), transparent);
+          opacity: 0.30;
+          pointer-events: none;
+        }
+
+        .premiumActiveContent {
+          position: relative;
+          z-index: 1;
+          display: grid;
+          grid-template-columns: 58px 1fr auto;
+          gap: 14px;
+          align-items: center;
+        }
+
+        .premiumIcon {
+          width: 58px;
+          height: 58px;
+          border-radius: 999px;
+          display: grid;
+          place-items: center;
+          font-size: 30px;
+          background: linear-gradient(135deg, #22d3ee, #a855f7, #f472b6);
+          box-shadow: 0 12px 24px rgba(124,58,237,0.30);
+        }
+
+        .premiumBadge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 42px;
+          border-radius: 999px;
+          padding: 10px 14px;
+          color: #312e81;
+          background: linear-gradient(90deg, #ffffff, #fef3c7);
+          font-weight: 1000;
+          box-shadow: 0 12px 24px rgba(255,255,255,0.14);
+          white-space: nowrap;
+        }
+
+        .premiumPerks {
+          position: relative;
+          z-index: 1;
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+          margin-top: 14px;
+          padding-top: 14px;
+          border-top: 1px solid rgba(255,255,255,0.14);
+        }
+
+        .premiumPerk {
+          border-radius: 18px;
+          padding: 12px;
+          background: rgba(15,23,42,0.34);
+          border: 1px solid rgba(255,255,255,0.14);
+          color: rgba(255,255,255,0.92);
+          font-size: 13px;
+          font-weight: 900;
+          text-align: center;
         }
 
         .progressTrack {
@@ -1105,6 +1189,26 @@ export default function HomePage() {
             font-size: 12px;
           }
 
+          .premiumActiveContent {
+            grid-template-columns: 52px 1fr;
+          }
+
+          .premiumBadge {
+            grid-column: 1 / -1;
+            width: 100%;
+            box-sizing: border-box;
+          }
+
+          .premiumIcon {
+            width: 52px;
+            height: 52px;
+            font-size: 26px;
+          }
+
+          .premiumPerks {
+            grid-template-columns: 1fr;
+          }
+
           .progressHeader {
             grid-template-columns: 52px 1fr;
           }
@@ -1281,33 +1385,59 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="progressPanel">
-              <div className="progressHeader">
-                <div className="gem">💎</div>
+            {isSubscribed ? (
+              <div className="premiumActivePanel">
+                <div className="premiumActiveContent">
+                  <div className="premiumIcon">👑</div>
 
-                <div>
-                  <div style={{ fontWeight: 1000, fontSize: 19 }}>
-                    Free collector plan
+                  <div>
+                    <div style={{ fontWeight: 1000, fontSize: 20 }}>
+                      Full Access Active
+                    </div>
+                    <div style={{ color: "#d8b4fe", fontWeight: 900, marginTop: 4 }}>
+                      Unlimited tracking, marketplace tools, selling, and collector features are unlocked.
+                    </div>
                   </div>
-                  <div style={{ color: "#d8b4fe", fontWeight: 900, marginTop: 4 }}>
-                    {hasPersonalStats ? `Save up to 50 Doorables • ${remainingFree} free saves left` : "Your free saves appear here after sign in"}
-                  </div>
+
+                  <div className="premiumBadge">Unlocked 💜</div>
                 </div>
 
-                <Link href="/pricing" className="upgradeButton">
-                  Upgrade Now
-                </Link>
+                <div className="premiumPerks">
+                  <div className="premiumPerk">∞ Unlimited saves</div>
+                  <div className="premiumPerk">🛍️ Marketplace access</div>
+                  <div className="premiumPerk">🏷️ Sell extras</div>
+                </div>
               </div>
+            ) : (
+              <div className="progressPanel">
+                <div className="progressHeader">
+                  <div className="gem">💎</div>
 
-              <div className="progressTrack">
-                <div className="progressFill" style={{ width: `${hasPersonalStats ? freePercent : 0}%` }} />
+                  <div>
+                    <div style={{ fontWeight: 1000, fontSize: 19 }}>
+                      Free collector plan
+                    </div>
+                    <div style={{ color: "#d8b4fe", fontWeight: 900, marginTop: 4 }}>
+                      {hasPersonalStats ? `Save up to 50 Doorables • ${remainingFree} free saves left` : "Your free saves appear here after sign in"}
+                    </div>
+                  </div>
+
+                  <Link href="/pricing" className="upgradeButton">
+                    <span>Upgrade Now</span>
+                  </Link>
+                </div>
+
+                <div className="progressTrack">
+                  <div className="progressFill" style={{ width: `${hasPersonalStats ? freePercent : 0}%` }} />
+                </div>
+
+                <div style={{ marginTop: 10, color: "rgba(255,255,255,0.80)", fontWeight: 800, fontSize: 13 }}>
+                  {hasPersonalStats ? `${freeUsed} / 50 free saved Doorables used` : "Start free, save up to 50 Doorables, then upgrade when you need more."}
+                </div>
               </div>
+            )}
 
-              <div style={{ marginTop: 10, color: "rgba(255,255,255,0.80)", fontWeight: 800, fontSize: 13 }}>
-                {hasPersonalStats ? `${freeUsed} / 50 free saved Doorables used` : "Start free, save up to 50 Doorables, then upgrade when you need more."}
-              </div>
-
-              <div className="quickActions">
+            <div className="quickActions">
                 <Link href="/collection" className="quickAction">
                   <span className="quickActionIcon">🎯</span>
                   <span>
@@ -1335,7 +1465,6 @@ export default function HomePage() {
                   </span>
                 </Link>
               </div>
-            </div>
           </div>
         </section>
 

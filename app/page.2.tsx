@@ -22,6 +22,8 @@ type HomeStats = {
   listings: number;
 };
 
+type PlanKey = "monthly" | "yearly";
+
 const ADMIN_EMAILS = ["riffeljosh80@gmail.com"];
 const FREE_LIMIT = 50;
 
@@ -34,6 +36,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
+  const [checkoutError, setCheckoutError] = useState("");
   const [stats, setStats] = useState<HomeStats>({
     owned: 0,
     needed: 0,
@@ -53,7 +57,7 @@ export default function HomePage() {
       "Adorable Vault | Doorables Collection Tracker, Checklist & Marketplace";
 
     const description =
-      "Adorable Vault is a premium fan-made Doorables collection tracker, Disney Doorables checklist, wishlist, extras organizer, inventory tool, rarity tracker, series progress tracker, trading helper, and collector marketplace hub.";
+      "Adorable Vault helps Doorables collectors track owned figures, wishlist items, extras, series progress, and marketplace listings in one easy collector vault.";
 
     function setMeta(name: string, content: string) {
       let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
@@ -247,6 +251,36 @@ export default function HomePage() {
     }
   }
 
+  async function handleCheckout(plan: PlanKey) {
+    try {
+      setCheckoutError("");
+      setLoadingPlan(plan);
+
+      const res = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ plan }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Unable to start checkout.");
+      }
+
+      if (!data?.url) {
+        throw new Error("Stripe checkout URL was not returned.");
+      }
+
+      window.location.href = data.url;
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : "Something went wrong starting checkout.");
+      setLoadingPlan(null);
+    }
+  }
+
   const announcementText =
     body.trim() ||
     "New collector tools, marketplace upgrades, secret promos, and smoother Doorables tracking features are coming soon 💜";
@@ -254,6 +288,7 @@ export default function HomePage() {
   const freeUsed = Math.min(stats.owned, FREE_LIMIT);
   const freePercent = Math.min(100, Math.round((freeUsed / FREE_LIMIT) * 100));
   const remainingFree = Math.max(0, FREE_LIMIT - freeUsed);
+  const hasPersonalStats = stats.total > 0 && (stats.owned > 0 || stats.extras > 0);
 
   return (
     <main className="page">
@@ -289,16 +324,7 @@ export default function HomePage() {
           position: relative;
           max-width: 1180px;
           margin: 0 auto;
-          padding: 22px;
-          padding-bottom: 112px;
-        }
-
-        .topNav {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 14px;
-          margin-bottom: 18px;
+          padding: 18px 22px 112px;
         }
 
         .brand {
@@ -339,23 +365,6 @@ export default function HomePage() {
           color: #d8b4fe;
           font-weight: 950;
           font-size: 15px;
-        }
-
-        .navActions {
-          display: flex;
-          gap: 10px;
-          align-items: center;
-        }
-
-        .navPill {
-          color: white !important;
-          text-decoration: none !important;
-          font-weight: 950;
-          padding: 12px 15px;
-          border-radius: 999px;
-          background: rgba(255,255,255,0.1);
-          border: 1px solid rgba(255,255,255,0.14);
-          box-shadow: 0 10px 24px rgba(0,0,0,0.15);
         }
 
         .hero {
@@ -590,10 +599,6 @@ export default function HomePage() {
             0 16px 34px rgba(168,85,247,0.58),
             inset 0 1px 0 rgba(255,255,255,0.20);
           white-space: nowrap;
-        }
-
-        .upgradeButton span {
-          color: #ffffff !important;
         }
 
         .progressTrack {
@@ -854,51 +859,118 @@ export default function HomePage() {
         .priceGrid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 14px;
+          gap: 16px;
         }
 
         .priceCard {
-          border-radius: 24px;
-          padding: 20px;
+          position: relative;
+          overflow: hidden;
+          text-align: left;
+          border-radius: 28px;
+          padding: 24px;
           color: white;
-          background: rgba(15,23,42,0.78);
-          border: 1px solid rgba(255,255,255,0.12);
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.10), transparent 34%),
+            rgba(15,23,42,0.78);
+          border: 1px solid rgba(255,255,255,0.16);
           box-shadow: 0 16px 34px rgba(0,0,0,0.22);
+          cursor: pointer;
+          transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+          min-height: 260px;
+        }
+
+        .priceCard:hover {
+          transform: translateY(-3px);
+          border-color: rgba(255,255,255,0.28);
+          box-shadow: 0 22px 48px rgba(0,0,0,0.30);
+        }
+
+        .priceCard:disabled {
+          opacity: 0.72;
+          cursor: wait;
+        }
+
+        .priceCard.free {
+          cursor: default;
         }
 
         .priceCard.best {
           background:
-            radial-gradient(circle at top right, rgba(244,114,182,0.24), transparent 36%),
-            linear-gradient(135deg, rgba(88,28,135,0.88), rgba(15,23,42,0.95));
-          border-color: rgba(217,70,239,0.4);
+            radial-gradient(circle at top right, rgba(244,114,182,0.28), transparent 36%),
+            linear-gradient(135deg, rgba(88,28,135,0.92), rgba(15,23,42,0.95));
+          border-color: rgba(217,70,239,0.46);
+          animation: popularGlow 2.8s ease-in-out infinite;
+        }
+
+        @keyframes popularGlow {
+          0%, 100% {
+            box-shadow: 0 16px 34px rgba(0,0,0,0.22), 0 0 0 rgba(217,70,239,0);
+          }
+          50% {
+            box-shadow: 0 22px 48px rgba(0,0,0,0.30), 0 0 34px rgba(217,70,239,0.30);
+          }
         }
 
         .tag {
           display: inline-flex;
           margin-bottom: 10px;
           border-radius: 999px;
-          padding: 6px 10px;
+          padding: 7px 12px;
           font-size: 12px;
           font-weight: 1000;
           background: linear-gradient(90deg, #f59e0b, #f472b6);
           color: white;
         }
 
-        .price {
-          font-size: 34px;
+        .saveTag {
+          display: inline-flex;
+          margin-left: 8px;
+          border-radius: 999px;
+          padding: 7px 12px;
+          font-size: 12px;
           font-weight: 1000;
-          margin: 10px 0;
+          background: rgba(255,255,255,0.14);
+          border: 1px solid rgba(255,255,255,0.18);
+          color: white;
+        }
+
+        .price {
+          font-size: 46px;
+          font-weight: 1000;
+          margin: 12px 0;
+          line-height: 0.95;
         }
 
         .price span {
           color: rgba(255,255,255,0.74);
-          font-size: 13px;
+          font-size: 18px;
         }
 
         .finePrint {
-          color: rgba(255,255,255,0.8);
+          color: rgba(255,255,255,0.84);
           line-height: 1.55;
-          font-size: 14px;
+          font-size: 15px;
+          margin-bottom: 18px;
+        }
+
+        .planButton {
+          width: 100%;
+          min-height: 50px;
+          border-radius: 17px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          text-decoration: none;
+          font-weight: 1000;
+          color: white !important;
+          background: linear-gradient(135deg, #2563eb, #8b5cf6);
+          border: 1px solid rgba(255,255,255,0.22);
+          box-shadow: 0 12px 24px rgba(79,70,229,0.28);
+        }
+
+        .planButton.yearly {
+          background: linear-gradient(135deg, #f59e0b, #f97316);
+          box-shadow: 0 12px 24px rgba(249,115,22,0.30);
         }
 
         .primaryButton,
@@ -974,19 +1046,11 @@ export default function HomePage() {
             padding-bottom: 112px;
           }
 
-          .topNav {
-            align-items: flex-start;
-          }
-
           .brandIcon {
             width: 56px;
             height: 56px;
             border-radius: 18px;
             font-size: 30px;
-          }
-
-          .navPill:not(.menuPill) {
-            display: none;
           }
 
           .hero {
@@ -1087,6 +1151,11 @@ export default function HomePage() {
             border-radius: 24px;
           }
 
+          .priceCard {
+            min-height: 0;
+            padding: 22px;
+          }
+
           .mobileSticky {
             position: fixed;
             z-index: 60;
@@ -1109,6 +1178,22 @@ export default function HomePage() {
             border-radius: 15px;
             padding: 10px 12px;
             font-size: 13px;
+            color: #ffffff !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+          }
+
+          .mobileSticky .primaryButton {
+            background: linear-gradient(135deg, #ec4899, #7c3aed, #2563eb);
+            color: #ffffff !important;
+            border: 1px solid rgba(255,255,255,0.38);
+            box-shadow: 0 12px 28px rgba(124,58,237,0.44);
+          }
+
+          .mobileSticky .secondaryButton {
+            background: linear-gradient(135deg, #f59e0b, #f97316);
+            color: #ffffff !important;
+            border: 1px solid rgba(255,255,255,0.38);
+            box-shadow: 0 12px 28px rgba(249,115,22,0.34);
           }
         }
 
@@ -1132,47 +1217,27 @@ export default function HomePage() {
       `}</style>
 
       <div className="shell">
-        <nav className="topNav">
-          <Link href="/" className="brand">
-            <span className="brandIcon">💎</span>
-            <span>
-              <span className="brandTitle">Adorable Vault</span>
-              <span className="brandSub">track • trade • showcase</span>
-            </span>
-          </Link>
-
-          <div className="navActions">
-            <Link href="/collection" className="navPill">Collection</Link>
-            <Link href="/sell" className="navPill">Sell</Link>
-            <Link href="/marketplace" className="navPill">Marketplace</Link>
-            <Link href="/messages" className="navPill">Messages</Link>
-            <Link href="/pricing" className="navPill">Subscription</Link>
-            <Link href="/feedback" className="navPill menuPill">💙 Feedback</Link>
-          </div>
-        </nav>
-
         <section className="hero">
           <div className="heroCard">
-            <div className="badge">✨ Premium Doorables tracker • fan-made collector vault ✨</div>
+            <div className="badge">✨ Fan-made collector vault ✨</div>
 
             <h1 className="headline">
-              The Doorables tracker for collectors who are done guessing.
+              Track your Doorables without the chaos.
             </h1>
 
             <div className="heroText">
-              Welcome{username ? ` back, ${username}` : ""}! Adorable Vault helps you track your Doorables collection,
-              build a wishlist, organize extras, find missing pieces, browse marketplace listings,
-              and complete more sets with less chaos.
+              Welcome{username ? ` back, ${username}` : ""}! Adorable Vault helps you track what you own,
+              what you still need, and which extras are ready to sell or trade.
             </div>
 
             <div className="seoLine">
-              Built as a Doorables collection tracker, Disney Doorables checklist, Doorables wishlist,
-              Doorables inventory manager, Doorables rarity tracker, Doorables series tracker, and marketplace companion.
+              Built for collectors who want a cleaner checklist, wishlist, rarity tracker, series tracker,
+              and marketplace companion in one place.
             </div>
 
             <div className="trustRow">
               <span className="trustPill">Free up to 50 saved Doorables</span>
-              <span className="trustPill">$3/month or $15/year</span>
+              <span className="trustPill">Unlimited plans from $3/month</span>
               <span className="trustPill">Mobile-friendly collector hub</span>
             </div>
           </div>
@@ -1182,27 +1247,27 @@ export default function HomePage() {
               <div className="statBubble">
                 <Link href="/collection" className="statCard owned">
                   <div className="statIcon">📦</div>
-                  <div className="statLabel">Total Owned</div>
-                  <div className="statValue">{stats.owned}</div>
-                  <div className="statSub">Doorables you own</div>
+                  <div className="statLabel">{hasPersonalStats ? "Total Owned" : "Your Vault"}</div>
+                  <div className="statValue">{hasPersonalStats ? stats.owned : "—"}</div>
+                  <div className="statSub">{hasPersonalStats ? "Doorables you own" : "Sign in to see your count"}</div>
                 </Link>
               </div>
 
               <div className="statBubble">
                 <Link href="/collection" className="statCard needed">
                   <div className="statIcon">📋</div>
-                  <div className="statLabel">Still Needed</div>
-                  <div className="statValue">{stats.needed.toLocaleString()}</div>
-                  <div className="statSub">Doorables to collect</div>
+                  <div className="statLabel">{hasPersonalStats ? "Still Needed" : "Wishlist"}</div>
+                  <div className="statValue">{hasPersonalStats ? stats.needed.toLocaleString() : "—"}</div>
+                  <div className="statSub">{hasPersonalStats ? "Doorables to collect" : "Track what you need"}</div>
                 </Link>
               </div>
 
               <div className="statBubble">
                 <Link href="/sell" className="statCard extras">
                   <div className="statIcon">⭐</div>
-                  <div className="statLabel">Extras</div>
-                  <div className="statValue">{stats.extras}</div>
-                  <div className="statSub">Ready to trade or sell</div>
+                  <div className="statLabel">{hasPersonalStats ? "Extras" : "Extras"}</div>
+                  <div className="statValue">{hasPersonalStats ? stats.extras : "—"}</div>
+                  <div className="statSub">{hasPersonalStats ? "Ready to trade or sell" : "List duplicates later"}</div>
                 </Link>
               </div>
 
@@ -1211,7 +1276,7 @@ export default function HomePage() {
                   <div className="statIcon">🛍️</div>
                   <div className="statLabel">Marketplace</div>
                   <div className="statValue">{stats.listings}</div>
-                  <div className="statSub">Current listings</div>
+                  <div className="statSub">Current marketplace listings</div>
                 </Link>
               </div>
             </div>
@@ -1225,21 +1290,21 @@ export default function HomePage() {
                     Free collector plan
                   </div>
                   <div style={{ color: "#d8b4fe", fontWeight: 900, marginTop: 4 }}>
-                    Save up to 50 Doorables • {remainingFree} free saves left
+                    {hasPersonalStats ? `Save up to 50 Doorables • ${remainingFree} free saves left` : "Your free saves appear here after sign in"}
                   </div>
                 </div>
 
                 <Link href="/pricing" className="upgradeButton">
-                  <span>Upgrade Now</span>
+                  Upgrade Now
                 </Link>
               </div>
 
               <div className="progressTrack">
-                <div className="progressFill" style={{ width: `${freePercent}%` }} />
+                <div className="progressFill" style={{ width: `${hasPersonalStats ? freePercent : 0}%` }} />
               </div>
 
               <div style={{ marginTop: 10, color: "rgba(255,255,255,0.80)", fontWeight: 800, fontSize: 13 }}>
-                {freeUsed} / 50 free saved Doorables used
+                {hasPersonalStats ? `${freeUsed} / 50 free saved Doorables used` : "Start free, save up to 50 Doorables, then upgrade when you need more."}
               </div>
 
               <div className="quickActions">
@@ -1284,8 +1349,7 @@ export default function HomePage() {
             </div>
 
             <div className="sectionText">
-              A premium Doorables tracker for owned figures, needed figures, extras, rarities, movies, series, duplicates,
-              trades, and collector marketplace finds.
+              Track your collection, manage your wishlist, organize extras, and browse collector listings from one mobile-friendly vault.
             </div>
           </div>
 
@@ -1303,16 +1367,16 @@ export default function HomePage() {
               <div className="featureIcon">🔎</div>
               <div className="featureTitle">Find what you need</div>
               <div className="featureText">
-                Search your Doorables checklist before buying, trading, or joining another live sale.
+                Check your wishlist before buying, trading, or joining another live sale.
               </div>
               <div className="featureLink">Find gaps →</div>
             </Link>
 
             <Link href="/sell" className="featureCard">
               <div className="featureIcon">🔁</div>
-              <div className="featureTitle">Trade or sell extras</div>
+              <div className="featureTitle">Sell extras faster</div>
               <div className="featureText">
-                Turn duplicate Doorables into organized extras so other collectors can discover them.
+                Turn duplicate Doorables into Marketplace listings with cleaner tools and auto-listing support.
               </div>
               <div className="featureLink">List extras →</div>
             </Link>
@@ -1321,7 +1385,7 @@ export default function HomePage() {
               <div className="featureIcon">🛍️</div>
               <div className="featureTitle">Browse marketplace</div>
               <div className="featureText">
-                Use collector listings to search for missing Doorables and complete more sets.
+                Search collector listings and message sellers when you find something you need.
               </div>
               <div className="featureLink">Browse marketplace →</div>
             </Link>
@@ -1399,7 +1463,7 @@ export default function HomePage() {
               </div>
               <div className="miniListItem">
                 <span>✅</span>
-                <span>Upgrade from a free Doorables checklist to unlimited collector access.</span>
+                <span>Upgrade from a free checklist to unlimited collector access.</span>
               </div>
             </div>
           </div>
@@ -1415,23 +1479,44 @@ export default function HomePage() {
             </div>
 
             <div className="sectionText">
-              Free accounts can save up to 50 Doorables. Paid plans unlock unlimited Doorables collection tracking,
-              marketplace tools, selling extras, and full collector features.
+              Free accounts can save up to 50 Doorables. Paid plans unlock unlimited tracking,
+              Marketplace, selling extras, messaging, and full collector features.
             </div>
           </div>
 
+          {checkoutError && (
+            <div
+              style={{
+                marginBottom: 14,
+                borderRadius: 18,
+                padding: 14,
+                background: "rgba(254,226,226,0.96)",
+                color: "#991b1b",
+                fontWeight: 900,
+              }}
+            >
+              {checkoutError}
+            </div>
+          )}
+
           <div className="priceGrid">
-            <div className="priceCard">
+            <Link href="/collection" className="priceCard free">
               <div style={{ fontWeight: 1000 }}>Starter</div>
               <div className="price">
                 $0 <span>/ free</span>
               </div>
               <div className="finePrint">
-                Save up to 50 Doorables, try the checklist, and start organizing your collection.
+                Save up to 50 Doorables and try the tracker before upgrading.
               </div>
-            </div>
+              <div className="planButton">Start Tracking</div>
+            </Link>
 
-            <div className="priceCard">
+            <button
+              type="button"
+              className="priceCard"
+              onClick={() => void handleCheckout("monthly")}
+              disabled={loadingPlan === "monthly"}
+            >
               <div style={{ fontWeight: 1000 }}>Collector Monthly</div>
               <div className="price">
                 $3 <span>/ month</span>
@@ -1439,36 +1524,44 @@ export default function HomePage() {
               <div className="finePrint">
                 Unlimited tracking, marketplace tools, and full collector access with flexible billing.
               </div>
-            </div>
+              <div className="planButton">
+                {loadingPlan === "monthly" ? "Starting checkout..." : "Start Monthly ✨"}
+              </div>
+            </button>
 
-            <div className="priceCard best">
-              <div className="tag">Best value</div>
+            <button
+              type="button"
+              className="priceCard best"
+              onClick={() => void handleCheckout("yearly")}
+              disabled={loadingPlan === "yearly"}
+            >
+              <div>
+                <span className="tag">Most popular</span>
+                <span className="saveTag">Save $21/year</span>
+              </div>
               <div style={{ fontWeight: 1000 }}>Collector Yearly</div>
               <div className="price">
                 $15 <span>/ year</span>
               </div>
               <div className="finePrint">
-                The best plan for serious collectors who want the full Doorables vault all year.
+                Best value for collectors who want the full Doorables vault all year.
               </div>
-            </div>
-          </div>
-
-          <div style={{ marginTop: 16 }}>
-            <Link href="/pricing" className="secondaryButton">
-              Compare Plans
-            </Link>
+              <div className="planButton yearly">
+                {loadingPlan === "yearly" ? "Starting checkout..." : "Get Best Deal 🚀"}
+              </div>
+            </button>
           </div>
         </section>
 
         <section className="section splitGrid">
           <div className="whiteCard">
-            <div className="eyebrow">SEO-friendly collector tool</div>
+            <div className="eyebrow">Built for real collecting</div>
             <h2 className="sectionTitle">
-              A Doorables tracker, checklist, wishlist, inventory, and marketplace hub.
+              Your collection, wishlist, extras, and listings in one place.
             </h2>
             <div className="sectionText">
-              Use Adorable Vault as a Disney Doorables collection tracker, Doorables checklist, Doorables wishlist,
-              Doorables inventory manager, Doorables rarity tracker, Doorables series tracker, and Doorables marketplace companion.
+              Use Adorable Vault when you are opening blind bags, checking what you already own,
+              figuring out what you still need, or getting extras ready to sell or trade.
             </div>
           </div>
 
@@ -1495,7 +1588,7 @@ export default function HomePage() {
               Open My Collection
             </Link>
             <Link href="/pricing" className="secondaryButton">
-              Unlock Full Access
+              View Plans
             </Link>
           </div>
         </section>
@@ -1503,10 +1596,10 @@ export default function HomePage() {
 
       <div className="mobileSticky">
         <Link href="/collection" className="primaryButton">
-          Start Tracking
+          🚀 Start Tracking
         </Link>
         <Link href="/pricing" className="secondaryButton">
-          View Plans
+          👑 View Plans
         </Link>
       </div>
     </main>

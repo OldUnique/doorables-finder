@@ -6,14 +6,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { getSupabase } from "../lib/supabase";
 
 const links = [
-  { href: "/", label: "🏠 Home" },
-  { href: "/about", label: "About" },
-  { href: "/app", label: "Collection" },
-  { href: "/sell", label: "Sell" },
-  { href: "/marketplace", label: "Marketplace" },
-  { href: "/messages", label: "Messages" },
-  { href: "/pricing", label: "Subscription" },
-  { href: "/feedback", label: "💙 Feedback" },
+  { href: "/", icon: "🏠", label: "Home" },
+  { href: "/about", icon: "💜", label: "About" },
+  { href: "/app", icon: "🧸", label: "Collection" },
+  { href: "/sell", icon: "🏷️", label: "Sell" },
+  { href: "/marketplace", icon: "🛍️", label: "Marketplace" },
+  { href: "/messages", icon: "💬", label: "Messages" },
+  { href: "/pricing", icon: "👑", label: "Subscription" },
+  { href: "/feedback", icon: "💙", label: "Feedback" },
 ];
 
 export default function AppHeader() {
@@ -191,7 +191,11 @@ export default function AppHeader() {
                 onClick={() => setMenuOpen(false)}
                 className={active ? "navLink navLinkActive" : "navLink"}
               >
-                {link.label}
+                <span className="navIcon" aria-hidden="true">
+                  {link.icon}
+                </span>
+
+                <span className="navLabel">{link.label}</span>
 
                 {isMessages && unreadCount > 0 && (
                   <span title={`${unreadCount} unread`} className="unreadBadge">
@@ -228,9 +232,9 @@ export default function AppHeader() {
           z-index: 40;
           backdrop-filter: blur(16px);
           background:
-            radial-gradient(circle at 12% 0%, rgba(236,72,153,0.20), transparent 26%),
-            radial-gradient(circle at 82% 0%, rgba(59,130,246,0.18), transparent 26%),
-            linear-gradient(135deg, rgba(8,11,24,0.94), rgba(32,17,68,0.90), rgba(30,41,99,0.90));
+            radial-gradient(circle at 12% 0%, rgba(236,72,153,0.22), transparent 26%),
+            radial-gradient(circle at 82% 0%, rgba(59,130,246,0.20), transparent 26%),
+            linear-gradient(135deg, rgba(8,11,24,0.96), rgba(32,17,68,0.92), rgba(30,41,99,0.92));
           border-bottom: 1px solid rgba(255,255,255,0.10);
           box-shadow: 0 12px 28px rgba(0,0,0,0.25);
         }
@@ -335,12 +339,14 @@ export default function AppHeader() {
           gap: 8px;
           min-height: 44px;
           padding: 10px 13px;
-          border-radius: 14px;
-          border: 1px solid rgba(255,255,255,0.14);
-          background: rgba(255,255,255,0.09);
-          color: white;
-          font-weight: 900;
+          border-radius: 16px;
+          border: 1px solid rgba(255,255,255,0.20);
+          background:
+            linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+          color: #ffffff;
+          font-weight: 1000;
           cursor: pointer;
+          box-shadow: 0 8px 18px rgba(0,0,0,0.16);
         }
 
         nav {
@@ -356,26 +362,50 @@ export default function AppHeader() {
           align-items: center;
           justify-content: center;
           gap: 8px;
-          padding: 12px 15px;
-          border-radius: 16px;
-          color: white;
+          padding: 10px 13px;
+          border-radius: 17px;
+          color: #ffffff;
           text-decoration: none;
-          font-weight: 850;
-          background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.08);
+          font-weight: 900;
+          letter-spacing: 0.1px;
+          background:
+            linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.055));
+          border: 1px solid rgba(255,255,255,0.13);
           transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
           white-space: nowrap;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
         }
 
         .navLink:hover {
           transform: translateY(-1px);
-          background: rgba(255,255,255,0.10);
+          background:
+            linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+          box-shadow: 0 8px 18px rgba(0,0,0,0.16);
         }
 
         .navLinkActive {
-          background: linear-gradient(135deg, rgba(236,72,153,0.92), rgba(124,58,237,0.95), rgba(59,130,246,0.92));
-          border: 1px solid rgba(255,255,255,0.22);
-          box-shadow: 0 10px 22px rgba(124,58,237,0.28);
+          background: linear-gradient(135deg, rgba(236,72,153,1), rgba(124,58,237,1), rgba(59,130,246,1));
+          border: 1px solid rgba(255,255,255,0.28);
+          box-shadow: 0 10px 22px rgba(124,58,237,0.30);
+        }
+
+        .navIcon {
+          width: 30px;
+          height: 30px;
+          min-width: 30px;
+          border-radius: 12px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255,255,255,0.15);
+          border: 1px solid rgba(255,255,255,0.12);
+          font-size: 15px;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+        }
+
+        .navLabel {
+          color: #ffffff;
         }
 
         .unreadBadge {
@@ -409,12 +439,13 @@ export default function AppHeader() {
         }
 
         .emailText {
-          opacity: 0.86;
+          opacity: 0.90;
           max-width: 220px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
           color: #f9fafb;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.45);
         }
 
         .accountButton {
@@ -424,12 +455,13 @@ export default function AppHeader() {
           min-height: 42px;
           padding: 10px 14px;
           border-radius: 14px;
-          border: 1px solid rgba(255,255,255,0.12);
-          background: linear-gradient(135deg, rgba(255,255,255,0.11), rgba(255,255,255,0.05));
+          border: 1px solid rgba(255,255,255,0.16);
+          background: linear-gradient(135deg, rgba(255,255,255,0.13), rgba(255,255,255,0.06));
           color: white;
           font-weight: 900;
           cursor: pointer;
           text-decoration: none;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
         }
 
         @media (max-width: 1100px) {
@@ -438,7 +470,7 @@ export default function AppHeader() {
           }
 
           .navLink {
-            padding: 11px 13px;
+            padding: 10px 12px;
           }
         }
 
@@ -468,20 +500,60 @@ export default function AppHeader() {
             flex-direction: column;
             align-items: stretch !important;
             order: 3;
-            padding: 8px;
-            border-radius: 20px;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.08);
+            padding: 10px;
+            border-radius: 24px;
+            background:
+              radial-gradient(circle at top right, rgba(147,197,253,0.15), transparent 32%),
+              linear-gradient(135deg, rgba(30,27,75,0.92), rgba(49,46,129,0.88));
+            border: 1px solid rgba(255,255,255,0.14);
+            box-shadow:
+              inset 0 1px 0 rgba(255,255,255,0.12),
+              0 14px 28px rgba(0,0,0,0.22);
           }
 
           nav.navOpen {
-            display: flex !important;
+            display: grid !important;
+            grid-template-columns: 1fr;
+            gap: 10px;
           }
 
           .navLink {
             width: 100%;
-            min-height: 48px;
+            min-height: 56px;
             box-sizing: border-box;
+            justify-content: flex-start;
+            padding: 12px 14px;
+            border-radius: 18px;
+            color: #ffffff !important;
+            background:
+              linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.09));
+            border: 1px solid rgba(255,255,255,0.18);
+            box-shadow:
+              inset 0 1px 0 rgba(255,255,255,0.10),
+              0 8px 18px rgba(0,0,0,0.14);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.55);
+          }
+
+          .navLinkActive {
+            background: linear-gradient(135deg, #ec4899, #7c3aed, #2563eb);
+            color: white !important;
+            border-color: rgba(255,255,255,0.30);
+            box-shadow: 0 12px 24px rgba(124,58,237,0.34);
+          }
+
+          .navIcon {
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
+            border-radius: 14px;
+            font-size: 18px;
+            background: rgba(255,255,255,0.20);
+          }
+
+          .navLabel {
+            color: #ffffff !important;
+            font-size: 16px;
+            font-weight: 1000;
           }
 
           .accountArea {

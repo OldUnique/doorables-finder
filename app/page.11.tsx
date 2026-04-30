@@ -22,7 +22,7 @@ type HomeStats = {
   listings: number;
 };
 
-type PlanKey = "monthly" | "yearly" | "founding";
+type PlanKey = "monthly" | "yearly";
 
 const ADMIN_EMAILS = ["riffeljosh80@gmail.com"];
 const FREE_LIMIT = 50;
@@ -942,7 +942,7 @@ export default function HomePage() {
 
         .priceGrid {
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 16px;
         }
 
@@ -984,17 +984,6 @@ export default function HomePage() {
             linear-gradient(135deg, rgba(88,28,135,0.92), rgba(15,23,42,0.95));
           border-color: rgba(217,70,239,0.46);
           animation: popularGlow 2.8s ease-in-out infinite;
-        }
-
-        .priceCard.founding {
-          background:
-            radial-gradient(circle at top right, rgba(250,204,21,0.22), transparent 36%),
-            radial-gradient(circle at bottom left, rgba(236,72,153,0.28), transparent 40%),
-            linear-gradient(135deg, rgba(131,24,67,0.94), rgba(49,46,129,0.96));
-          border-color: rgba(244,114,182,0.60);
-          box-shadow:
-            0 22px 50px rgba(236,72,153,0.24),
-            0 16px 34px rgba(0,0,0,0.24);
         }
 
         @keyframes popularGlow {
@@ -1068,11 +1057,6 @@ export default function HomePage() {
           box-shadow: 0 12px 24px rgba(249,115,22,0.30);
         }
 
-        .planButton.founding {
-          background: linear-gradient(135deg, #ec4899, #8b5cf6);
-          box-shadow: 0 12px 26px rgba(236,72,153,0.34);
-        }
-
         .primaryButton,
         .secondaryButton {
           min-height: 50px;
@@ -1138,12 +1122,6 @@ export default function HomePage() {
         .brand:visited,
         .brand:visited * {
           color: inherit !important;
-        }
-
-        @media (max-width: 1180px) {
-          .priceGrid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
         }
 
         @media (max-width: 980px) {
@@ -1631,7 +1609,7 @@ export default function HomePage() {
 
             <div className="sectionText">
               Free accounts can save up to 50 Doorables. Paid plans unlock unlimited tracking,
-              Marketplace, selling extras, messaging, and full collector features. The limited founding bundle adds a physical keychain thank-you gift while supplies last.
+              Marketplace, selling extras, messaging, and full collector features.
             </div>
           </div>
 
@@ -1701,27 +1679,6 @@ export default function HomePage() {
                 {loadingPlan === "yearly" ? "Starting checkout..." : "Get Best Deal 🚀"}
               </div>
             </button>
-
-            <button
-              type="button"
-              className="priceCard founding"
-              onClick={() => void handleCheckout("founding")}
-              disabled={loadingPlan === "founding"}
-            >
-              <div>
-                <span className="tag">Limited launch</span>
-              </div>
-              <div style={{ fontWeight: 1000 }}>Founding Collector</div>
-              <div className="price">
-                $20 <span>/ year</span>
-              </div>
-              <div className="finePrint">
-                1 full year of access plus a limited edition Adorable Vault keychain while supplies last.
-              </div>
-              <div className="planButton founding">
-                {loadingPlan === "founding" ? "Starting checkout..." : "Get Bundle + Keychain 💜"}
-              </div>
-            </button>
           </div>
         </section>
 
@@ -1743,7 +1700,7 @@ export default function HomePage() {
             <div className="sectionText">
               Adorable Vault is a fan-made collector tracking and marketplace tool. It is not affiliated with,
               sponsored by, or endorsed by Disney or Just Play. Character names and references are used only
-              to help collectors organize and identify their collections. Founding keychain bundle is limited and available while supplies last.
+              to help collectors organize and identify their collections.
             </div>
           </div>
         </section>

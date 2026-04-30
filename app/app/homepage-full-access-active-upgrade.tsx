@@ -1335,8 +1335,8 @@ export default function HomePage() {
             </div>
 
             <div className="seoLine">
-              Made for collectors who want one clean place to track sets, manage extras,
-              and stop wondering, “Do I already have this one?”
+              Built for collectors who want a cleaner checklist, wishlist, rarity tracker, series tracker,
+              and marketplace companion in one place.
             </div>
 
             <div className="trustRow">
@@ -1379,8 +1379,8 @@ export default function HomePage() {
                 <Link href="/marketplace" className="statCard market">
                   <div className="statIcon">🛍️</div>
                   <div className="statLabel">Marketplace</div>
-                  <div className="statValue">{stats.listings > 0 ? stats.listings : "→"}</div>
-                  <div className="statSub">{stats.listings > 0 ? "Current marketplace listings" : "Browse collector listings"}</div>
+                  <div className="statValue">{stats.listings}</div>
+                  <div className="statSub">Current marketplace listings</div>
                 </Link>
               </div>
             </div>
@@ -1487,7 +1487,7 @@ export default function HomePage() {
               <div className="featureIcon">💜</div>
               <div className="featureTitle">Track your collection</div>
               <div className="featureText">
-                Mark what you own, what you need, your extras, notes, rarity, movie, and series progress.
+                Mark owned, needed, extras, custom notes, rarity, movie, subcategory, and series progress.
               </div>
               <div className="featureLink">Open tracker →</div>
             </Link>
@@ -1689,8 +1689,8 @@ export default function HomePage() {
               Your collection, wishlist, extras, and listings in one place.
             </h2>
             <div className="sectionText">
-              Use Adorable Vault while you are opening blind bags, shopping lives, checking duplicates,
-              or getting extras ready to sell or trade.
+              Use Adorable Vault when you are opening blind bags, checking what you already own,
+              figuring out what you still need, or getting extras ready to sell or trade.
             </div>
           </div>
 

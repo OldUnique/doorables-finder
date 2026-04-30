@@ -288,7 +288,6 @@ export default function HomePage() {
   const freeUsed = Math.min(stats.owned, FREE_LIMIT);
   const freePercent = Math.min(100, Math.round((freeUsed / FREE_LIMIT) * 100));
   const remainingFree = Math.max(0, FREE_LIMIT - freeUsed);
-  const hasPersonalStats = stats.total > 0 && (stats.owned > 0 || stats.extras > 0);
 
   return (
     <main className="page">
@@ -324,7 +323,16 @@ export default function HomePage() {
           position: relative;
           max-width: 1180px;
           margin: 0 auto;
-          padding: 18px 22px 112px;
+          padding: 22px;
+          padding-bottom: 112px;
+        }
+
+        .topNav {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 18px;
         }
 
         .brand {
@@ -365,6 +373,44 @@ export default function HomePage() {
           color: #d8b4fe;
           font-weight: 950;
           font-size: 15px;
+        }
+
+        .navActions {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+        }
+
+        .navPill {
+          color: #ffffff !important;
+          text-decoration: none !important;
+          font-weight: 1000;
+          padding: 12px 16px;
+          border-radius: 999px;
+          background:
+            linear-gradient(135deg, rgba(255,255,255,0.20), rgba(255,255,255,0.08));
+          border: 1px solid rgba(255,255,255,0.24);
+          box-shadow:
+            0 10px 24px rgba(0,0,0,0.20),
+            inset 0 1px 0 rgba(255,255,255,0.14);
+          text-shadow: 0 1px 2px rgba(0,0,0,0.55);
+          transition: transform 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .navPill:hover {
+          transform: translateY(-1px);
+          background:
+            linear-gradient(135deg, rgba(255,255,255,0.28), rgba(255,255,255,0.12));
+          box-shadow:
+            0 14px 28px rgba(0,0,0,0.24),
+            0 0 22px rgba(124,58,237,0.22),
+            inset 0 1px 0 rgba(255,255,255,0.18);
+        }
+
+        .menuPill {
+          background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
+          border-color: rgba(255,255,255,0.32) !important;
+          color: #ffffff !important;
         }
 
         .hero {
@@ -1046,11 +1092,19 @@ export default function HomePage() {
             padding-bottom: 112px;
           }
 
+          .topNav {
+            align-items: flex-start;
+          }
+
           .brandIcon {
             width: 56px;
             height: 56px;
             border-radius: 18px;
             font-size: 30px;
+          }
+
+          .navPill:not(.menuPill) {
+            display: none;
           }
 
           .hero {
@@ -1217,6 +1271,25 @@ export default function HomePage() {
       `}</style>
 
       <div className="shell">
+        <nav className="topNav">
+          <Link href="/" className="brand">
+            <span className="brandIcon">💎</span>
+            <span>
+              <span className="brandTitle">Adorable Vault</span>
+              <span className="brandSub">track • trade • showcase</span>
+            </span>
+          </Link>
+
+          <div className="navActions">
+            <Link href="/collection" className="navPill">Collection</Link>
+            <Link href="/sell" className="navPill">Sell</Link>
+            <Link href="/marketplace" className="navPill">Marketplace</Link>
+            <Link href="/messages" className="navPill">Messages</Link>
+            <Link href="/pricing" className="navPill">Subscription</Link>
+            <Link href="/feedback" className="navPill menuPill">💙 Feedback</Link>
+          </div>
+        </nav>
+
         <section className="hero">
           <div className="heroCard">
             <div className="badge">✨ Fan-made collector vault ✨</div>
@@ -1247,27 +1320,27 @@ export default function HomePage() {
               <div className="statBubble">
                 <Link href="/collection" className="statCard owned">
                   <div className="statIcon">📦</div>
-                  <div className="statLabel">{hasPersonalStats ? "Total Owned" : "Your Vault"}</div>
-                  <div className="statValue">{hasPersonalStats ? stats.owned : "—"}</div>
-                  <div className="statSub">{hasPersonalStats ? "Doorables you own" : "Sign in to see your count"}</div>
+                  <div className="statLabel">Total Owned</div>
+                  <div className="statValue">{stats.owned}</div>
+                  <div className="statSub">Doorables you own</div>
                 </Link>
               </div>
 
               <div className="statBubble">
                 <Link href="/collection" className="statCard needed">
                   <div className="statIcon">📋</div>
-                  <div className="statLabel">{hasPersonalStats ? "Still Needed" : "Wishlist"}</div>
-                  <div className="statValue">{hasPersonalStats ? stats.needed.toLocaleString() : "—"}</div>
-                  <div className="statSub">{hasPersonalStats ? "Doorables to collect" : "Track what you need"}</div>
+                  <div className="statLabel">Still Needed</div>
+                  <div className="statValue">{stats.needed.toLocaleString()}</div>
+                  <div className="statSub">Doorables to collect</div>
                 </Link>
               </div>
 
               <div className="statBubble">
                 <Link href="/sell" className="statCard extras">
                   <div className="statIcon">⭐</div>
-                  <div className="statLabel">{hasPersonalStats ? "Extras" : "Extras"}</div>
-                  <div className="statValue">{hasPersonalStats ? stats.extras : "—"}</div>
-                  <div className="statSub">{hasPersonalStats ? "Ready to trade or sell" : "List duplicates later"}</div>
+                  <div className="statLabel">Extras</div>
+                  <div className="statValue">{stats.extras}</div>
+                  <div className="statSub">Ready to trade or sell</div>
                 </Link>
               </div>
 
@@ -1276,7 +1349,7 @@ export default function HomePage() {
                   <div className="statIcon">🛍️</div>
                   <div className="statLabel">Marketplace</div>
                   <div className="statValue">{stats.listings}</div>
-                  <div className="statSub">Current marketplace listings</div>
+                  <div className="statSub">Current listings</div>
                 </Link>
               </div>
             </div>
@@ -1290,7 +1363,7 @@ export default function HomePage() {
                     Free collector plan
                   </div>
                   <div style={{ color: "#d8b4fe", fontWeight: 900, marginTop: 4 }}>
-                    {hasPersonalStats ? `Save up to 50 Doorables • ${remainingFree} free saves left` : "Your free saves appear here after sign in"}
+                    Save up to 50 Doorables • {remainingFree} free saves left
                   </div>
                 </div>
 
@@ -1300,11 +1373,11 @@ export default function HomePage() {
               </div>
 
               <div className="progressTrack">
-                <div className="progressFill" style={{ width: `${hasPersonalStats ? freePercent : 0}%` }} />
+                <div className="progressFill" style={{ width: `${freePercent}%` }} />
               </div>
 
               <div style={{ marginTop: 10, color: "rgba(255,255,255,0.80)", fontWeight: 800, fontSize: 13 }}>
-                {hasPersonalStats ? `${freeUsed} / 50 free saved Doorables used` : "Start free, save up to 50 Doorables, then upgrade when you need more."}
+                {freeUsed} / 50 free saved Doorables used
               </div>
 
               <div className="quickActions">
@@ -1555,13 +1628,13 @@ export default function HomePage() {
 
         <section className="section splitGrid">
           <div className="whiteCard">
-            <div className="eyebrow">Built for real collecting</div>
+            <div className="eyebrow">SEO-friendly collector tool</div>
             <h2 className="sectionTitle">
-              Your collection, wishlist, extras, and listings in one place.
+              A Doorables tracker, checklist, wishlist, inventory, and marketplace hub.
             </h2>
             <div className="sectionText">
-              Use Adorable Vault when you are opening blind bags, checking what you already own,
-              figuring out what you still need, or getting extras ready to sell or trade.
+              Use Adorable Vault as a Disney Doorables collection tracker, Doorables checklist, Doorables wishlist,
+              Doorables inventory manager, Doorables rarity tracker, Doorables series tracker, and Doorables marketplace companion.
             </div>
           </div>
 

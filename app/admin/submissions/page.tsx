@@ -15,7 +15,6 @@ type Submission = {
   status: string | null;
   created_at: string | null;
   user_id: string | null;
-  submitted_by: string | null;
 };
 
 type Doorable = {
@@ -89,7 +88,7 @@ export default function AdminSubmissionsPage() {
 
     const { data: subData, error: subError } = await supabase
       .from("image_submissions")
-      .select("id, doorable_id, image_url, status, created_at, user_id, submitted_by")
+      .select("id, doorable_id, image_url, status, created_at, user_id")
       .in("status", ["pending", "approved", "rejected"])
       .order("created_at", { ascending: false });
 
@@ -107,11 +106,7 @@ export default function AdminSubmissionsPage() {
     );
 
     const userIds = Array.from(
-      new Set(
-        submissionRows
-          .map((row) => row.submitted_by || row.user_id)
-          .filter(Boolean)
-      )
+      new Set(submissionRows.map((row) => row.user_id).filter(Boolean))
     ) as string[];
 
     if (doorableIds.length > 0) {
@@ -338,9 +333,8 @@ export default function AdminSubmissionsPage() {
 
     const filtered = submissions.filter((submission) => {
       const doorable = doorablesById[submission.doorable_id];
-      const submitterId = submission.submitted_by || submission.user_id;
-      const submitter = submitterId
-        ? usersById[submitterId]?.email || submitterId
+      const submitter = submission.user_id
+        ? usersById[submission.user_id]?.email || submission.user_id
         : "Unknown user";
 
       const matchesStatus =
@@ -592,11 +586,8 @@ export default function AdminSubmissionsPage() {
             submission={selectedSubmission}
             doorable={doorablesById[selectedSubmission.doorable_id]}
             submitter={
-              (selectedSubmission.submitted_by || selectedSubmission.user_id)
-                ? usersById[selectedSubmission.submitted_by || selectedSubmission.user_id || ""]?.email ||
-                  selectedSubmission.submitted_by ||
-                  selectedSubmission.user_id ||
-                  "Unknown user"
+              selectedSubmission.user_id
+                ? usersById[selectedSubmission.user_id]?.email || selectedSubmission.user_id
                 : "Unknown user"
             }
             busyId={busyId}
@@ -618,9 +609,8 @@ export default function AdminSubmissionsPage() {
           <section className={`submissionGrid ${compactMode ? "compact" : ""}`}>
             {filteredSubmissions.map((submission, index) => {
               const doorable = doorablesById[submission.doorable_id];
-              const submitterId = submission.submitted_by || submission.user_id;
-              const submitter = submitterId
-                ? usersById[submitterId]?.email || submitterId
+              const submitter = submission.user_id
+                ? usersById[submission.user_id]?.email || submission.user_id
                 : "Unknown user";
               const theme = statusTheme(submission.status);
               const isBusy = busyId === submission.id;

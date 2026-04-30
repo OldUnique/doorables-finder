@@ -320,8 +320,6 @@ export default function PublicCollectorPage() {
   const [error, setError] = useState("");
   const [displayName, setDisplayName] = useState(username);
   const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
-  const [page, setPage] = useState(1);
-  const [isMobile, setIsMobile] = useState(false);
   const [collectorUserId, setCollectorUserId] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
   const [startingChatId, setStartingChatId] = useState("");
@@ -339,17 +337,6 @@ export default function PublicCollectorPage() {
   useEffect(() => {
     void loadPage();
   }, [username]);
-
-  useEffect(() => {
-    const updateMobile = () => setIsMobile(window.innerWidth <= 920);
-    updateMobile();
-    window.addEventListener("resize", updateMobile);
-    return () => window.removeEventListener("resize", updateMobile);
-  }, []);
-
-  useEffect(() => {
-    setPage(1);
-  }, [viewFilter]);
 
   async function loadPage() {
     try {
@@ -721,14 +708,6 @@ export default function PublicCollectorPage() {
     }
     return cards;
   }, [cards, viewFilter]);
-
-  const cardsPerPage = isMobile ? 8 : 24;
-  const totalPages = Math.max(1, Math.ceil(displayedCards.length / cardsPerPage));
-  const safePage = Math.min(page, totalPages);
-  const pagedCards = displayedCards.slice(
-    (safePage - 1) * cardsPerPage,
-    safePage * cardsPerPage
-  );
 
   function getStatusLabel(card: PublicCard) {
     if (card.qty > 1) return "Extra";
@@ -1167,37 +1146,6 @@ export default function PublicCollectorPage() {
           transform: scale(1.08);
         }
 
-        .pager {
-          display: flex;
-          gap: 10px;
-          align-items: center;
-          justify-content: center;
-          flex-wrap: wrap;
-          margin-top: 18px;
-        }
-
-        .pagerButton {
-          min-height: 44px;
-          padding: 10px 16px;
-          border-radius: 999px;
-          border: 1px solid rgba(255,255,255,0.24);
-          background: linear-gradient(135deg, #4f46e5, #7c3aed);
-          color: white;
-          font-weight: 1000;
-          cursor: pointer;
-          box-shadow: 0 12px 24px rgba(79,70,229,0.22);
-        }
-
-        .pagerButton:disabled {
-          opacity: 0.45;
-          cursor: not-allowed;
-        }
-
-        .pagerText {
-          color: #111827;
-          font-weight: 1000;
-        }
-
         .cardActionButton {
           margin-top: 10px;
           width: 100%;
@@ -1420,7 +1368,7 @@ export default function PublicCollectorPage() {
             </div>
 
             <div style={{ fontSize: 14, color: "#6b7280", fontWeight: 800 }}>
-              Showing {pagedCards.length} of {displayedCards.length} item{displayedCards.length === 1 ? "" : "s"}
+              Showing {displayedCards.length} item{displayedCards.length === 1 ? "" : "s"}
             </div>
           </div>
 
@@ -1430,7 +1378,7 @@ export default function PublicCollectorPage() {
             </div>
           ) : (
             <section className="cardsGrid">
-              {pagedCards.map((item) => {
+              {displayedCards.map((item) => {
                 const rarity = rarityTheme(item.rarity);
                 const status = getStatusLabel(item);
                 const statusColor = getStatusColor(item);
@@ -1555,32 +1503,6 @@ export default function PublicCollectorPage() {
                 );
               })}
             </section>
-          )}
-
-          {totalPages > 1 && (
-            <div className="pager">
-              <button
-                type="button"
-                className="pagerButton"
-                disabled={safePage <= 1}
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              >
-                Previous
-              </button>
-
-              <div className="pagerText">
-                Page {safePage} of {totalPages}
-              </div>
-
-              <button
-                type="button"
-                className="pagerButton"
-                disabled={safePage >= totalPages}
-                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-              >
-                Next
-              </button>
-            </div>
           )}
         </section>
       </div>

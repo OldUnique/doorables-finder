@@ -291,6 +291,24 @@ function renderStars(value: number) {
   return "★".repeat(rounded) + "☆".repeat(5 - rounded);
 }
 
+function seriesSort(a: string, b: string) {
+  const aStr = String(a || "");
+  const bStr = String(b || "");
+  const aMatch = aStr.match(/\d+/);
+  const bMatch = bStr.match(/\d+/);
+
+  if (aMatch && bMatch) {
+    const aNum = Number(aMatch[0]);
+    const bNum = Number(bMatch[0]);
+    if (aNum !== bNum) return aNum - bNum;
+  }
+
+  return aStr.localeCompare(bStr, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
 export default function PublicCollectorPage() {
   const params = useParams();
   const rawUsername = String(params?.username || "");
@@ -303,7 +321,9 @@ export default function PublicCollectorPage() {
   const [displayName, setDisplayName] = useState(username);
   const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
   const [collectorUserId, setCollectorUserId] = useState("");
+  const [currentUserId, setCurrentUserId] = useState("");
   const [startingChatId, setStartingChatId] = useState("");
+  const [shareNotice, setShareNotice] = useState("");
 
   const [marketplaceStars, setMarketplaceStars] = useState(0);
   const [marketplaceReviewCount, setMarketplaceReviewCount] = useState(0);
@@ -324,6 +344,12 @@ export default function PublicCollectorPage() {
       setError("");
 
       const supabase = getSupabase();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      setCurrentUserId(user?.id ? String(user.id) : "");
 
       const { data: userRow, error: userError } = await supabase
         .from("users")
@@ -353,7 +379,8 @@ export default function PublicCollectorPage() {
       } else {
         const { data: doorables, error: doorablesError } = await supabase
           .from("doorables")
-          .select("id, name, series, rarity, image_url");
+          .select("id, name, series, rarity, image_url")
+          .range(0, 1999);
 
         if (doorablesError) {
           setError(doorablesError.message);
@@ -394,9 +421,11 @@ export default function PublicCollectorPage() {
           merged = merged.filter((item) => item.qty > 1 || item.qty <= 0);
         }
 
-        merged.sort((a, b) =>
-          a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
-        );
+        merged.sort((a, b) => {
+          const bySeries = seriesSort(a.series, b.series);
+          if (bySeries !== 0) return bySeries;
+          return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+        });
 
         setCards(merged);
       }
@@ -487,10 +516,10 @@ export default function PublicCollectorPage() {
     }
   }
 
-  async function messageAboutDoorable(card: PublicCard) {
+  async function startCollectorChat(prefilledBody?: string, loadingKey = "collector") {
     try {
       setError("");
-      setStartingChatId(card.id);
+      setStartingChatId(loadingKey);
 
       const supabase = getSupabase();
 
@@ -499,7 +528,12 @@ export default function PublicCollectorPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        window.location.href = "/login";
+        const next =
+          typeof window !== "undefined"
+            ? `${window.location.pathname}${window.location.search}`
+            : `/collector/${username}`;
+
+        window.location.href = `/login?next=${encodeURIComponent(next)}`;
         return;
       }
 
@@ -510,7 +544,7 @@ export default function PublicCollectorPage() {
       }
 
       if (String(user.id) === collectorUserId) {
-        setError("You cannot message yourself.");
+        setError("You cannot message yourself, but you can share your public profile 💜");
         setStartingChatId("");
         return;
       }
@@ -559,35 +593,68 @@ export default function PublicCollectorPage() {
         conversationId = String(created.id);
       }
 
-      let body = `Hi! I saw your collection and wanted to ask about ${card.name}.`;
+      if (prefilledBody) {
+        const { error: messageError } = await supabase
+          .from("marketplace_messages")
+          .insert([
+            {
+              conversation_id: conversationId,
+              sender_id: user.id,
+              body: prefilledBody,
+              read_at: null,
+            },
+          ]);
 
-      if (card.qty > 1) {
-        body = `Hi! I saw that you have an extra of ${card.name} in your collection and wanted to ask about it.`;
-      } else if (card.qty <= 0) {
-        body = `Hi! I saw that ${card.name} is on your wishlist and wanted to message you about it.`;
-      }
-
-      const { error: messageError } = await supabase
-        .from("marketplace_messages")
-        .insert([
-          {
-            conversation_id: conversationId,
-            sender_id: user.id,
-            body,
-            read_at: null,
-          },
-        ]);
-
-      if (messageError) {
-        setError(messageError.message);
-        setStartingChatId("");
-        return;
+        if (messageError) {
+          setError(messageError.message);
+          setStartingChatId("");
+          return;
+        }
       }
 
       window.location.href = `/messages?conversation=${conversationId}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start message.");
       setStartingChatId("");
+    }
+  }
+
+  async function messageAboutDoorable(card: PublicCard) {
+    let body = `Hi! I saw your collection and wanted to ask about ${card.name}.`;
+
+    if (card.qty > 1) {
+      body = `Hi! I saw that you have an extra of ${card.name} in your collection and wanted to ask about it.`;
+    } else if (card.qty <= 0) {
+      body = `Hi! I saw that ${card.name} is on your wishlist and wanted to message you about it.`;
+    }
+
+    await startCollectorChat(body, card.id);
+  }
+
+  async function shareProfile() {
+    try {
+      const url =
+        typeof window !== "undefined"
+          ? window.location.href
+          : `https://www.mydoorables.com/collector/${username}`;
+
+      if (navigator.share) {
+        await navigator.share({
+          title: `${displayName}'s Adorable Vault`,
+          text: `Check out ${displayName}'s Adorable Vault collection 💜`,
+          url,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(url);
+      setShareNotice("Profile link copied! 💜");
+
+      window.setTimeout(() => {
+        setShareNotice("");
+      }, 2500);
+    } catch {
+      setShareNotice("Could not copy automatically, but you can copy the link from your browser.");
     }
   }
 
@@ -599,6 +666,7 @@ export default function PublicCollectorPage() {
   }, [cards]);
 
   const completion = stats.total ? Math.round((stats.owned / stats.total) * 100) : 0;
+  const isOwnProfile = !!currentUserId && !!collectorUserId && currentUserId === collectorUserId;
 
   const collectionTier = useMemo(
     () => getCollectionTier(completion, stats.owned),
@@ -662,43 +730,67 @@ export default function PublicCollectorPage() {
 
   if (loading) {
     return (
-      <main
-        style={{
-          minHeight: "100vh",
-          padding: 24,
-          background:
-            "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
-          color: "white",
-        }}
-      >
-        Loading collector page...
+      <main className="loadingPage">
+        <style jsx>{`
+          .loadingPage {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 22px;
+            color: white;
+            background:
+              radial-gradient(circle at 8% 4%, rgba(168,85,247,0.42) 0%, transparent 28%),
+              radial-gradient(circle at 88% 10%, rgba(59,130,246,0.30) 0%, transparent 27%),
+              linear-gradient(180deg, #030712 0%, #080b1f 45%, #020617 100%);
+          }
+
+          .loadingCard {
+            width: min(520px, 100%);
+            border-radius: 28px;
+            padding: 28px;
+            text-align: center;
+            background: rgba(255,255,255,0.10);
+            border: 1px solid rgba(255,255,255,0.16);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+          }
+        `}</style>
+
+        <div className="loadingCard">
+          <div style={{ fontSize: 34, marginBottom: 10 }}>💎</div>
+          <div style={{ fontWeight: 1000, fontSize: 22 }}>Loading collector vault...</div>
+        </div>
       </main>
     );
   }
 
   if (error && !cards.length && visibility !== "private") {
     return (
-      <main
-        style={{
-          minHeight: "100vh",
-          padding: 24,
-          background:
-            "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
-          color: "white",
-        }}
-      >
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div
-            style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 22,
-              padding: 20,
-            }}
-          >
-            <div style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>Oops 💜</div>
-            <div>{error}</div>
-          </div>
+      <main className="simplePage">
+        <style jsx>{`
+          .simplePage {
+            min-height: 100vh;
+            padding: 22px;
+            color: white;
+            background:
+              radial-gradient(circle at 8% 4%, rgba(168,85,247,0.42) 0%, transparent 28%),
+              radial-gradient(circle at 88% 10%, rgba(59,130,246,0.30) 0%, transparent 27%),
+              linear-gradient(180deg, #030712 0%, #080b1f 45%, #020617 100%);
+          }
+
+          .card {
+            max-width: 900px;
+            margin: 0 auto;
+            border-radius: 28px;
+            padding: 24px;
+            background: rgba(255,255,255,0.10);
+            border: 1px solid rgba(255,255,255,0.16);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+          }
+        `}</style>
+
+        <div className="card">
+          <div style={{ fontSize: 28, fontWeight: 1000, marginBottom: 8 }}>Oops 💜</div>
+          <div>{error}</div>
         </div>
       </main>
     );
@@ -706,26 +798,46 @@ export default function PublicCollectorPage() {
 
   if (visibility === "private") {
     return (
-      <main
-        style={{
-          minHeight: "100vh",
-          padding: 24,
-          background:
-            "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
-          color: "white",
-        }}
-      >
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <section
-            style={{
-              background: "linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88))",
-              borderRadius: 28,
-              padding: 24,
-              boxShadow: "0 20px 40px rgba(0,0,0,0.30)",
-              marginBottom: 18,
-            }}
-          >
-            <h1 style={{ margin: 0, fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 900 }}>
+      <main className="simplePage">
+        <style jsx>{`
+          .simplePage {
+            min-height: 100vh;
+            padding: 22px;
+            color: white;
+            background:
+              radial-gradient(circle at 8% 4%, rgba(168,85,247,0.42) 0%, transparent 28%),
+              radial-gradient(circle at 88% 10%, rgba(59,130,246,0.30) 0%, transparent 27%),
+              linear-gradient(180deg, #030712 0%, #080b1f 45%, #020617 100%);
+          }
+
+          .shell {
+            max-width: 1000px;
+            margin: 0 auto;
+          }
+
+          .hero {
+            border-radius: 30px;
+            padding: 28px;
+            margin-bottom: 18px;
+            background:
+              radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
+              linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
+            border: 1px solid rgba(255,255,255,0.16);
+            box-shadow: 0 26px 64px rgba(0,0,0,0.36);
+          }
+
+          .card {
+            background: linear-gradient(180deg, #ffffff, #f8fafc);
+            color: #111827;
+            border-radius: 26px;
+            padding: 24px;
+            box-shadow: 0 20px 46px rgba(0,0,0,0.24);
+          }
+        `}</style>
+
+        <div className="shell">
+          <section className="hero">
+            <h1 style={{ margin: 0, fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 1000 }}>
               @{displayName}'s Collection 💜
             </h1>
             <div style={{ marginTop: 8, opacity: 0.92 }}>
@@ -733,16 +845,8 @@ export default function PublicCollectorPage() {
             </div>
           </section>
 
-          <section
-            style={{
-              background: "rgba(255,255,255,0.96)",
-              color: "#111827",
-              borderRadius: 24,
-              padding: 22,
-              boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
-            }}
-          >
-            <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 8 }}>🔒 Private Collection</div>
+          <section className="card">
+            <div style={{ fontSize: 22, fontWeight: 1000, marginBottom: 8 }}>🔒 Private Collection</div>
             <div style={{ color: "#4b5563", lineHeight: 1.6 }}>
               This collector has chosen not to publicly show their Doorables right now.
             </div>
@@ -753,30 +857,177 @@ export default function PublicCollectorPage() {
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        padding: 24,
-        color: "white",
-        background:
-          "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), radial-gradient(circle at 70% 70%, rgba(236,72,153,0.18) 0%, rgba(236,72,153,0) 20%), linear-gradient(180deg, #09090f 0%, #111827 38%, #0f172a 65%, #020617 100%)",
-      }}
-    >
+    <main className="page">
       <style jsx>{`
+        .page {
+          min-height: 100vh;
+          color: white;
+          background:
+            radial-gradient(circle at 8% 4%, rgba(168, 85, 247, 0.42) 0%, transparent 28%),
+            radial-gradient(circle at 88% 10%, rgba(59, 130, 246, 0.30) 0%, transparent 27%),
+            radial-gradient(circle at 70% 94%, rgba(236, 72, 153, 0.22) 0%, transparent 30%),
+            linear-gradient(180deg, #030712 0%, #080b1f 45%, #020617 100%);
+          overflow-x: hidden;
+        }
+
+        .page::before {
+          content: "";
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          background-image:
+            radial-gradient(2px 2px at 18% 22%, rgba(255,255,255,0.78) 35%, transparent 36%),
+            radial-gradient(1.5px 1.5px at 78% 16%, rgba(255,255,255,0.65) 35%, transparent 36%),
+            radial-gradient(1.8px 1.8px at 48% 72%, rgba(255,255,255,0.58) 35%, transparent 36%),
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+          background-size: auto, auto, auto, 46px 46px, 46px 46px;
+          opacity: 0.68;
+          mask-image: linear-gradient(to bottom, rgba(0,0,0,0.92), transparent 80%);
+        }
+
         .shell {
-          max-width: 1380px;
-          margin: 0 auto;
           position: relative;
           z-index: 1;
+          max-width: 1380px;
+          margin: 0 auto;
+          padding: 22px;
+          padding-bottom: 84px;
         }
 
         .hero {
-          background: linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
-          border-radius: 28px;
-          padding: 24px;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.30);
+          border-radius: 34px;
+          padding: 28px;
           margin-bottom: 18px;
-          border: 1px solid rgba(255,255,255,0.08);
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
+            linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
+          border: 1px solid rgba(255,255,255,0.16);
+          box-shadow: 0 26px 64px rgba(0,0,0,0.36);
+        }
+
+        .heroTop {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 18px;
+          align-items: center;
+        }
+
+        .profileBadge {
+          display: inline-flex;
+          width: fit-content;
+          align-items: center;
+          gap: 8px;
+          padding: 9px 13px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.15);
+          font-size: 13px;
+          font-weight: 1000;
+          margin-bottom: 12px;
+        }
+
+        .heroTitle {
+          margin: 0;
+          font-size: clamp(2.25rem, 5.8vw, 4.15rem);
+          line-height: 0.96;
+          letter-spacing: -1.8px;
+          font-weight: 1000;
+          text-wrap: balance;
+        }
+
+        .heroText {
+          margin-top: 10px;
+          color: rgba(255,255,255,0.88);
+          font-size: 16px;
+          line-height: 1.6;
+          max-width: 760px;
+        }
+
+        .actionPanel {
+          min-width: 310px;
+          border-radius: 24px;
+          padding: 18px;
+          background: rgba(15,23,42,0.58);
+          border: 1px solid rgba(255,255,255,0.14);
+          box-shadow: 0 14px 28px rgba(0,0,0,0.20);
+        }
+
+        .actionGrid {
+          display: grid;
+          gap: 10px;
+        }
+
+        .bubbleButton,
+        .bubbleButton:visited {
+          min-height: 48px;
+          border-radius: 999px;
+          padding: 12px 16px;
+          font-weight: 1000;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          box-sizing: border-box;
+          border: 1px solid transparent;
+          cursor: pointer;
+        }
+
+        .heroButton,
+        .heroButton:visited {
+          background: rgba(255,255,255,0.12);
+          color: white;
+          border-color: rgba(255,255,255,0.20);
+        }
+
+        .primaryHeroButton {
+          background: linear-gradient(135deg, #ffffff, #fef3c7);
+          color: #312e81;
+          border-color: rgba(255,255,255,0.55);
+          box-shadow: 0 18px 40px rgba(255,255,255,0.20);
+        }
+
+        .progressBox {
+          margin-top: 20px;
+          border-radius: 24px;
+          padding: 16px;
+          background: rgba(15,23,42,0.45);
+          border: 1px solid rgba(255,255,255,0.13);
+        }
+
+        .progressHeader {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          align-items: center;
+          margin-bottom: 10px;
+          flex-wrap: wrap;
+        }
+
+        .progressTrack {
+          height: 12px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.18);
+          overflow: hidden;
+        }
+
+        .progressFill {
+          height: 100%;
+          border-radius: inherit;
+          background: linear-gradient(90deg,#60a5fa,#a78bfa,#ec4899);
+          box-shadow: 0 0 18px rgba(236,72,153,0.30);
+        }
+
+        .shareNotice {
+          margin-top: 10px;
+          border-radius: 16px;
+          padding: 10px 12px;
+          background: rgba(236,253,245,0.14);
+          border: 1px solid rgba(187,247,208,0.35);
+          color: #bbf7d0;
+          font-weight: 900;
+          font-size: 13px;
         }
 
         .tierGrid {
@@ -787,12 +1038,12 @@ export default function PublicCollectorPage() {
         }
 
         .tierCard {
-          background: rgba(255,255,255,0.94);
+          background: rgba(255,255,255,0.96);
           color: #111827;
-          border-radius: 22px;
+          border-radius: 24px;
           padding: 16px;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-          border: 1px solid rgba(255,255,255,0.35);
+          box-shadow: 0 14px 32px rgba(0,0,0,0.18);
+          border: 1px solid rgba(255,255,255,0.45);
           overflow: hidden;
           position: relative;
         }
@@ -801,7 +1052,7 @@ export default function PublicCollectorPage() {
           position: absolute;
           inset: 0 auto 0 0;
           width: 8px;
-          border-radius: 22px 0 0 22px;
+          border-radius: 24px 0 0 24px;
         }
 
         .statsGrid {
@@ -812,12 +1063,12 @@ export default function PublicCollectorPage() {
         }
 
         .statCard {
-          background: rgba(255,255,255,0.94);
+          background: rgba(255,255,255,0.96);
           color: #111827;
-          border-radius: 20px;
+          border-radius: 22px;
           padding: 18px;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-          border: 1px solid rgba(255,255,255,0.35);
+          box-shadow: 0 14px 32px rgba(0,0,0,0.18);
+          border: 1px solid rgba(255,255,255,0.45);
           cursor: pointer;
           text-align: left;
           transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -825,21 +1076,21 @@ export default function PublicCollectorPage() {
 
         .statCard:hover {
           transform: translateY(-2px);
-          box-shadow: 0 14px 28px rgba(0,0,0,0.22);
+          box-shadow: 0 18px 36px rgba(0,0,0,0.22);
         }
 
         .statCardActive {
-          outline: 3px solid #4f46e5;
+          outline: 3px solid #a78bfa;
         }
 
         .collectionCard {
           background: rgba(255,255,255,0.96);
           color: #111827;
-          border-radius: 24px;
-          padding: 16px;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          border-radius: 28px;
+          padding: 18px;
+          box-shadow: 0 18px 40px rgba(0,0,0,0.22);
           margin-bottom: 18px;
-          border: 1px solid rgba(255,255,255,0.35);
+          border: 1px solid rgba(255,255,255,0.50);
         }
 
         .cardsGrid {
@@ -855,6 +1106,12 @@ export default function PublicCollectorPage() {
 
           .tierGrid {
             grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+        }
+
+        @media (min-width: 1300px) {
+          .cardsGrid {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
           }
         }
 
@@ -889,9 +1146,36 @@ export default function PublicCollectorPage() {
           transform: scale(1.08);
         }
 
+        .cardActionButton {
+          margin-top: 10px;
+          width: 100%;
+          min-height: 44px;
+          padding: 10px 12px;
+          border-radius: 999px;
+          border: none;
+          cursor: pointer;
+          font-weight: 900;
+          color: white;
+          box-shadow: 0 12px 22px rgba(79,70,229,0.20);
+        }
+
         @media (max-width: 920px) {
-          main {
-            padding: 16px !important;
+          .shell {
+            padding: 14px;
+            padding-bottom: 60px;
+          }
+
+          .hero {
+            border-radius: 25px;
+            padding: 21px;
+          }
+
+          .heroTop {
+            grid-template-columns: 1fr;
+          }
+
+          .actionPanel {
+            min-width: 0;
           }
 
           .cardsGrid {
@@ -908,48 +1192,85 @@ export default function PublicCollectorPage() {
             border-radius: 18px !important;
             padding: 10px !important;
           }
+
+          .bubbleButton {
+            width: 100%;
+          }
+        }
+
+        @media (max-width: 460px) {
+          .cardsGrid {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
 
       <div className="shell">
         <section className="hero">
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 14,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
+          <div className="heroTop">
             <div>
-              <h1 style={{ margin: 0, fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 900 }}>
-                @{displayName}'s Collection 💜
-              </h1>
-              <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
+              <div className="profileBadge">💎 Collector Public Profile</div>
+              <h1 className="heroTitle">@{displayName}'s Collection 💜</h1>
+              <div className="heroText">
                 {visibility === "extras_only"
-                  ? "Showing public wishlist and extras."
-                  : "Showing full public collection."}
+                  ? "Showing this collector's public wishlist and extras."
+                  : "Showing this collector's full public vault."}
+              </div>
+              <div style={{ marginTop: 8, color: "rgba(255,255,255,0.70)", fontSize: 14, fontWeight: 800 }}>
+                Collector ID • Public Profile
               </div>
             </div>
 
-            <Link
-              href="/collection"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "12px 16px",
-                borderRadius: 14,
-                textDecoration: "none",
-                color: "white",
-                fontWeight: 800,
-                background: "rgba(255,255,255,0.10)",
-                border: "1px solid rgba(255,255,255,0.18)",
-              }}
-            >
-              Back to My Collection
-            </Link>
+            <div className="actionPanel">
+              <div style={{ color: "#fde68a", fontSize: 13, fontWeight: 1000, marginBottom: 10 }}>
+                Profile Actions
+              </div>
+
+              <div className="actionGrid">
+                <button type="button" onClick={() => void shareProfile()} className="bubbleButton primaryHeroButton">
+                  Share Profile 🔗
+                </button>
+
+                {!isOwnProfile && (
+                  <button
+                    type="button"
+                    onClick={() => void startCollectorChat(`Hi! I saw your Adorable Vault profile and wanted to connect.`, "collector")}
+                    disabled={startingChatId === "collector"}
+                    className="bubbleButton heroButton"
+                    style={{ opacity: startingChatId === "collector" ? 0.7 : 1 }}
+                  >
+                    {startingChatId === "collector" ? "Opening..." : "Message Collector 💬"}
+                  </button>
+                )}
+
+                <Link href="/marketplace" className="bubbleButton heroButton">
+                  Browse Marketplace 🛍️
+                </Link>
+
+                {isOwnProfile && (
+                  <Link href="/collection" className="bubbleButton heroButton">
+                    Back to My Collection
+                  </Link>
+                )}
+              </div>
+
+              {shareNotice && <div className="shareNotice">{shareNotice}</div>}
+            </div>
+          </div>
+
+          <div className="progressBox">
+            <div className="progressHeader">
+              <div style={{ fontWeight: 1000 }}>Collection Completion</div>
+              <div style={{ color: "#fde68a", fontWeight: 1000 }}>{completion}%</div>
+            </div>
+
+            <div className="progressTrack">
+              <div className="progressFill" style={{ width: `${completion}%` }} />
+            </div>
+
+            <div style={{ marginTop: 9, color: "rgba(255,255,255,0.72)", fontSize: 13, fontWeight: 800 }}>
+              {stats.owned} owned out of {stats.total} visible items
+            </div>
           </div>
         </section>
 
@@ -958,10 +1279,10 @@ export default function PublicCollectorPage() {
             <div key={tier.title} className="tierCard">
               <div className="tierAccent" style={{ background: tier.accent }} />
               <div style={{ paddingLeft: 12 }}>
-                <div style={{ fontSize: 13, color: "#6b7280", fontWeight: 800, marginBottom: 6 }}>
+                <div style={{ fontSize: 13, color: "#6b7280", fontWeight: 900, marginBottom: 6 }}>
                   {tier.title}
                 </div>
-                <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 6 }}>
+                <div style={{ fontSize: 24, fontWeight: 1000, marginBottom: 6 }}>
                   {tier.label}
                 </div>
                 <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.5 }}>
@@ -969,9 +1290,9 @@ export default function PublicCollectorPage() {
                 </div>
 
                 {tier.title === "Marketplace Tier" && (
-                  <div style={{ marginTop: 8, fontSize: 14, fontWeight: 800, color: "#7c3aed" }}>
+                  <div style={{ marginTop: 8, fontSize: 14, fontWeight: 900, color: "#7c3aed" }}>
                     {renderStars(marketplaceTier.stars)}{" "}
-                    <span style={{ color: "#6b7280", fontWeight: 700 }}>
+                    <span style={{ color: "#6b7280", fontWeight: 800 }}>
                       {marketplaceTier.stars > 0
                         ? `${marketplaceTier.stars.toFixed(1)} · ${marketplaceReviewCount} review${marketplaceReviewCount === 1 ? "" : "s"}`
                         : "No ratings yet"}
@@ -993,11 +1314,11 @@ export default function PublicCollectorPage() {
           <div
             style={{
               marginBottom: 18,
-              background: "rgba(255,255,255,0.94)",
+              background: "rgba(255,255,255,0.96)",
               color: "#b91c1c",
               borderRadius: 18,
               padding: 14,
-              fontWeight: 700,
+              fontWeight: 800,
             }}
           >
             {error}
@@ -1019,8 +1340,10 @@ export default function PublicCollectorPage() {
                 onClick={() => setViewFilter(stat.key as ViewFilter)}
                 className={`statCard ${active ? "statCardActive" : ""}`}
               >
-                <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>{stat.label}</div>
-                <div style={{ fontSize: 30, fontWeight: 900 }}>{stat.value}</div>
+                <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6, fontWeight: 800 }}>
+                  {stat.label}
+                </div>
+                <div style={{ fontSize: 30, fontWeight: 1000 }}>{stat.value}</div>
               </button>
             );
           })}
@@ -1037,14 +1360,20 @@ export default function PublicCollectorPage() {
               marginBottom: 12,
             }}
           >
-            <div style={{ fontSize: 18, fontWeight: 900 }}>{getFilterTitle()}</div>
-            <div style={{ fontSize: 14, color: "#6b7280", fontWeight: 700 }}>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 1000 }}>{getFilterTitle()}</div>
+              <div style={{ fontSize: 13, color: "#64748b", fontWeight: 800, marginTop: 3 }}>
+                Tap a card action to connect with this collector.
+              </div>
+            </div>
+
+            <div style={{ fontSize: 14, color: "#6b7280", fontWeight: 800 }}>
               Showing {displayedCards.length} item{displayedCards.length === 1 ? "" : "s"}
             </div>
           </div>
 
           {displayedCards.length === 0 ? (
-            <div style={{ color: "#6b7280", padding: 10 }}>
+            <div style={{ color: "#6b7280", padding: 10, fontWeight: 800 }}>
               Nothing to show in this section yet.
             </div>
           ) : (
@@ -1077,7 +1406,7 @@ export default function PublicCollectorPage() {
                           className="cardImage"
                         />
                       ) : (
-                        <div style={{ color: "#6b7280", fontWeight: 700 }}>No Image</div>
+                        <div style={{ color: "#6b7280", fontWeight: 800 }}>No Image</div>
                       )}
                     </div>
 
@@ -1090,8 +1419,10 @@ export default function PublicCollectorPage() {
                         marginBottom: 6,
                       }}
                     >
-                      <div>
-                        <div style={{ fontWeight: 900, fontSize: 20 }}>{item.name}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 1000, fontSize: 19, lineHeight: 1.1, wordBreak: "break-word" }}>
+                          {item.name}
+                        </div>
                         <div style={{ opacity: 0.8, fontSize: 14 }}>{item.series}</div>
                       </div>
 
@@ -1100,7 +1431,7 @@ export default function PublicCollectorPage() {
                           padding: "6px 10px",
                           borderRadius: 999,
                           fontSize: 12,
-                          fontWeight: 900,
+                          fontWeight: 1000,
                           background: rarity.badgeBg,
                           color: rarity.badgeText,
                           whiteSpace: "nowrap",
@@ -1114,14 +1445,14 @@ export default function PublicCollectorPage() {
                       style={{
                         marginTop: 8,
                         marginBottom: 6,
-                        fontWeight: 800,
+                        fontWeight: 1000,
                         color: statusColor,
                       }}
                     >
                       {status}
                     </div>
 
-                    <div style={{ fontSize: 14, color: "#4b5563", fontWeight: 700 }}>
+                    <div style={{ fontSize: 14, color: "#4b5563", fontWeight: 800 }}>
                       Qty: {item.qty}
                     </div>
 
@@ -1135,42 +1466,39 @@ export default function PublicCollectorPage() {
                           borderRadius: 12,
                           padding: 10,
                           color: "#374151",
+                          fontWeight: 700,
                         }}
                       >
                         {item.note}
                       </div>
                     ) : null}
 
-                    <button
-                      type="button"
-                      onClick={() => void messageAboutDoorable(item)}
-                      disabled={startingChatId === item.id}
-                      style={{
-                        marginTop: 10,
-                        width: "100%",
-                        padding: "10px 12px",
-                        borderRadius: 12,
-                        border: "none",
-                        cursor: startingChatId === item.id ? "wait" : "pointer",
-                        fontWeight: 800,
-                        background:
-                          item.qty > 1
-                            ? "#2563eb"
+                    {!isOwnProfile && (
+                      <button
+                        type="button"
+                        onClick={() => void messageAboutDoorable(item)}
+                        disabled={startingChatId === item.id}
+                        className="cardActionButton"
+                        style={{
+                          cursor: startingChatId === item.id ? "wait" : "pointer",
+                          background:
+                            item.qty > 1
+                              ? "linear-gradient(135deg,#2563eb,#60a5fa)"
+                              : item.qty <= 0
+                                ? "linear-gradient(135deg,#7c3aed,#c084fc)"
+                                : "linear-gradient(135deg,#4f46e5,#7c3aed)",
+                          opacity: startingChatId === item.id ? 0.7 : 1,
+                        }}
+                      >
+                        {startingChatId === item.id
+                          ? "Opening..."
+                          : item.qty > 1
+                            ? "Ask About Trade"
                             : item.qty <= 0
-                              ? "#7c3aed"
-                              : "#4f46e5",
-                        color: "white",
-                        opacity: startingChatId === item.id ? 0.7 : 1,
-                      }}
-                    >
-                      {startingChatId === item.id
-                        ? "Opening..."
-                        : item.qty > 1
-                          ? "Ask About Trade"
-                          : item.qty <= 0
-                            ? "I Have This"
-                            : "Send Message"}
-                    </button>
+                              ? "I Have This"
+                              : "Send Message"}
+                      </button>
+                    )}
                   </div>
                 );
               })}

@@ -27,6 +27,13 @@ type Theme = {
   glow: string;
 };
 
+type TierCard = {
+  title: string;
+  label: string;
+  subtext: string;
+  accent: string;
+};
+
 function rarityTheme(rarity: string): Theme {
   const value = String(rarity || "").toLowerCase().trim();
 
@@ -95,6 +102,195 @@ function rarityTheme(rarity: string): Theme {
   };
 }
 
+function average(nums: number[]) {
+  if (!nums.length) return 0;
+  return nums.reduce((sum, n) => sum + n, 0) / nums.length;
+}
+
+function getCollectionTier(completion: number, ownedCount: number): TierCard {
+  if (completion >= 90 || ownedCount >= 400) {
+    return {
+      title: "Collection Tier",
+      label: "Crown Collector",
+      subtext: `${completion}% complete`,
+      accent: "linear-gradient(135deg,#f59e0b,#facc15)",
+    };
+  }
+
+  if (completion >= 70 || ownedCount >= 250) {
+    return {
+      title: "Collection Tier",
+      label: "Elite Collector",
+      subtext: `${completion}% complete`,
+      accent: "linear-gradient(135deg,#7c3aed,#c084fc)",
+    };
+  }
+
+  if (completion >= 45 || ownedCount >= 125) {
+    return {
+      title: "Collection Tier",
+      label: "Vault Builder",
+      subtext: `${completion}% complete`,
+      accent: "linear-gradient(135deg,#2563eb,#60a5fa)",
+    };
+  }
+
+  if (completion >= 20 || ownedCount >= 50) {
+    return {
+      title: "Collection Tier",
+      label: "Treasure Tracker",
+      subtext: `${completion}% complete`,
+      accent: "linear-gradient(135deg,#16a34a,#4ade80)",
+    };
+  }
+
+  return {
+    title: "Collection Tier",
+    label: "Starter Shelf",
+    subtext: `${completion}% complete`,
+    accent: "linear-gradient(135deg,#64748b,#94a3b8)",
+  };
+}
+
+function getMarketplaceTier(params: {
+  averageRating: number;
+  reviewCount: number;
+  activeListings: number;
+  soldListings: number;
+}) {
+  const { averageRating, reviewCount, activeListings, soldListings } = params;
+
+  let stars = 0;
+  if (reviewCount > 0) {
+    stars = Number(averageRating.toFixed(1));
+  } else if (soldListings >= 10) {
+    stars = 5.0;
+  } else if (soldListings >= 5) {
+    stars = 4.7;
+  } else if (soldListings >= 2) {
+    stars = 4.3;
+  } else if (activeListings >= 3) {
+    stars = 4.0;
+  }
+
+  if ((reviewCount >= 10 && averageRating >= 4.8) || soldListings >= 15) {
+    return {
+      title: "Marketplace Tier",
+      label: "Vault Legend",
+      subtext: stars > 0 ? `${stars.toFixed(1)} ★ marketplace rating` : "Top marketplace energy",
+      accent: "linear-gradient(135deg,#f59e0b,#fb7185)",
+      stars,
+    };
+  }
+
+  if ((reviewCount >= 5 && averageRating >= 4.5) || soldListings >= 7) {
+    return {
+      title: "Marketplace Tier",
+      label: "Marketplace MVP",
+      subtext: stars > 0 ? `${stars.toFixed(1)} ★ marketplace rating` : "Strong seller momentum",
+      accent: "linear-gradient(135deg,#7c3aed,#ec4899)",
+      stars,
+    };
+  }
+
+  if ((reviewCount >= 3 && averageRating >= 4.2) || soldListings >= 3) {
+    return {
+      title: "Marketplace Tier",
+      label: "Trusted Trader",
+      subtext: stars > 0 ? `${stars.toFixed(1)} ★ marketplace rating` : "Growing trade trust",
+      accent: "linear-gradient(135deg,#2563eb,#7c3aed)",
+      stars,
+    };
+  }
+
+  if (activeListings > 0 || soldListings > 0) {
+    return {
+      title: "Marketplace Tier",
+      label: "Smooth Seller",
+      subtext: stars > 0 ? `${stars.toFixed(1)} ★ marketplace rating` : "Getting active in marketplace",
+      accent: "linear-gradient(135deg,#0ea5e9,#38bdf8)",
+      stars,
+    };
+  }
+
+  return {
+    title: "Marketplace Tier",
+    label: "New Seller",
+    subtext: "No marketplace rating yet",
+    accent: "linear-gradient(135deg,#64748b,#94a3b8)",
+    stars,
+  };
+}
+
+function getCommunityTier(params: {
+  monthlyMessages: number;
+  monthlyListings: number;
+  monthlyPhotos: number;
+  monthlyFeedback: number;
+  isPublic: boolean;
+}) {
+  const score =
+    params.monthlyMessages * 2 +
+    params.monthlyListings * 2 +
+    params.monthlyPhotos * 2 +
+    params.monthlyFeedback +
+    (params.isPublic ? 2 : 0);
+
+  if (score >= 20) {
+    return {
+      title: "Community Tier",
+      label: "Heart of the Vault",
+      subtext: "Very active this month",
+      accent: "linear-gradient(135deg,#ec4899,#f472b6)",
+      score,
+    };
+  }
+
+  if (score >= 12) {
+    return {
+      title: "Community Tier",
+      label: "Vault Favorite",
+      subtext: "Strong community energy",
+      accent: "linear-gradient(135deg,#8b5cf6,#c084fc)",
+      score,
+    };
+  }
+
+  if (score >= 7) {
+    return {
+      title: "Community Tier",
+      label: "Chat Champ",
+      subtext: "Nicely active this month",
+      accent: "linear-gradient(135deg,#2563eb,#60a5fa)",
+      score,
+    };
+  }
+
+  if (score >= 3) {
+    return {
+      title: "Community Tier",
+      label: "Community Spark",
+      subtext: "Building momentum this month",
+      accent: "linear-gradient(135deg,#14b8a6,#34d399)",
+      score,
+    };
+  }
+
+  return {
+    title: "Community Tier",
+    label: "Quiet Gem",
+    subtext: "Low-key month so far",
+    accent: "linear-gradient(135deg,#64748b,#94a3b8)",
+    score,
+  };
+}
+
+function renderStars(value: number) {
+  if (value <= 0) return "☆☆☆☆☆";
+  const rounded = Math.round(value);
+  return "★".repeat(rounded) + "☆".repeat(5 - rounded);
+}
+
 export default function PublicCollectorPage() {
   const params = useParams();
   const rawUsername = String(params?.username || "");
@@ -108,6 +304,15 @@ export default function PublicCollectorPage() {
   const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
   const [collectorUserId, setCollectorUserId] = useState("");
   const [startingChatId, setStartingChatId] = useState("");
+
+  const [marketplaceStars, setMarketplaceStars] = useState(0);
+  const [marketplaceReviewCount, setMarketplaceReviewCount] = useState(0);
+  const [activeListingsCount, setActiveListingsCount] = useState(0);
+  const [soldListingsCount, setSoldListingsCount] = useState(0);
+  const [monthlyMessages, setMonthlyMessages] = useState(0);
+  const [monthlyListings, setMonthlyListings] = useState(0);
+  const [monthlyPhotos, setMonthlyPhotos] = useState(0);
+  const [monthlyFeedback, setMonthlyFeedback] = useState(0);
 
   useEffect(() => {
     void loadPage();
@@ -145,58 +350,136 @@ export default function PublicCollectorPage() {
 
       if (mode === "private") {
         setCards([]);
-        setLoading(false);
-        return;
+      } else {
+        const { data: doorables, error: doorablesError } = await supabase
+          .from("doorables")
+          .select("id, name, series, rarity, image_url");
+
+        if (doorablesError) {
+          setError(doorablesError.message);
+          setLoading(false);
+          return;
+        }
+
+        const { data: userDoorables, error: userDoorablesError } = await supabase
+          .from("user_doorables")
+          .select("doorable_id, qty_owned, custom_tag, wanted")
+          .eq("user_id", userRow.id);
+
+        if (userDoorablesError) {
+          setError(userDoorablesError.message);
+          setLoading(false);
+          return;
+        }
+
+        const userMap = new Map<string, any>();
+        (userDoorables || []).forEach((row: any) => {
+          userMap.set(String(row.doorable_id), row);
+        });
+
+        let merged: PublicCard[] = ((doorables || []) as any[]).map((d) => {
+          const row = userMap.get(String(d.id));
+          return {
+            id: String(d.id ?? ""),
+            name: String(d.name ?? "Unknown"),
+            series: String(d.series ?? "Unknown Series"),
+            rarity: String(d.rarity ?? "Common"),
+            image: String(d.image_url ?? ""),
+            qty: Number(row?.qty_owned ?? 0),
+            note: String(row?.custom_tag ?? ""),
+          };
+        });
+
+        if (mode === "extras_only") {
+          merged = merged.filter((item) => item.qty > 1 || item.qty <= 0);
+        }
+
+        merged.sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+        );
+
+        setCards(merged);
       }
 
-      const { data: doorables, error: doorablesError } = await supabase
-        .from("doorables")
-        .select("id, name, series, rarity, image_url");
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      const startOfMonthIso = startOfMonth.toISOString();
 
-      if (doorablesError) {
-        setError(doorablesError.message);
-        setLoading(false);
-        return;
+      const [
+        listingsResult,
+        reviewsResult,
+        messagesResult,
+        submissionsResult,
+        feedbackResult,
+      ] = await Promise.allSettled([
+        supabase
+          .from("marketplace_listings")
+          .select("id, status, created_at, sold_at")
+          .eq("user_id", userRow.id),
+
+        supabase
+          .from("collector_reviews")
+          .select("rating")
+          .eq("reviewed_user_id", userRow.id),
+
+        supabase
+          .from("marketplace_messages")
+          .select("id, created_at, sender_id")
+          .eq("sender_id", userRow.id)
+          .gte("created_at", startOfMonthIso),
+
+        supabase
+          .from("image_submissions")
+          .select("id, created_at, status")
+          .eq("submitted_by", userRow.id)
+          .gte("created_at", startOfMonthIso),
+
+        supabase
+          .from("feedback_posts")
+          .select("id, created_at")
+          .eq("user_id", userRow.id)
+          .gte("created_at", startOfMonthIso),
+      ]);
+
+      if (listingsResult.status === "fulfilled" && !listingsResult.value.error) {
+        const listings = listingsResult.value.data || [];
+        const activeListings = listings.filter((row: any) => String(row.status || "") === "active");
+        const soldListings = listings.filter(
+          (row: any) => String(row.status || "") === "sold" || !!row.sold_at
+        );
+        const monthListings = listings.filter((row: any) => {
+          const created = row.created_at ? new Date(row.created_at).getTime() : 0;
+          return created >= new Date(startOfMonthIso).getTime();
+        });
+
+        setActiveListingsCount(activeListings.length);
+        setSoldListingsCount(soldListings.length);
+        setMonthlyListings(monthListings.length);
       }
 
-      const { data: userDoorables, error: userDoorablesError } = await supabase
-        .from("user_doorables")
-        .select("doorable_id, qty_owned, custom_tag, wanted")
-        .eq("user_id", userRow.id);
+      if (reviewsResult.status === "fulfilled" && !reviewsResult.value.error) {
+        const ratings = (reviewsResult.value.data || [])
+          .map((row: any) => Number(row.rating || 0))
+          .filter((n: number) => n > 0);
 
-      if (userDoorablesError) {
-        setError(userDoorablesError.message);
-        setLoading(false);
-        return;
+        const avg = average(ratings);
+        setMarketplaceStars(avg);
+        setMarketplaceReviewCount(ratings.length);
       }
 
-      const userMap = new Map<string, any>();
-      (userDoorables || []).forEach((row: any) => {
-        userMap.set(String(row.doorable_id), row);
-      });
-
-      let merged: PublicCard[] = ((doorables || []) as any[]).map((d) => {
-        const row = userMap.get(String(d.id));
-        return {
-          id: String(d.id ?? ""),
-          name: String(d.name ?? "Unknown"),
-          series: String(d.series ?? "Unknown Series"),
-          rarity: String(d.rarity ?? "Common"),
-          image: String(d.image_url ?? ""),
-          qty: Number(row?.qty_owned ?? 0),
-          note: String(row?.custom_tag ?? ""),
-        };
-      });
-
-      if (mode === "extras_only") {
-        merged = merged.filter((item) => item.qty > 1 || item.qty <= 0);
+      if (messagesResult.status === "fulfilled" && !messagesResult.value.error) {
+        setMonthlyMessages((messagesResult.value.data || []).length);
       }
 
-      merged.sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
-      );
+      if (submissionsResult.status === "fulfilled" && !submissionsResult.value.error) {
+        setMonthlyPhotos((submissionsResult.value.data || []).length);
+      }
 
-      setCards(merged);
+      if (feedbackResult.status === "fulfilled" && !feedbackResult.value.error) {
+        setMonthlyFeedback((feedbackResult.value.data || []).length);
+      }
+
       setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load collection.");
@@ -314,6 +597,36 @@ export default function PublicCollectorPage() {
     const owned = cards.filter((c) => c.qty > 0).length;
     return { extras, wishlist, owned, total: cards.length };
   }, [cards]);
+
+  const completion = stats.total ? Math.round((stats.owned / stats.total) * 100) : 0;
+
+  const collectionTier = useMemo(
+    () => getCollectionTier(completion, stats.owned),
+    [completion, stats.owned]
+  );
+
+  const marketplaceTier = useMemo(
+    () =>
+      getMarketplaceTier({
+        averageRating: marketplaceStars,
+        reviewCount: marketplaceReviewCount,
+        activeListings: activeListingsCount,
+        soldListings: soldListingsCount,
+      }),
+    [marketplaceStars, marketplaceReviewCount, activeListingsCount, soldListingsCount]
+  );
+
+  const communityTier = useMemo(
+    () =>
+      getCommunityTier({
+        monthlyMessages,
+        monthlyListings,
+        monthlyPhotos,
+        monthlyFeedback,
+        isPublic: visibility !== "private",
+      }),
+    [monthlyMessages, monthlyListings, monthlyPhotos, monthlyFeedback, visibility]
+  );
 
   const displayedCards = useMemo(() => {
     if (viewFilter === "owned") {
@@ -466,6 +779,31 @@ export default function PublicCollectorPage() {
           border: 1px solid rgba(255,255,255,0.08);
         }
 
+        .tierGrid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 14px;
+          margin-bottom: 18px;
+        }
+
+        .tierCard {
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          border-radius: 22px;
+          padding: 16px;
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          border: 1px solid rgba(255,255,255,0.35);
+          overflow: hidden;
+          position: relative;
+        }
+
+        .tierAccent {
+          position: absolute;
+          inset: 0 auto 0 0;
+          width: 8px;
+          border-radius: 22px 0 0 22px;
+        }
+
         .statsGrid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -513,6 +851,10 @@ export default function PublicCollectorPage() {
         @media (min-width: 900px) {
           .cardsGrid {
             grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+
+          .tierGrid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
           }
         }
 
@@ -609,6 +951,42 @@ export default function PublicCollectorPage() {
               Back to My Collection
             </Link>
           </div>
+        </section>
+
+        <section className="tierGrid">
+          {[collectionTier, marketplaceTier, communityTier].map((tier) => (
+            <div key={tier.title} className="tierCard">
+              <div className="tierAccent" style={{ background: tier.accent }} />
+              <div style={{ paddingLeft: 12 }}>
+                <div style={{ fontSize: 13, color: "#6b7280", fontWeight: 800, marginBottom: 6 }}>
+                  {tier.title}
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 6 }}>
+                  {tier.label}
+                </div>
+                <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.5 }}>
+                  {tier.subtext}
+                </div>
+
+                {tier.title === "Marketplace Tier" && (
+                  <div style={{ marginTop: 8, fontSize: 14, fontWeight: 800, color: "#7c3aed" }}>
+                    {renderStars(marketplaceTier.stars)}{" "}
+                    <span style={{ color: "#6b7280", fontWeight: 700 }}>
+                      {marketplaceTier.stars > 0
+                        ? `${marketplaceTier.stars.toFixed(1)} · ${marketplaceReviewCount} review${marketplaceReviewCount === 1 ? "" : "s"}`
+                        : "No ratings yet"}
+                    </span>
+                  </div>
+                )}
+
+                {tier.title === "Community Tier" && (
+                  <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
+                    This month: {monthlyMessages} chats • {monthlyListings} listings • {monthlyPhotos} photos • {monthlyFeedback} feedback
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </section>
 
         {!!error && (

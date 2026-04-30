@@ -331,6 +331,7 @@ export default function Page() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
+  const [autoSellLoading, setAutoSellLoading] = useState(false);
 
   const [visibility, setVisibility] = useState<"private" | "extras_only" | "full">("private");
   const [savingVisibility, setSavingVisibility] = useState(false);
@@ -359,6 +360,7 @@ export default function Page() {
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [expandedSeries, setExpandedSeries] = useState(false);
+  const [shareStatus, setShareStatus] = useState("");
 
   useEffect(() => {
     void load();
@@ -579,6 +581,41 @@ export default function Page() {
     }
   }
 
+  async function sharePublicProfile() {
+    if (!username) {
+      setShareStatus("Add a username before sharing your public profile.");
+      return;
+    }
+
+    const profileUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/collector/${username}`
+        : `https://www.mydoorables.com/collector/${username}`;
+
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: "My Adorable Vault collection",
+          text: "Check out my Adorable Vault collection 💜",
+          url: profileUrl,
+        });
+        setShareStatus("Profile shared! 💜");
+      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(profileUrl);
+        setShareStatus("Public profile link copied! 💜");
+      } else {
+        setShareStatus(`Copy this link: ${profileUrl}`);
+      }
+
+      window.setTimeout(() => {
+        setShareStatus("");
+      }, 3000);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      setShareStatus("Could not share automatically. Try copying the public link.");
+    }
+  }
+
   async function saveVisibility(next: "private" | "extras_only" | "full") {
     try {
       setSavingVisibility(true);
@@ -701,11 +738,113 @@ export default function Page() {
     }
   }
 
+  async function handleAutoSellExtras() {
+    try {
+      setError("");
+      setNotice("");
+      setAutoSellLoading(true);
+
+      const supabase = getSupabase();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+
+      if (!isSubscribed) {
+        setShowUpgradeModal(true);
+        document.getElementById("upgrade-wall")?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+        return;
+      }
+
+      const extras = cards.filter((card) => Number(card.qty || 0) > 1);
+
+      if (!extras.length) {
+        setNotice("No extras to auto-list yet 💜");
+        return;
+      }
+
+      const { data: existingListings, error: existingError } = await supabase
+        .from("marketplace_listings")
+        .select("id, title, status, user_id")
+        .eq("user_id", user.id)
+        .in("status", ["active", "pending"]);
+
+      if (existingError) {
+        setError("Could not check existing listings: " + existingError.message);
+        return;
+      }
+
+      const existingKeys = new Set(
+        (existingListings || []).map((row: any) =>
+          String(row.title || "").trim().toLowerCase()
+        )
+      );
+
+      const listingsToCreate = extras
+        .filter((item) => !existingKeys.has(String(item.name || "").trim().toLowerCase()))
+        .map((item) => {
+          const extraQty = Math.max(1, Number(item.qty || 0) - 1);
+          const details = [
+            item.series ? `Series: ${item.series}` : "",
+            item.rarity ? `Rarity: ${item.rarity}` : "",
+            item.movie ? `Movie: ${item.movie}` : "",
+            item.subcategory ? `Category: ${item.subcategory}` : "",
+            `Extra quantity available: ${extraQty}`,
+            item.note ? `Collector note: ${item.note}` : "",
+          ].filter(Boolean);
+
+          return {
+            title: item.name,
+            description: `Auto-listed from collection extras. ${details.join(" • ")}`,
+            price: null,
+            image_url: item.image || null,
+            seller_name: username || user.email || "Collector",
+            user_id: user.id,
+            status: "active",
+            sold_at: null,
+            shipping_available: false,
+            shipping_price: null,
+            local_pickup_available: false,
+            pickup_location: null,
+          };
+        });
+
+      if (!listingsToCreate.length) {
+        setNotice("Your extras already have active or pending listings 💜");
+        return;
+      }
+
+      const { error: insertError } = await supabase
+        .from("marketplace_listings")
+        .insert(listingsToCreate);
+
+      if (insertError) {
+        setError("Could not auto-list extras: " + insertError.message);
+        return;
+      }
+
+      setNotice(`Auto-listed ${listingsToCreate.length} extra${listingsToCreate.length === 1 ? "" : "s"} in Marketplace 💜`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not auto-list extras.");
+    } finally {
+      setAutoSellLoading(false);
+    }
+  }
+
   async function handlePhotoSubmission(card: Card, file: File | null) {
     if (!file) return;
 
     try {
       setError("");
+      setNotice("");
       setUploadingPhotoId(card.id);
 
       const supabase = getSupabase();
@@ -720,7 +859,8 @@ export default function Page() {
         return;
       }
 
-      const fileExt = file.name.split(".").pop() || "jpg";
+      const rawExt = file.name.split(".").pop() || "jpg";
+      const fileExt = rawExt.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
       const filePath = `doorables/${card.id}/${user.id}-${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
@@ -731,7 +871,7 @@ export default function Page() {
         });
 
       if (uploadError) {
-        setError(uploadError.message);
+        setError("Photo upload failed: " + uploadError.message);
         return;
       }
 
@@ -741,30 +881,41 @@ export default function Page() {
 
       const publicUrl = publicUrlData.publicUrl;
 
-      const insertPayload = {
-        user_id: user.id,
+      const basePayload = {
         doorable_id: card.id,
         image_url: publicUrl,
         status: "pending",
       };
 
-      const { error: insertError } = await supabase
+      // Your project has used both submitted_by and user_id at different points.
+      // This tries the newer submitted_by column first, then falls back to user_id
+      // so the collection page can save even if the database/table is on the older setup.
+      const { error: submittedByError } = await supabase
         .from("image_submissions")
-        .insert([insertPayload])
-        .select();
+        .insert([{ ...basePayload, submitted_by: user.id }]);
 
-      if (insertError) {
-        setError(insertError.message || "Insert failed");
-        setUploadingPhotoId("");
-        return;
+      if (submittedByError) {
+        const { error: userIdError } = await supabase
+          .from("image_submissions")
+          .insert([{ ...basePayload, user_id: user.id }]);
+
+        if (userIdError) {
+          setError(
+            "Photo uploaded, but it could not be added to the review queue. submitted_by error: " +
+              submittedByError.message +
+              " | user_id error: " +
+              userIdError.message
+          );
+          return;
+        }
       }
 
+      setError("");
       setNotice("Photo submitted for review 💜");
       setPhotoNote((prev) => ({ ...prev, [card.id]: "" }));
       setExpandedPhotoCardId("");
     } catch (err) {
-      console.error("Upload crash:", err);
-      setError("Upload failed");
+      setError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
       setUploadingPhotoId("");
     }
@@ -1117,6 +1268,65 @@ export default function Page() {
           border-radius: 22px 0 0 22px;
         }
 
+
+        .autoSellCard {
+          background:
+            radial-gradient(circle at top right, rgba(192,132,252,0.28), transparent 32%),
+            linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          color: #111827;
+          border-radius: 24px;
+          padding: 18px;
+          box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+          margin-bottom: 18px;
+          border: 1px solid rgba(255,255,255,0.55);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+
+        .autoSellEyebrow {
+          color: #6d28d9;
+          font-size: 12px;
+          font-weight: 1000;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin-bottom: 6px;
+        }
+
+        .autoSellTitle {
+          font-size: clamp(1.25rem, 3vw, 1.8rem);
+          font-weight: 1000;
+          letter-spacing: -0.5px;
+          margin-bottom: 6px;
+        }
+
+        .autoSellText {
+          color: #4b5563;
+          line-height: 1.55;
+          font-size: 14px;
+          max-width: 760px;
+        }
+
+        .autoSellButton {
+          min-height: 50px;
+          border: none;
+          border-radius: 16px;
+          padding: 13px 18px;
+          font-weight: 1000;
+          color: white;
+          background: linear-gradient(135deg, #16a34a, #4f46e5);
+          box-shadow: 0 14px 26px rgba(79,70,229,0.22);
+          cursor: pointer;
+          white-space: nowrap;
+        }
+
+        .autoSellButton:disabled {
+          opacity: 0.62;
+          cursor: wait;
+        }
+
         .statsSection {
           display: grid;
           grid-template-columns: 1fr;
@@ -1305,7 +1515,8 @@ export default function Page() {
           flex-wrap: wrap;
         }
 
-        .publicProfileButton {
+        .publicProfileButton,
+        .publicProfileButton:visited {
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -1317,12 +1528,40 @@ export default function Page() {
           background: linear-gradient(135deg, #4f46e5, #7c3aed);
           box-shadow: 0 10px 18px rgba(79,70,229,0.28);
           min-height: 46px;
+          border: none;
+          cursor: pointer;
+          font-size: 15px;
+          font-family: inherit;
+        }
+
+        .publicProfileButton.secondary {
+          background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+        }
+
+        .publicProfileActions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: flex-end;
         }
 
         .publicProfileMeta {
           font-size: 13px;
           color: #4b5563;
           line-height: 1.5;
+        }
+
+        .copyStatus {
+          margin-top: 8px;
+          display: inline-flex;
+          padding: 8px 10px;
+          border-radius: 999px;
+          background: #ecfdf5;
+          color: #065f46;
+          border: 1px solid #bbf7d0;
+          font-size: 12px;
+          font-weight: 900;
         }
 
         .spotlightGrid {
@@ -1910,8 +2149,25 @@ export default function Page() {
             box-sizing: border-box;
           }
 
+
+          .autoSellCard {
+            display: grid;
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 14px;
+          }
+
+          .autoSellButton {
+            width: 100%;
+          }
+
           .publicProfileRow {
             display: grid;
+          }
+
+          .publicProfileActions {
+            display: grid;
+            width: 100%;
           }
 
           .publicProfileButton {
@@ -2129,13 +2385,36 @@ export default function Page() {
                 <div className="publicProfileMeta">
                   Your current visibility: <strong>{getVisibilityLabel()}</strong>
                   <br />
-                  Public link: <strong>/collector/{username}</strong>
+                  Public link:{" "}
+                  <Link
+                    href={`/collector/${username}`}
+                    style={{
+                      color: "#4f46e5",
+                      fontWeight: 900,
+                      textDecoration: "underline",
+                      textUnderlineOffset: 3,
+                    }}
+                  >
+                    /collector/{username}
+                  </Link>
                 </div>
+
+                {shareStatus && <div className="copyStatus">{shareStatus}</div>}
               </div>
 
-              <Link href={`/collector/${username}`} className="publicProfileButton">
-                View Public Profile
-              </Link>
+              <div className="publicProfileActions">
+                <Link href={`/collector/${username}`} className="publicProfileButton">
+                  View Public Profile
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => void sharePublicProfile()}
+                  className="publicProfileButton secondary"
+                >
+                  Share Profile 🔗
+                </button>
+              </div>
             </div>
           </section>
         )}
@@ -2205,6 +2484,30 @@ export default function Page() {
             </div>
           </section>
         )}
+
+        <section className="autoSellCard">
+          <div>
+            <div className="autoSellEyebrow">Marketplace Shortcut</div>
+            <div className="autoSellTitle">Auto-list your extras 💸</div>
+            <div className="autoSellText">
+              You currently have <strong>{extrasCount}</strong> extra Doorable{extrasCount === 1 ? "" : "s"}.
+              Create Marketplace listings from your extras in one click. Existing active or pending listings are skipped.
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="autoSellButton"
+            onClick={() => void handleAutoSellExtras()}
+            disabled={autoSellLoading || extrasCount <= 0}
+          >
+            {autoSellLoading
+              ? "Listing extras..."
+              : extrasCount > 0
+                ? `List ${extrasCount} Extra${extrasCount === 1 ? "" : "s"}`
+                : "No Extras Yet"}
+          </button>
+        </section>
 
         <section className="statsSection">
           {[

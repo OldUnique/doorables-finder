@@ -15,7 +15,6 @@ type Submission = {
   status: string | null;
   created_at: string | null;
   user_id: string | null;
-  submitted_by: string | null;
 };
 
 type Doorable = {
@@ -89,7 +88,7 @@ export default function AdminSubmissionsPage() {
 
     const { data: subData, error: subError } = await supabase
       .from("image_submissions")
-      .select("id, doorable_id, image_url, status, created_at, user_id, submitted_by")
+      .select("id, doorable_id, image_url, status, created_at, user_id")
       .in("status", ["pending", "approved", "rejected"])
       .order("created_at", { ascending: false });
 
@@ -107,11 +106,7 @@ export default function AdminSubmissionsPage() {
     );
 
     const userIds = Array.from(
-      new Set(
-        submissionRows
-          .map((row) => row.submitted_by || row.user_id)
-          .filter(Boolean)
-      )
+      new Set(submissionRows.map((row) => row.user_id).filter(Boolean))
     ) as string[];
 
     if (doorableIds.length > 0) {
@@ -178,11 +173,10 @@ export default function AdminSubmissionsPage() {
     setBusyId(submission.id);
     setMessage("");
 
-    const { data: doorableUpdateData, error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .from("doorables")
       .update({ image_url: submission.image_url })
-      .eq("id", submission.doorable_id)
-      .select("id");
+      .eq("id", submission.doorable_id);
 
     if (updateError) {
       setMessage("Could not update doorable image: " + updateError.message);
@@ -190,17 +184,10 @@ export default function AdminSubmissionsPage() {
       return;
     }
 
-    if (!doorableUpdateData || doorableUpdateData.length === 0) {
-      setMessage("Approve blocked: the Doorable image did not update. Check RLS permissions on the doorables table.");
-      setBusyId(null);
-      return;
-    }
-
-    const { data, error: statusError } = await supabase
+    const { error: statusError } = await supabase
       .from("image_submissions")
       .update({ status: "approved" })
-      .eq("id", submission.id)
-      .select("id");
+      .eq("id", submission.id);
 
     if (statusError) {
       setMessage("Image updated, but status failed: " + statusError.message);
@@ -208,13 +195,7 @@ export default function AdminSubmissionsPage() {
       return;
     }
 
-    if (!data || data.length === 0) {
-      setMessage("Approve blocked: status did not update. Check RLS permissions on image_submissions.");
-      setBusyId(null);
-      return;
-    }
-
-    setMessage("Approved image successfully 💜");
+    setMessage("Approved image successfully.");
     await loadEverything();
     setBusyId(null);
   }
@@ -223,20 +204,13 @@ export default function AdminSubmissionsPage() {
     setBusyId(submission.id);
     setMessage("");
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("image_submissions")
       .update({ status: "rejected" })
-      .eq("id", submission.id)
-      .select("id");
+      .eq("id", submission.id);
 
     if (error) {
       setMessage("Could not reject submission: " + error.message);
-      setBusyId(null);
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      setMessage("Reject blocked. Check RLS permissions on image_submissions.");
       setBusyId(null);
       return;
     }
@@ -250,20 +224,13 @@ export default function AdminSubmissionsPage() {
     setBusyId(submission.id);
     setMessage("");
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("image_submissions")
       .update({ status: "pending" })
-      .eq("id", submission.id)
-      .select("id");
+      .eq("id", submission.id);
 
     if (error) {
       setMessage("Could not move back to pending: " + error.message);
-      setBusyId(null);
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      setMessage("Pending update blocked. Check RLS permissions on image_submissions.");
       setBusyId(null);
       return;
     }
@@ -280,20 +247,13 @@ export default function AdminSubmissionsPage() {
     setBusyId(submission.id);
     setMessage("");
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("image_submissions")
       .delete()
-      .eq("id", submission.id)
-      .select("id");
+      .eq("id", submission.id);
 
     if (error) {
       setMessage("Could not delete submission: " + error.message);
-      setBusyId(null);
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      setMessage("Delete blocked. Check RLS permissions on image_submissions.");
       setBusyId(null);
       return;
     }
@@ -338,9 +298,8 @@ export default function AdminSubmissionsPage() {
 
     const filtered = submissions.filter((submission) => {
       const doorable = doorablesById[submission.doorable_id];
-      const submitterId = submission.submitted_by || submission.user_id;
-      const submitter = submitterId
-        ? usersById[submitterId]?.email || submitterId
+      const submitter = submission.user_id
+        ? usersById[submission.user_id]?.email || submission.user_id
         : "Unknown user";
 
       const matchesStatus =
@@ -592,11 +551,8 @@ export default function AdminSubmissionsPage() {
             submission={selectedSubmission}
             doorable={doorablesById[selectedSubmission.doorable_id]}
             submitter={
-              (selectedSubmission.submitted_by || selectedSubmission.user_id)
-                ? usersById[selectedSubmission.submitted_by || selectedSubmission.user_id || ""]?.email ||
-                  selectedSubmission.submitted_by ||
-                  selectedSubmission.user_id ||
-                  "Unknown user"
+              selectedSubmission.user_id
+                ? usersById[selectedSubmission.user_id]?.email || selectedSubmission.user_id
                 : "Unknown user"
             }
             busyId={busyId}
@@ -618,9 +574,8 @@ export default function AdminSubmissionsPage() {
           <section className={`submissionGrid ${compactMode ? "compact" : ""}`}>
             {filteredSubmissions.map((submission, index) => {
               const doorable = doorablesById[submission.doorable_id];
-              const submitterId = submission.submitted_by || submission.user_id;
-              const submitter = submitterId
-                ? usersById[submitterId]?.email || submitterId
+              const submitter = submission.user_id
+                ? usersById[submission.user_id]?.email || submission.user_id
                 : "Unknown user";
               const theme = statusTheme(submission.status);
               const isBusy = busyId === submission.id;

@@ -742,6 +742,7 @@ export default function Page() {
 
     try {
       setError("");
+      setNotice("");
       setUploadingPhotoId(card.id);
 
       const supabase = getSupabase();
@@ -756,7 +757,8 @@ export default function Page() {
         return;
       }
 
-      const fileExt = file.name.split(".").pop() || "jpg";
+      const rawExt = file.name.split(".").pop() || "jpg";
+      const fileExt = rawExt.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
       const filePath = `doorables/${card.id}/${user.id}-${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
@@ -767,7 +769,7 @@ export default function Page() {
         });
 
       if (uploadError) {
-        setError(uploadError.message);
+        setError("Photo upload failed: " + uploadError.message);
         return;
       }
 
@@ -777,22 +779,33 @@ export default function Page() {
 
       const publicUrl = publicUrlData.publicUrl;
 
-      const insertPayload = {
-        submitted_by: user.id,
+      const basePayload = {
         doorable_id: card.id,
         image_url: publicUrl,
         status: "pending",
       };
 
-      const { error: insertError } = await supabase
+      // Your project has used both submitted_by and user_id at different points.
+      // This tries the newer submitted_by column first, then falls back to user_id
+      // so the collection page can save even if the database/table is on the older setup.
+      const { error: submittedByError } = await supabase
         .from("image_submissions")
-        .insert([insertPayload])
-        .select();
+        .insert([{ ...basePayload, submitted_by: user.id }]);
 
-      if (insertError) {
-        setError("Photo uploaded, but it could not be added to the review queue: " + (insertError.message || "Insert failed"));
-        setUploadingPhotoId("");
-        return;
+      if (submittedByError) {
+        const { error: userIdError } = await supabase
+          .from("image_submissions")
+          .insert([{ ...basePayload, user_id: user.id }]);
+
+        if (userIdError) {
+          setError(
+            "Photo uploaded, but it could not be added to the review queue. submitted_by error: " +
+              submittedByError.message +
+              " | user_id error: " +
+              userIdError.message
+          );
+          return;
+        }
       }
 
       setError("");
@@ -800,8 +813,7 @@ export default function Page() {
       setPhotoNote((prev) => ({ ...prev, [card.id]: "" }));
       setExpandedPhotoCardId("");
     } catch (err) {
-      console.error("Upload crash:", err);
-      setError("Upload failed");
+      setError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
       setUploadingPhotoId("");
     }

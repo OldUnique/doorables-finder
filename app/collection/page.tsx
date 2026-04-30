@@ -359,6 +359,7 @@ export default function Page() {
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [expandedSeries, setExpandedSeries] = useState(false);
+  const [shareStatus, setShareStatus] = useState("");
 
   useEffect(() => {
     void load();
@@ -576,6 +577,41 @@ export default function Page() {
           : "Collection page crashed while loading."
       );
       setLoading(false);
+    }
+  }
+
+  async function sharePublicProfile() {
+    if (!username) {
+      setShareStatus("Add a username before sharing your public profile.");
+      return;
+    }
+
+    const profileUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/collector/${username}`
+        : `https://www.mydoorables.com/collector/${username}`;
+
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: "My Adorable Vault collection",
+          text: "Check out my Adorable Vault collection 💜",
+          url: profileUrl,
+        });
+        setShareStatus("Profile shared! 💜");
+      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(profileUrl);
+        setShareStatus("Public profile link copied! 💜");
+      } else {
+        setShareStatus(`Copy this link: ${profileUrl}`);
+      }
+
+      window.setTimeout(() => {
+        setShareStatus("");
+      }, 3000);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      setShareStatus("Could not share automatically. Try copying the public link.");
     }
   }
 
@@ -1305,7 +1341,8 @@ export default function Page() {
           flex-wrap: wrap;
         }
 
-        .publicProfileButton {
+        .publicProfileButton,
+        .publicProfileButton:visited {
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -1317,12 +1354,40 @@ export default function Page() {
           background: linear-gradient(135deg, #4f46e5, #7c3aed);
           box-shadow: 0 10px 18px rgba(79,70,229,0.28);
           min-height: 46px;
+          border: none;
+          cursor: pointer;
+          font-size: 15px;
+          font-family: inherit;
+        }
+
+        .publicProfileButton.secondary {
+          background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+        }
+
+        .publicProfileActions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: flex-end;
         }
 
         .publicProfileMeta {
           font-size: 13px;
           color: #4b5563;
           line-height: 1.5;
+        }
+
+        .copyStatus {
+          margin-top: 8px;
+          display: inline-flex;
+          padding: 8px 10px;
+          border-radius: 999px;
+          background: #ecfdf5;
+          color: #065f46;
+          border: 1px solid #bbf7d0;
+          font-size: 12px;
+          font-weight: 900;
         }
 
         .spotlightGrid {
@@ -1914,6 +1979,11 @@ export default function Page() {
             display: grid;
           }
 
+          .publicProfileActions {
+            display: grid;
+            width: 100%;
+          }
+
           .publicProfileButton {
             width: 100%;
             box-sizing: border-box;
@@ -2129,13 +2199,36 @@ export default function Page() {
                 <div className="publicProfileMeta">
                   Your current visibility: <strong>{getVisibilityLabel()}</strong>
                   <br />
-                  Public link: <strong>/collector/{username}</strong>
+                  Public link:{" "}
+                  <Link
+                    href={`/collector/${username}`}
+                    style={{
+                      color: "#4f46e5",
+                      fontWeight: 900,
+                      textDecoration: "underline",
+                      textUnderlineOffset: 3,
+                    }}
+                  >
+                    /collector/{username}
+                  </Link>
                 </div>
+
+                {shareStatus && <div className="copyStatus">{shareStatus}</div>}
               </div>
 
-              <Link href={`/collector/${username}`} className="publicProfileButton">
-                View Public Profile
-              </Link>
+              <div className="publicProfileActions">
+                <Link href={`/collector/${username}`} className="publicProfileButton">
+                  View Public Profile
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => void sharePublicProfile()}
+                  className="publicProfileButton secondary"
+                >
+                  Share Profile 🔗
+                </button>
+              </div>
             </div>
           </section>
         )}

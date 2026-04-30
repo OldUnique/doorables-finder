@@ -748,7 +748,7 @@ export default function Page() {
     }
   }
 
-  function openAutoSellModal() {
+  async function openAutoSellModal() {
     setError("");
     setNotice("");
 
@@ -768,21 +768,51 @@ export default function Page() {
       return;
     }
 
+    const supabase = getSupabase();
+
+    const extraNames = extras.map((item) => item.name).filter(Boolean);
+
+    const { data: soldListings } = await supabase
+      .from("marketplace_listings")
+      .select("title, price, status, sold_at")
+      .in("title", extraNames)
+      .or("status.eq.sold,sold_at.not.is.null")
+      .not("price", "is", null);
+
+    const soldPriceMap = new Map<string, number[]>();
+
+    (soldListings || []).forEach((row: any) => {
+      const key = String(row.title || "").trim().toLowerCase();
+      const price = Number(row.price);
+
+      if (!key || Number.isNaN(price) || price <= 0) return;
+
+      const current = soldPriceMap.get(key) || [];
+      current.push(price);
+      soldPriceMap.set(key, current);
+    });
+
     const drafts = extras.map((item) => {
       const extraQty = Math.max(1, Number(item.qty || 0) - 1);
+      const soldPrices = soldPriceMap.get(String(item.name || "").trim().toLowerCase()) || [];
+      const averageSoldPrice = soldPrices.length
+        ? soldPrices.reduce((sum, price) => sum + price, 0) / soldPrices.length
+        : 0;
+
       const details = [
         item.series ? `Series: ${item.series}` : "",
         item.rarity ? `Rarity: ${item.rarity}` : "",
         item.movie ? `Movie: ${item.movie}` : "",
         item.subcategory ? `Category: ${item.subcategory}` : "",
         `Extra quantity available: ${extraQty}`,
+        averageSoldPrice > 0 ? `Suggested from sold average: $${averageSoldPrice.toFixed(2)}` : "No sold average yet — example: $3.00",
         item.note ? `Collector note: ${item.note}` : "",
       ].filter(Boolean);
 
       return {
         cardId: item.id,
         title: item.name,
-        price: "",
+        price: averageSoldPrice > 0 ? averageSoldPrice.toFixed(2) : "",
         description: `Auto-listed from collection extras. ${details.join(" • ")}`,
         selected: true,
       };
@@ -804,6 +834,16 @@ export default function Page() {
       )
     );
   }
+
+  function setAllAutoSellDraftsSelected(selected: boolean) {
+    setAutoSellDrafts((prev) =>
+      prev.map((draft) => ({
+        ...draft,
+        selected,
+      }))
+    );
+  }
+
 
   async function handleAutoSellExtras() {
     try {
@@ -1384,6 +1424,45 @@ export default function Page() {
           max-width: 760px;
         }
 
+
+        .autoSellToolbar {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: 14px;
+          padding: 10px;
+          border-radius: 16px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+        }
+
+        .autoSellToolbarButtons {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .autoSellSmallButton {
+          min-height: 40px;
+          border-radius: 12px;
+          border: 1px solid #d1d5db;
+          background: #ffffff;
+          color: #334155;
+          font-weight: 950;
+          padding: 9px 12px;
+          cursor: pointer;
+        }
+
+        .autoSellHint {
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 850;
+          line-height: 1.35;
+        }
+
+
         .autoSellButton {
           min-height: 50px;
           border: none;
@@ -1931,6 +2010,12 @@ export default function Page() {
           gap: 8px;
         }
 
+        .autoSellTitlePriceRow {
+          display: grid;
+          grid-template-columns: 1fr 120px;
+          gap: 8px;
+        }
+
         .autoSellInput,
         .autoSellTextarea {
           width: 100%;
@@ -2323,7 +2408,46 @@ export default function Page() {
             margin-bottom: 14px;
           }
 
-          .autoSellButton {
+  
+        .autoSellToolbar {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: 14px;
+          padding: 10px;
+          border-radius: 16px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+        }
+
+        .autoSellToolbarButtons {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .autoSellSmallButton {
+          min-height: 40px;
+          border-radius: 12px;
+          border: 1px solid #d1d5db;
+          background: #ffffff;
+          color: #334155;
+          font-weight: 950;
+          padding: 9px 12px;
+          cursor: pointer;
+        }
+
+        .autoSellHint {
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 850;
+          line-height: 1.35;
+        }
+
+
+        .autoSellButton {
             width: 100%;
           }
 
@@ -2383,6 +2507,32 @@ export default function Page() {
             margin-bottom: 14px;
           }
         }
+
+
+
+          .autoSellToolbar {
+            align-items: stretch;
+          }
+
+          .autoSellToolbarButtons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            width: 100%;
+          }
+
+          .autoSellSmallButton {
+            width: 100%;
+          }
+
+          .autoSellTitlePriceRow {
+            grid-template-columns: 1fr;
+          }
+
+          .autoSellInput,
+          .autoSellTextarea {
+            min-height: 46px;
+            font-size: 15px;
+          }
 
 
           .autoSellItem {
@@ -2679,7 +2829,7 @@ export default function Page() {
           <button
             type="button"
             className="autoSellButton"
-            onClick={openAutoSellModal}
+            onClick={() => void openAutoSellModal()}
             disabled={autoSellLoading || extrasCount <= 0}
           >
             {autoSellLoading
@@ -3222,6 +3372,30 @@ export default function Page() {
                 Pick which extras should become Marketplace listings. You can add prices now or leave them blank and edit later.
               </div>
 
+              <div className="autoSellToolbar">
+                <div className="autoSellHint">
+                  Prices auto-fill only when this item has a sold listing average. Otherwise, price stays blank and can be edited later.
+                </div>
+
+                <div className="autoSellToolbarButtons">
+                  <button
+                    type="button"
+                    className="autoSellSmallButton"
+                    onClick={() => setAllAutoSellDraftsSelected(true)}
+                  >
+                    Select All
+                  </button>
+
+                  <button
+                    type="button"
+                    className="autoSellSmallButton"
+                    onClick={() => setAllAutoSellDraftsSelected(false)}
+                  >
+                    Deselect All
+                  </button>
+                </div>
+              </div>
+
               <div className="autoSellModalList">
                 {autoSellDrafts.map((draft) => {
                   const item = cards.find((card) => card.id === draft.cardId);
@@ -3251,7 +3425,7 @@ export default function Page() {
                       </div>
 
                       <div className="autoSellFields">
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: 8 }}>
+                        <div className="autoSellTitlePriceRow">
                           <input
                             className="autoSellInput"
                             value={draft.title}
@@ -3271,7 +3445,7 @@ export default function Page() {
                                 price: e.target.value,
                               })
                             }
-                            placeholder="Price"
+                            placeholder="Price example: 3.00"
                             inputMode="decimal"
                           />
                         </div>

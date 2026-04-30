@@ -40,6 +40,14 @@ type TierCard = {
   accent: string;
 };
 
+type AutoSellDraft = {
+  cardId: string;
+  title: string;
+  price: string;
+  description: string;
+  selected: boolean;
+};
+
 const FREE_LIMIT = 50;
 const MONTHLY_PRICE_LABEL = "$3/month";
 const YEARLY_PRICE_LABEL = "$15/year";
@@ -332,6 +340,8 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
   const [autoSellLoading, setAutoSellLoading] = useState(false);
+  const [showAutoSellModal, setShowAutoSellModal] = useState(false);
+  const [autoSellDrafts, setAutoSellDrafts] = useState<AutoSellDraft[]>([]);
 
   const [visibility, setVisibility] = useState<"private" | "extras_only" | "full">("private");
   const [savingVisibility, setSavingVisibility] = useState(false);
@@ -738,6 +748,63 @@ export default function Page() {
     }
   }
 
+  function openAutoSellModal() {
+    setError("");
+    setNotice("");
+
+    if (!isSubscribed) {
+      setShowUpgradeModal(true);
+      document.getElementById("upgrade-wall")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      return;
+    }
+
+    const extras = cards.filter((card) => Number(card.qty || 0) > 1);
+
+    if (!extras.length) {
+      setNotice("No extras to auto-list yet 💜");
+      return;
+    }
+
+    const drafts = extras.map((item) => {
+      const extraQty = Math.max(1, Number(item.qty || 0) - 1);
+      const details = [
+        item.series ? `Series: ${item.series}` : "",
+        item.rarity ? `Rarity: ${item.rarity}` : "",
+        item.movie ? `Movie: ${item.movie}` : "",
+        item.subcategory ? `Category: ${item.subcategory}` : "",
+        `Extra quantity available: ${extraQty}`,
+        item.note ? `Collector note: ${item.note}` : "",
+      ].filter(Boolean);
+
+      return {
+        cardId: item.id,
+        title: item.name,
+        price: "",
+        description: `Auto-listed from collection extras. ${details.join(" • ")}`,
+        selected: true,
+      };
+    });
+
+    setAutoSellDrafts(drafts);
+    setShowAutoSellModal(true);
+  }
+
+  function updateAutoSellDraft(cardId: string, patch: Partial<AutoSellDraft>) {
+    setAutoSellDrafts((prev) =>
+      prev.map((draft) =>
+        draft.cardId === cardId
+          ? {
+              ...draft,
+              ...patch,
+            }
+          : draft
+      )
+    );
+  }
+
   async function handleAutoSellExtras() {
     try {
       setError("");
@@ -764,10 +831,20 @@ export default function Page() {
         return;
       }
 
-      const extras = cards.filter((card) => Number(card.qty || 0) > 1);
+      const selectedDrafts = autoSellDrafts.filter((draft) => draft.selected);
 
-      if (!extras.length) {
-        setNotice("No extras to auto-list yet 💜");
+      if (!selectedDrafts.length) {
+        setError("Choose at least one extra to list.");
+        return;
+      }
+
+      const invalidPrice = selectedDrafts.find((draft) => {
+        const cleanPrice = draft.price.trim();
+        return cleanPrice !== "" && Number.isNaN(Number(cleanPrice));
+      });
+
+      if (invalidPrice) {
+        setError(`Price for "${invalidPrice.title}" needs to be a valid number or blank.`);
         return;
       }
 
@@ -788,24 +865,19 @@ export default function Page() {
         )
       );
 
-      const listingsToCreate = extras
-        .filter((item) => !existingKeys.has(String(item.name || "").trim().toLowerCase()))
-        .map((item) => {
-          const extraQty = Math.max(1, Number(item.qty || 0) - 1);
-          const details = [
-            item.series ? `Series: ${item.series}` : "",
-            item.rarity ? `Rarity: ${item.rarity}` : "",
-            item.movie ? `Movie: ${item.movie}` : "",
-            item.subcategory ? `Category: ${item.subcategory}` : "",
-            `Extra quantity available: ${extraQty}`,
-            item.note ? `Collector note: ${item.note}` : "",
-          ].filter(Boolean);
+      const cardMap = new Map(cards.map((card) => [card.id, card]));
+
+      const listingsToCreate = selectedDrafts
+        .filter((draft) => !existingKeys.has(String(draft.title || "").trim().toLowerCase()))
+        .map((draft) => {
+          const item = cardMap.get(draft.cardId);
+          const numericPrice = draft.price.trim() === "" ? null : Number(draft.price.trim());
 
           return {
-            title: item.name,
-            description: `Auto-listed from collection extras. ${details.join(" • ")}`,
-            price: null,
-            image_url: item.image || null,
+            title: draft.title.trim() || item?.name || "Doorable Extra",
+            description: draft.description.trim() || null,
+            price: numericPrice,
+            image_url: item?.image || null,
             seller_name: username || user.email || "Collector",
             user_id: user.id,
             status: "active",
@@ -818,7 +890,8 @@ export default function Page() {
         });
 
       if (!listingsToCreate.length) {
-        setNotice("Your extras already have active or pending listings 💜");
+        setNotice("Those extras already have active or pending listings 💜");
+        setShowAutoSellModal(false);
         return;
       }
 
@@ -832,6 +905,8 @@ export default function Page() {
       }
 
       setNotice(`Auto-listed ${listingsToCreate.length} extra${listingsToCreate.length === 1 ? "" : "s"} in Marketplace 💜`);
+      setShowAutoSellModal(false);
+      setAutoSellDrafts([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not auto-list extras.");
     } finally {
@@ -1808,6 +1883,97 @@ export default function Page() {
           box-shadow: 0 14px 26px rgba(79,70,229,0.26);
         }
 
+
+        .autoSellModalList {
+          display: grid;
+          gap: 12px;
+          margin-top: 18px;
+          max-height: none;
+          overflow: auto;
+          padding-right: 4px;
+          flex: 1;
+          min-height: 0;
+        }
+
+        .autoSellItem {
+          display: grid;
+          grid-template-columns: auto 92px 1fr;
+          gap: 12px;
+          align-items: start;
+          text-align: left;
+          border-radius: 18px;
+          border: 1px solid #e5e7eb;
+          background: #ffffff;
+          padding: 12px;
+          box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+        }
+
+        .autoSellThumb {
+          width: 76px;
+          height: 76px;
+          border-radius: 14px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+
+        .autoSellThumb img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+
+        .autoSellFields {
+          display: grid;
+          gap: 8px;
+        }
+
+        .autoSellInput,
+        .autoSellTextarea {
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid #d1d5db;
+          border-radius: 12px;
+          padding: 11px 12px;
+          color: #111827;
+          background: white;
+          font-size: 14px;
+          font-family: inherit;
+        }
+
+        .autoSellTextarea {
+          min-height: 70px;
+          resize: vertical;
+        }
+
+        .autoSellModalActions {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          margin-top: 14px;
+          padding-top: 12px;
+          border-top: 1px solid #e5e7eb;
+          background: linear-gradient(180deg, rgba(255,255,255,0.92), #ffffff);
+          position: sticky;
+          bottom: 0;
+          z-index: 5;
+        }
+
+        .autoSellCancelButton {
+          min-height: 50px;
+          border-radius: 17px;
+          padding: 13px 18px;
+          font-weight: 1000;
+          border: 1px solid #d1d5db;
+          background: #f8fafc;
+          color: #334155;
+          cursor: pointer;
+        }
+
+
         .eliteModalOverlay {
           position: fixed;
           inset: 0;
@@ -2218,6 +2384,21 @@ export default function Page() {
           }
         }
 
+
+          .autoSellItem {
+            grid-template-columns: 1fr;
+          }
+
+          .autoSellThumb {
+            width: 100%;
+            height: 150px;
+          }
+
+          .autoSellModalActions {
+            grid-template-columns: 1fr;
+          }
+
+
         @media (max-width: 420px) {
           .statsSection {
             grid-template-columns: 1fr;
@@ -2498,7 +2679,7 @@ export default function Page() {
           <button
             type="button"
             className="autoSellButton"
-            onClick={() => void handleAutoSellExtras()}
+            onClick={openAutoSellModal}
             disabled={autoSellLoading || extrasCount <= 0}
           >
             {autoSellLoading
@@ -3011,6 +3192,135 @@ export default function Page() {
             <Link href="/pricing" className="eliteMobileButton">
               Upgrade
             </Link>
+          </div>
+        )}
+
+        {showAutoSellModal && (
+          <div className="eliteModalOverlay">
+            <div
+              className="eliteModal"
+              style={{
+                width: "min(860px, 100%)",
+                textAlign: "left",
+                maxHeight: "88vh",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <button
+                type="button"
+                className="eliteModalClose"
+                onClick={() => setShowAutoSellModal(false)}
+              >
+                ×
+              </button>
+
+              <div className="eliteModalIcon" style={{ margin: "0 0 12px" }}>💸</div>
+              <h2 className="eliteModalTitle">Choose extras to list</h2>
+
+              <div className="eliteModalText" style={{ marginLeft: 0 }}>
+                Pick which extras should become Marketplace listings. You can add prices now or leave them blank and edit later.
+              </div>
+
+              <div className="autoSellModalList">
+                {autoSellDrafts.map((draft) => {
+                  const item = cards.find((card) => card.id === draft.cardId);
+                  const extraQty = item ? Math.max(1, Number(item.qty || 0) - 1) : 1;
+
+                  return (
+                    <div key={draft.cardId} className="autoSellItem">
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 900 }}>
+                        <input
+                          type="checkbox"
+                          checked={draft.selected}
+                          onChange={(e) =>
+                            updateAutoSellDraft(draft.cardId, {
+                              selected: e.target.checked,
+                            })
+                          }
+                        />
+                        List
+                      </label>
+
+                      <div className="autoSellThumb">
+                        {item?.image ? (
+                          <img src={item.image} alt={item.name} loading="lazy" decoding="async" />
+                        ) : (
+                          <div style={{ color: "#64748b", fontWeight: 900, fontSize: 12 }}>No image</div>
+                        )}
+                      </div>
+
+                      <div className="autoSellFields">
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: 8 }}>
+                          <input
+                            className="autoSellInput"
+                            value={draft.title}
+                            onChange={(e) =>
+                              updateAutoSellDraft(draft.cardId, {
+                                title: e.target.value,
+                              })
+                            }
+                            placeholder="Listing title"
+                          />
+
+                          <input
+                            className="autoSellInput"
+                            value={draft.price}
+                            onChange={(e) =>
+                              updateAutoSellDraft(draft.cardId, {
+                                price: e.target.value,
+                              })
+                            }
+                            placeholder="Price"
+                            inputMode="decimal"
+                          />
+                        </div>
+
+                        <textarea
+                          className="autoSellTextarea"
+                          value={draft.description}
+                          onChange={(e) =>
+                            updateAutoSellDraft(draft.cardId, {
+                              description: e.target.value,
+                            })
+                          }
+                          placeholder="Description"
+                        />
+
+                        <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800 }}>
+                          Qty extra: {extraQty} • {item?.series || "Unknown Series"} • {item?.rarity || "Unknown rarity"}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ marginTop: 12, color: "#475569", fontSize: 13, fontWeight: 900 }}>
+                {autoSellDrafts.filter((draft) => draft.selected).length} selected to list
+              </div>
+
+              <div className="autoSellModalActions">
+                <button
+                  type="button"
+                  className="autoSellCancelButton"
+                  onClick={() => setShowAutoSellModal(false)}
+                  disabled={autoSellLoading}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  className="eliteModalButton"
+                  onClick={() => void handleAutoSellExtras()}
+                  disabled={autoSellLoading}
+                  style={{ marginTop: 0 }}
+                >
+                  {autoSellLoading ? "Creating listings..." : "Create Selected Listings 💜"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

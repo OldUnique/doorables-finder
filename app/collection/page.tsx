@@ -1888,9 +1888,11 @@ export default function Page() {
           display: grid;
           gap: 12px;
           margin-top: 18px;
-          max-height: 58vh;
+          max-height: none;
           overflow: auto;
           padding-right: 4px;
+          flex: 1;
+          min-height: 0;
         }
 
         .autoSellItem {
@@ -1952,6 +1954,12 @@ export default function Page() {
           grid-template-columns: 1fr 1fr;
           gap: 10px;
           margin-top: 14px;
+          padding-top: 12px;
+          border-top: 1px solid #e5e7eb;
+          background: linear-gradient(180deg, rgba(255,255,255,0.92), #ffffff);
+          position: sticky;
+          bottom: 0;
+          z-index: 5;
         }
 
         .autoSellCancelButton {
@@ -3189,7 +3197,16 @@ export default function Page() {
 
         {showAutoSellModal && (
           <div className="eliteModalOverlay">
-            <div className="eliteModal" style={{ width: "min(860px, 100%)", textAlign: "left" }}>
+            <div
+              className="eliteModal"
+              style={{
+                width: "min(860px, 100%)",
+                textAlign: "left",
+                maxHeight: "88vh",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
               <button
                 type="button"
                 className="eliteModalClose"
@@ -3277,6 +3294,10 @@ export default function Page() {
                     </div>
                   );
                 })}
+              </div>
+
+              <div style={{ marginTop: 12, color: "#475569", fontSize: 13, fontWeight: 900 }}>
+                {autoSellDrafts.filter((draft) => draft.selected).length} selected to list
               </div>
 
               <div className="autoSellModalActions">

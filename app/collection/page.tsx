@@ -331,6 +331,7 @@ export default function Page() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
+  const [autoSellLoading, setAutoSellLoading] = useState(false);
 
   const [visibility, setVisibility] = useState<"private" | "extras_only" | "full">("private");
   const [savingVisibility, setSavingVisibility] = useState(false);
@@ -734,6 +735,107 @@ export default function Page() {
     } catch (err) {
       setSavingId("");
       alert("Save failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
+  }
+
+  async function handleAutoSellExtras() {
+    try {
+      setError("");
+      setNotice("");
+      setAutoSellLoading(true);
+
+      const supabase = getSupabase();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+
+      if (!isSubscribed) {
+        setShowUpgradeModal(true);
+        document.getElementById("upgrade-wall")?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+        return;
+      }
+
+      const extras = cards.filter((card) => Number(card.qty || 0) > 1);
+
+      if (!extras.length) {
+        setNotice("No extras to auto-list yet 💜");
+        return;
+      }
+
+      const { data: existingListings, error: existingError } = await supabase
+        .from("marketplace_listings")
+        .select("id, title, status, user_id")
+        .eq("user_id", user.id)
+        .in("status", ["active", "pending"]);
+
+      if (existingError) {
+        setError("Could not check existing listings: " + existingError.message);
+        return;
+      }
+
+      const existingKeys = new Set(
+        (existingListings || []).map((row: any) =>
+          String(row.title || "").trim().toLowerCase()
+        )
+      );
+
+      const listingsToCreate = extras
+        .filter((item) => !existingKeys.has(String(item.name || "").trim().toLowerCase()))
+        .map((item) => {
+          const extraQty = Math.max(1, Number(item.qty || 0) - 1);
+          const details = [
+            item.series ? `Series: ${item.series}` : "",
+            item.rarity ? `Rarity: ${item.rarity}` : "",
+            item.movie ? `Movie: ${item.movie}` : "",
+            item.subcategory ? `Category: ${item.subcategory}` : "",
+            `Extra quantity available: ${extraQty}`,
+            item.note ? `Collector note: ${item.note}` : "",
+          ].filter(Boolean);
+
+          return {
+            title: item.name,
+            description: `Auto-listed from collection extras. ${details.join(" • ")}`,
+            price: null,
+            image_url: item.image || null,
+            seller_name: username || user.email || "Collector",
+            user_id: user.id,
+            status: "active",
+            sold_at: null,
+            shipping_available: false,
+            shipping_price: null,
+            local_pickup_available: false,
+            pickup_location: null,
+          };
+        });
+
+      if (!listingsToCreate.length) {
+        setNotice("Your extras already have active or pending listings 💜");
+        return;
+      }
+
+      const { error: insertError } = await supabase
+        .from("marketplace_listings")
+        .insert(listingsToCreate);
+
+      if (insertError) {
+        setError("Could not auto-list extras: " + insertError.message);
+        return;
+      }
+
+      setNotice(`Auto-listed ${listingsToCreate.length} extra${listingsToCreate.length === 1 ? "" : "s"} in Marketplace 💜`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not auto-list extras.");
+    } finally {
+      setAutoSellLoading(false);
     }
   }
 
@@ -1164,6 +1266,65 @@ export default function Page() {
           inset: 0 auto 0 0;
           width: 8px;
           border-radius: 22px 0 0 22px;
+        }
+
+
+        .autoSellCard {
+          background:
+            radial-gradient(circle at top right, rgba(192,132,252,0.28), transparent 32%),
+            linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          color: #111827;
+          border-radius: 24px;
+          padding: 18px;
+          box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+          margin-bottom: 18px;
+          border: 1px solid rgba(255,255,255,0.55);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+
+        .autoSellEyebrow {
+          color: #6d28d9;
+          font-size: 12px;
+          font-weight: 1000;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin-bottom: 6px;
+        }
+
+        .autoSellTitle {
+          font-size: clamp(1.25rem, 3vw, 1.8rem);
+          font-weight: 1000;
+          letter-spacing: -0.5px;
+          margin-bottom: 6px;
+        }
+
+        .autoSellText {
+          color: #4b5563;
+          line-height: 1.55;
+          font-size: 14px;
+          max-width: 760px;
+        }
+
+        .autoSellButton {
+          min-height: 50px;
+          border: none;
+          border-radius: 16px;
+          padding: 13px 18px;
+          font-weight: 1000;
+          color: white;
+          background: linear-gradient(135deg, #16a34a, #4f46e5);
+          box-shadow: 0 14px 26px rgba(79,70,229,0.22);
+          cursor: pointer;
+          white-space: nowrap;
+        }
+
+        .autoSellButton:disabled {
+          opacity: 0.62;
+          cursor: wait;
         }
 
         .statsSection {
@@ -1988,6 +2149,18 @@ export default function Page() {
             box-sizing: border-box;
           }
 
+
+          .autoSellCard {
+            display: grid;
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 14px;
+          }
+
+          .autoSellButton {
+            width: 100%;
+          }
+
           .publicProfileRow {
             display: grid;
           }
@@ -2311,6 +2484,30 @@ export default function Page() {
             </div>
           </section>
         )}
+
+        <section className="autoSellCard">
+          <div>
+            <div className="autoSellEyebrow">Marketplace Shortcut</div>
+            <div className="autoSellTitle">Auto-list your extras 💸</div>
+            <div className="autoSellText">
+              You currently have <strong>{extrasCount}</strong> extra Doorable{extrasCount === 1 ? "" : "s"}.
+              Create Marketplace listings from your extras in one click. Existing active or pending listings are skipped.
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="autoSellButton"
+            onClick={() => void handleAutoSellExtras()}
+            disabled={autoSellLoading || extrasCount <= 0}
+          >
+            {autoSellLoading
+              ? "Listing extras..."
+              : extrasCount > 0
+                ? `List ${extrasCount} Extra${extrasCount === 1 ? "" : "s"}`
+                : "No Extras Yet"}
+          </button>
+        </section>
 
         <section className="statsSection">
           {[

@@ -370,7 +370,6 @@ export default function Page() {
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [expandedSeries, setExpandedSeries] = useState(false);
-  const [showSeriesProgress, setShowSeriesProgress] = useState(false);
   const [shareStatus, setShareStatus] = useState("");
 
   useEffect(() => {
@@ -1517,8 +1516,9 @@ export default function Page() {
         }
 
         .filterPanel {
-          position: relative;
-          z-index: 1;
+          position: sticky;
+          top: 8px;
+          z-index: 55;
         }
 
         .filterHeader {
@@ -1831,23 +1831,6 @@ export default function Page() {
           background: #ffffff;
           text-align: left;
           cursor: pointer;
-        }
-
-        .jumpPanel {
-          margin-bottom: 14px;
-        }
-
-        .forceShowChips {
-          display: flex !important;
-          flex-wrap: wrap;
-          overflow: visible;
-          padding-bottom: 0;
-          gap: 8px;
-        }
-
-        .forceShowChips .quickChip {
-          min-width: 96px;
-          justify-content: center;
         }
 
         .showMoreButton {
@@ -3004,118 +2987,74 @@ export default function Page() {
         </section>
 
         <section className="panelCard">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              marginBottom: showSeriesProgress ? 12 : 0,
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 900 }}>Series Progress</div>
-              <div style={{ fontSize: 13, color: "#64748b", marginTop: 3, fontWeight: 700 }}>
-                {seriesProgress.length} series tracked • open when you want to jump by series
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="clearFiltersButton"
-              onClick={() => setShowSeriesProgress((prev) => !prev)}
-            >
-              {showSeriesProgress ? "Hide Series" : "Show Series"}
-            </button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+            <div style={{ fontSize: 18, fontWeight: 900 }}>Series Progress</div>
+            {isMobile && seriesProgress.length > 6 && (
+              <button
+                type="button"
+                className="clearFiltersButton"
+                onClick={() => setExpandedSeries((prev) => !prev)}
+              >
+                {expandedSeries ? "Show Less" : "Show All"}
+              </button>
+            )}
           </div>
 
-          {showSeriesProgress && (
-            <>
-              <div className="seriesProgressGrid" style={{ marginTop: 12 }}>
-                {visibleSeriesProgress.map((entry) => (
-                  <button
-                    key={entry.series}
-                    onClick={() => jumpToSeries(entry.series)}
-                    className="seriesProgressButton"
-                  >
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>
-                      {entry.series}
-                      {entry.subcategoryLabel && (
-                        <span
-                          style={{
-                            marginLeft: 8,
-                            color: "#6366f1",
-                            fontWeight: 700,
-                          }}
-                        >
-                          • {entry.subcategoryLabel}
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
-                      {entry.owned}/{entry.total} collected • {entry.percent}%
-                    </div>
-
-                    <div
+          <div className="seriesProgressGrid">
+            {visibleSeriesProgress.map((entry) => (
+              <button
+                key={entry.series}
+                onClick={() => jumpToSeries(entry.series)}
+                className="seriesProgressButton"
+              >
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>
+                  {entry.series}
+                  {entry.subcategoryLabel && (
+                    <span
                       style={{
-                        height: 10,
-                        borderRadius: 999,
-                        background: "#e5e7eb",
-                        overflow: "hidden",
+                        marginLeft: 8,
+                        color: "#6366f1",
+                        fontWeight: 700,
                       }}
                     >
-                      <div
-                        style={{
-                          width: `${entry.percent}%`,
-                          height: "100%",
-                          background: "linear-gradient(90deg,#60a5fa,#a78bfa)",
-                        }}
-                      />
-                    </div>
-                  </button>
-                ))}
-              </div>
+                      • {entry.subcategoryLabel}
+                    </span>
+                  )}
+                </div>
 
-              {isMobile && seriesProgress.length > 6 && (
-                <button
-                  type="button"
-                  className="showMoreButton"
-                  onClick={() => setExpandedSeries((prev) => !prev)}
+                <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
+                  {entry.owned}/{entry.total} collected • {entry.percent}%
+                </div>
+
+                <div
+                  style={{
+                    height: 10,
+                    borderRadius: 999,
+                    background: "#e5e7eb",
+                    overflow: "hidden",
+                  }}
                 >
-                  {expandedSeries ? "Show fewer series" : `Show all ${seriesProgress.length} series`}
-                </button>
-              )}
-            </>
-          )}
-        </section>
-
-        <section className="panelCard jumpPanel">
-          <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 10 }}>Quick Jump</div>
-          <div className="quickMobileChips forceShowChips">
-            {[
-              { value: "all", label: "All" },
-              { value: "have", label: "Have" },
-              { value: "need", label: "Need" },
-              { value: "extra", label: "Extras" },
-            ].map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={`quickChip ${collectionFilter === option.value ? "active" : ""}`}
-                onClick={() => {
-                  setCollectionFilter(option.value);
-                  document.getElementById("cards-grid")?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  });
-                }}
-              >
-                {option.label}
+                  <div
+                    style={{
+                      width: `${entry.percent}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg,#60a5fa,#a78bfa)",
+                    }}
+                  />
+                </div>
               </button>
             ))}
           </div>
+
+          {isMobile && seriesProgress.length > 6 && (
+            <button
+              type="button"
+              className="showMoreButton"
+              onClick={() => setExpandedSeries((prev) => !prev)}
+            >
+              {expandedSeries ? "Show fewer series" : `Show all ${seriesProgress.length} series`}
+            </button>
+          )}
         </section>
 
         <section id="cards-grid" className="cardsGrid">

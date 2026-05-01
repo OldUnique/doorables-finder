@@ -2478,7 +2478,9 @@ export default function Page() {
 
           .autoSellCard {
             grid-template-columns: 1fr;
-            padding: 16px;
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 14px;
           }
 
           .autoSellButton {
@@ -2496,12 +2498,13 @@ export default function Page() {
 
           .autoSellOverlay {
             padding: 10px;
-            align-items: end;
+            align-items: center;
           }
 
           .autoSellModal {
-            width: 100%;
+            width: min(760px, 100%);
             max-height: 94vh;
+            min-height: min(760px, 88vh);
             border-radius: 24px;
             padding: 16px;
           }
@@ -2516,6 +2519,15 @@ export default function Page() {
             display: none;
           }
 
+          .autoSellModalTitle {
+            font-size: 24px;
+          }
+
+          .autoSellModalText {
+            font-size: 14px;
+            line-height: 1.45;
+          }
+
           .autoSellSummaryGrid {
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 8px;
@@ -2523,6 +2535,12 @@ export default function Page() {
 
           .autoSellSummaryCard {
             padding: 10px;
+            text-align: center;
+          }
+
+          .autoSellSummaryCard span {
+            font-size: 11px;
+            margin-bottom: 4px;
           }
 
           .autoSellSummaryCard strong {
@@ -2530,54 +2548,102 @@ export default function Page() {
           }
 
           .autoSellToolbar {
-            align-items: stretch;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+          }
+
+          .autoSellHint {
+            width: 100%;
+            font-size: 12px;
+            text-align: center;
           }
 
           .autoSellToolbarButtons {
             width: 100%;
             display: grid;
             grid-template-columns: 1fr 1fr;
+            gap: 8px;
+          }
+
+          .autoSellSmallButton {
+            width: 100%;
+            min-height: 42px;
           }
 
           .autoSellModalList {
-            min-height: 220px;
+            min-height: 320px;
+            max-height: calc(94vh - 360px);
             padding: 8px;
           }
 
           .autoSellItem {
-            grid-template-columns: 52px 72px minmax(0, 1fr);
+            grid-template-columns: 44px 64px minmax(0, 1fr);
             gap: 8px;
             padding: 10px;
+            align-items: start;
           }
 
           .autoSellCheck {
-            min-height: 72px;
+            min-height: 64px;
+            padding: 6px;
           }
 
           .autoSellThumb {
-            width: 72px;
-            height: 72px;
+            width: 64px;
+            height: 64px;
             border-radius: 14px;
           }
 
+          .autoSellFields {
+            gap: 7px;
+          }
+
           .autoSellTitlePriceRow {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 1fr) 110px;
+            gap: 8px;
+          }
+
+          .autoSellInput,
+          .autoSellTextarea {
+            min-height: 44px;
+            font-size: 14px;
+            padding: 10px 11px;
           }
 
           .autoSellTextarea {
-            min-height: 60px;
+            min-height: 56px;
+          }
+
+          .autoSellMetaBadges {
+            gap: 5px;
+          }
+
+          .autoSellMetaBadges span {
+            font-size: 11px;
+            padding: 5px 7px;
           }
 
           .autoSellModalActions {
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr auto auto;
+            gap: 8px;
+            padding-top: 10px;
+            margin-top: 10px;
+          }
+
+          .autoSellSelectedNote {
+            font-size: 12px;
           }
 
           .autoSellCancelButton,
           .autoSellCreateButton {
-            width: 100%;
-            min-width: 0;
+            min-height: 46px;
           }
 
+          .autoSellCreateButton {
+            width: auto;
+            min-width: 190px;
+          }
 
           .eliteUpgradeWall {
             display: grid;
@@ -2668,57 +2734,6 @@ export default function Page() {
             box-sizing: border-box;
           }
 
-
-          .autoSellCard {
-            display: grid;
-            border-radius: 20px;
-            padding: 15px;
-            margin-bottom: 14px;
-          }
-
-  
-        .autoSellToolbar {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          align-items: center;
-          justify-content: space-between;
-          margin-top: 14px;
-          padding: 10px;
-          border-radius: 16px;
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
-        }
-
-        .autoSellToolbarButtons {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .autoSellSmallButton {
-          min-height: 40px;
-          border-radius: 12px;
-          border: 1px solid #d1d5db;
-          background: #ffffff;
-          color: #334155;
-          font-weight: 950;
-          padding: 9px 12px;
-          cursor: pointer;
-        }
-
-        .autoSellHint {
-          color: #64748b;
-          font-size: 12px;
-          font-weight: 850;
-          line-height: 1.35;
-        }
-
-
-        .autoSellButton {
-            width: 100%;
-          }
-
           .publicProfileRow {
             display: grid;
           }
@@ -2776,69 +2791,82 @@ export default function Page() {
           }
         }
 
+@media (max-width: 420px) {
+          .autoSellModal {
+            padding: 14px;
+          }
 
+          .autoSellSummaryGrid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 6px;
+          }
 
-          .autoSellToolbar {
-            align-items: stretch;
+          .autoSellSummaryCard {
+            padding: 8px;
+          }
+
+          .autoSellSummaryCard span {
+            font-size: 10px;
+          }
+
+          .autoSellSummaryCard strong {
+            font-size: 20px;
           }
 
           .autoSellToolbarButtons {
-            display: grid;
             grid-template-columns: 1fr 1fr;
-            width: 100%;
           }
 
-          .autoSellSmallButton {
-            width: 100%;
+          .autoSellModalList {
+            min-height: 300px;
+            max-height: calc(94vh - 350px);
+          }
+
+          .autoSellItem {
+            grid-template-columns: 38px 58px minmax(0, 1fr);
+            gap: 7px;
+            padding: 8px;
+          }
+
+          .autoSellCheck {
+            min-height: 58px;
+            font-size: 11px;
+          }
+
+          .autoSellThumb {
+            width: 58px;
+            height: 58px;
           }
 
           .autoSellTitlePriceRow {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 1fr) 96px;
+            gap: 6px;
           }
 
           .autoSellInput,
           .autoSellTextarea {
-            min-height: 46px;
-            font-size: 15px;
+            font-size: 13px;
+            padding: 9px 10px;
           }
 
-
-          .autoSellItem {
-            grid-template-columns: 1fr;
+          .autoSellTextarea {
+            min-height: 52px;
           }
 
-          .autoSellThumb {
-            width: 100%;
-            height: 150px;
+          .autoSellMetaBadges span {
+            font-size: 10px;
+            padding: 4px 6px;
           }
 
           .autoSellModalActions {
             grid-template-columns: 1fr;
           }
 
-
-        @media (max-width: 420px) {
-          .autoSellSummaryGrid {
-            grid-template-columns: 1fr;
-          }
-
-          .autoSellItem {
-            grid-template-columns: 1fr;
-          }
-
-          .autoSellCheck {
-            min-height: 44px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: row;
-          }
-
-          .autoSellThumb {
+          .autoSellCancelButton,
+          .autoSellCreateButton {
             width: 100%;
-            height: 130px;
+            min-width: 0;
           }
-
 
           .statsSection {
             grid-template-columns: 1fr;
@@ -2853,6 +2881,7 @@ export default function Page() {
             box-sizing: border-box;
           }
         }
+
       `}</style>
 
       <div className="galaxyStars">
@@ -3727,7 +3756,7 @@ export default function Page() {
 
               <div className="autoSellToolbar">
                 <div className="autoSellHint">
-                  Prices only auto-fill when that Doorable has sold listings with an average sale price. Otherwise, the price stays blank.
+                  Prices auto-fill only when that Doorable already has sold listings with an average sale price. Otherwise the price stays blank.
                 </div>
 
                 <div className="autoSellToolbarButtons">

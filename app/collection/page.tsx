@@ -342,6 +342,10 @@ export default function Page() {
   const [autoSellLoading, setAutoSellLoading] = useState(false);
   const [showAutoSellModal, setShowAutoSellModal] = useState(false);
   const [autoSellDrafts, setAutoSellDrafts] = useState<AutoSellDraft[]>([]);
+  const [autoSellShippingAvailable, setAutoSellShippingAvailable] = useState(true);
+  const [autoSellShippingPrice, setAutoSellShippingPrice] = useState("");
+  const [autoSellLocalPickupAvailable, setAutoSellLocalPickupAvailable] = useState(false);
+  const [autoSellPickupLocation, setAutoSellPickupLocation] = useState("");
 
   const [visibility, setVisibility] = useState<"private" | "extras_only" | "full">("private");
   const [savingVisibility, setSavingVisibility] = useState(false);
@@ -820,6 +824,10 @@ export default function Page() {
     });
 
     setAutoSellDrafts(drafts);
+    setAutoSellShippingAvailable(true);
+    setAutoSellShippingPrice("");
+    setAutoSellLocalPickupAvailable(false);
+    setAutoSellPickupLocation("");
     setShowAutoSellModal(true);
   }
 
@@ -889,6 +897,22 @@ export default function Page() {
         return;
       }
 
+      const cleanShippingPrice = autoSellShippingPrice.trim();
+
+      if (
+        autoSellShippingAvailable &&
+        cleanShippingPrice !== "" &&
+        Number.isNaN(Number(cleanShippingPrice))
+      ) {
+        setError("Shipping price needs to be a valid number or blank.");
+        return;
+      }
+
+      const shippingPrice =
+        autoSellShippingAvailable && cleanShippingPrice !== ""
+          ? Number(cleanShippingPrice)
+          : null;
+
       const { data: existingListings, error: existingError } = await supabase
         .from("marketplace_listings")
         .select("id, title, status, user_id")
@@ -923,10 +947,12 @@ export default function Page() {
             user_id: user.id,
             status: "active",
             sold_at: null,
-            shipping_available: false,
-            shipping_price: null,
-            local_pickup_available: false,
-            pickup_location: null,
+            shipping_available: autoSellShippingAvailable,
+            shipping_price: shippingPrice,
+            local_pickup_available: autoSellLocalPickupAvailable,
+            pickup_location: autoSellLocalPickupAvailable
+              ? autoSellPickupLocation.trim() || null
+              : null,
           };
         });
 
@@ -1479,6 +1505,84 @@ export default function Page() {
           max-width: 680px;
         }
 
+        .autoSellShippingPanel {
+          margin-top: 12px;
+          border-radius: 18px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          padding: 12px;
+        }
+
+        .autoSellShippingHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 10px;
+        }
+
+        .autoSellShippingTitle {
+          color: #111827;
+          font-size: 14px;
+          font-weight: 1000;
+          margin-bottom: 3px;
+        }
+
+        .autoSellShippingText {
+          color: #64748b;
+          font-size: 12px;
+          line-height: 1.35;
+          font-weight: 800;
+        }
+
+        .autoSellShippingControls {
+          display: grid;
+          grid-template-columns: auto 170px auto 1fr;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .autoSellShippingOption {
+          min-height: 44px;
+          border-radius: 14px;
+          border: 1px solid #d1d5db;
+          background: #ffffff;
+          color: #334155;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 9px 12px;
+          font-size: 13px;
+          font-weight: 950;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+
+        .autoSellShippingOption.active {
+          background: #eef2ff;
+          color: #3730a3;
+          border-color: #a78bfa;
+        }
+
+        .autoSellShippingOption input {
+          width: 16px;
+          height: 16px;
+          accent-color: #7c3aed;
+        }
+
+        .autoSellShippingPriceInput,
+        .autoSellPickupInput {
+          min-height: 44px;
+        }
+
+        .autoSellShippingPriceInput:disabled,
+        .autoSellPickupInput:disabled {
+          background: #f1f5f9;
+          color: #94a3b8;
+          cursor: not-allowed;
+        }
+
         .autoSellButton {
           min-height: 52px;
           border: none;
@@ -1997,6 +2101,7 @@ export default function Page() {
 
         .autoSellOverlay {
           padding: 18px;
+          z-index: 99999 !important;
         }
 
         .autoSellModal {
@@ -2571,9 +2676,35 @@ export default function Page() {
             min-height: 42px;
           }
 
+          .autoSellShippingPanel {
+            padding: 10px;
+            margin-top: 10px;
+          }
+
+          .autoSellShippingHeader {
+            margin-bottom: 8px;
+          }
+
+          .autoSellShippingControls {
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+          }
+
+          .autoSellShippingOption {
+            min-height: 42px;
+            width: 100%;
+            box-sizing: border-box;
+          }
+
+          .autoSellShippingPriceInput,
+          .autoSellPickupInput {
+            min-height: 42px;
+            width: 100%;
+          }
+
           .autoSellModalList {
-            min-height: 320px;
-            max-height: calc(94vh - 360px);
+            min-height: 300px;
+            max-height: calc(94vh - 420px);
             padding: 8px;
           }
 
@@ -2817,9 +2948,13 @@ export default function Page() {
             grid-template-columns: 1fr 1fr;
           }
 
+          .autoSellShippingControls {
+            grid-template-columns: 1fr;
+          }
+
           .autoSellModalList {
-            min-height: 300px;
-            max-height: calc(94vh - 350px);
+            min-height: 280px;
+            max-height: calc(94vh - 430px);
           }
 
           .autoSellItem {
@@ -3775,6 +3910,54 @@ export default function Page() {
                   >
                     Deselect All
                   </button>
+                </div>
+              </div>
+
+              <div className="autoSellShippingPanel">
+                <div className="autoSellShippingHeader">
+                  <div>
+                    <div className="autoSellShippingTitle">Simple shipping options</div>
+                    <div className="autoSellShippingText">
+                      Applies to all listings created from this batch. Buyers can still message you with questions.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="autoSellShippingControls">
+                  <label className={`autoSellShippingOption ${autoSellShippingAvailable ? "active" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={autoSellShippingAvailable}
+                      onChange={(e) => setAutoSellShippingAvailable(e.target.checked)}
+                    />
+                    <span>Shipping available</span>
+                  </label>
+
+                  <input
+                    className="autoSellInput autoSellShippingPriceInput"
+                    value={autoSellShippingPrice}
+                    onChange={(e) => setAutoSellShippingPrice(e.target.value)}
+                    placeholder="Shipping price optional"
+                    inputMode="decimal"
+                    disabled={!autoSellShippingAvailable}
+                  />
+
+                  <label className={`autoSellShippingOption ${autoSellLocalPickupAvailable ? "active" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={autoSellLocalPickupAvailable}
+                      onChange={(e) => setAutoSellLocalPickupAvailable(e.target.checked)}
+                    />
+                    <span>Local pickup</span>
+                  </label>
+
+                  <input
+                    className="autoSellInput autoSellPickupInput"
+                    value={autoSellPickupLocation}
+                    onChange={(e) => setAutoSellPickupLocation(e.target.value)}
+                    placeholder="Pickup area optional"
+                    disabled={!autoSellLocalPickupAvailable}
+                  />
                 </div>
               </div>
 

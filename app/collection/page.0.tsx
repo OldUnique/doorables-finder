@@ -370,6 +370,7 @@ export default function Page() {
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [expandedSeries, setExpandedSeries] = useState(false);
+  const [showSeriesProgress, setShowSeriesProgress] = useState(false);
   const [shareStatus, setShareStatus] = useState("");
 
   useEffect(() => {
@@ -1386,7 +1387,7 @@ export default function Page() {
 
         .autoSellCard {
           background:
-            radial-gradient(circle at top right, rgba(192,132,252,0.28), transparent 32%),
+            radial-gradient(circle at top right, rgba(192,132,252,0.30), transparent 32%),
             linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
           color: #111827;
           border-radius: 24px;
@@ -1394,11 +1395,10 @@ export default function Page() {
           box-shadow: 0 12px 28px rgba(0,0,0,0.18);
           margin-bottom: 18px;
           border: 1px solid rgba(255,255,255,0.55);
-          display: flex;
+          display: grid;
+          grid-template-columns: 1fr auto;
           align-items: center;
-          justify-content: space-between;
           gap: 16px;
-          flex-wrap: wrap;
         }
 
         .autoSellEyebrow {
@@ -1421,9 +1421,25 @@ export default function Page() {
           color: #4b5563;
           line-height: 1.55;
           font-size: 14px;
-          max-width: 760px;
+          max-width: 830px;
         }
 
+        .autoSellMiniSteps {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-top: 10px;
+        }
+
+        .autoSellMiniSteps span {
+          border-radius: 999px;
+          padding: 7px 10px;
+          background: #eef2ff;
+          color: #3730a3;
+          border: 1px solid #c7d2fe;
+          font-size: 12px;
+          font-weight: 950;
+        }
 
         .autoSellToolbar {
           display: flex;
@@ -1432,8 +1448,8 @@ export default function Page() {
           align-items: center;
           justify-content: space-between;
           margin-top: 14px;
-          padding: 10px;
-          border-radius: 16px;
+          padding: 12px;
+          border-radius: 18px;
           background: #f8fafc;
           border: 1px solid #e5e7eb;
         }
@@ -1445,13 +1461,13 @@ export default function Page() {
         }
 
         .autoSellSmallButton {
-          min-height: 40px;
-          border-radius: 12px;
+          min-height: 42px;
+          border-radius: 14px;
           border: 1px solid #d1d5db;
           background: #ffffff;
           color: #334155;
           font-weight: 950;
-          padding: 9px 12px;
+          padding: 9px 13px;
           cursor: pointer;
         }
 
@@ -1460,14 +1476,14 @@ export default function Page() {
           font-size: 12px;
           font-weight: 850;
           line-height: 1.35;
+          max-width: 680px;
         }
 
-
         .autoSellButton {
-          min-height: 50px;
+          min-height: 52px;
           border: none;
-          border-radius: 16px;
-          padding: 13px 18px;
+          border-radius: 18px;
+          padding: 14px 20px;
           font-weight: 1000;
           color: white;
           background: linear-gradient(135deg, #16a34a, #4f46e5);
@@ -1478,7 +1494,7 @@ export default function Page() {
 
         .autoSellButton:disabled {
           opacity: 0.62;
-          cursor: wait;
+          cursor: not-allowed;
         }
 
         .statsSection {
@@ -1516,9 +1532,8 @@ export default function Page() {
         }
 
         .filterPanel {
-          position: sticky;
-          top: 8px;
-          z-index: 55;
+          position: relative;
+          z-index: 1;
         }
 
         .filterHeader {
@@ -1833,6 +1848,23 @@ export default function Page() {
           cursor: pointer;
         }
 
+        .jumpPanel {
+          margin-bottom: 14px;
+        }
+
+        .forceShowChips {
+          display: flex !important;
+          flex-wrap: wrap;
+          overflow: visible;
+          padding-bottom: 0;
+          gap: 8px;
+        }
+
+        .forceShowChips .quickChip {
+          min-width: 96px;
+          justify-content: center;
+        }
+
         .showMoreButton {
           margin-top: 12px;
           width: 100%;
@@ -1963,22 +1995,88 @@ export default function Page() {
         }
 
 
+        .autoSellOverlay {
+          padding: 18px;
+        }
+
+        .autoSellModal {
+          width: min(1120px, 100%);
+          text-align: left;
+          max-height: 90vh;
+          display: flex;
+          flex-direction: column;
+          padding: 22px;
+        }
+
+        .autoSellModalHeader {
+          display: grid;
+          grid-template-columns: auto 1fr;
+          gap: 14px;
+          align-items: center;
+          padding-right: 44px;
+        }
+
+        .autoSellModalIcon {
+          margin: 0;
+        }
+
+        .autoSellModalTitle {
+          margin: 0;
+        }
+
+        .autoSellModalText {
+          margin: 8px 0 0;
+          max-width: 780px;
+        }
+
+        .autoSellSummaryGrid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+          margin-top: 14px;
+        }
+
+        .autoSellSummaryCard {
+          border-radius: 17px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          padding: 12px;
+        }
+
+        .autoSellSummaryCard span {
+          display: block;
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 950;
+          margin-bottom: 5px;
+        }
+
+        .autoSellSummaryCard strong {
+          color: #111827;
+          font-size: 26px;
+          font-weight: 1000;
+          line-height: 1;
+        }
+
         .autoSellModalList {
           display: grid;
           gap: 12px;
-          margin-top: 18px;
+          margin-top: 14px;
           max-height: none;
           overflow: auto;
-          padding-right: 4px;
+          padding: 10px;
           flex: 1;
-          min-height: 0;
+          min-height: 260px;
+          border-radius: 20px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
         }
 
         .autoSellItem {
           display: grid;
-          grid-template-columns: auto 92px 1fr;
+          grid-template-columns: 60px 96px minmax(0, 1fr);
           gap: 12px;
-          align-items: start;
+          align-items: stretch;
           text-align: left;
           border-radius: 18px;
           border: 1px solid #e5e7eb;
@@ -1987,10 +2085,36 @@ export default function Page() {
           box-shadow: 0 8px 18px rgba(0,0,0,0.06);
         }
 
+        .autoSellItem.selected {
+          border-color: #a78bfa;
+          box-shadow: 0 8px 20px rgba(124,58,237,0.12);
+        }
+
+        .autoSellCheck {
+          min-height: 76px;
+          border-radius: 15px;
+          background: #eef2ff;
+          color: #3730a3;
+          border: 1px solid #c7d2fe;
+          display: grid;
+          place-items: center;
+          align-content: center;
+          gap: 5px;
+          font-weight: 1000;
+          font-size: 12px;
+          cursor: pointer;
+        }
+
+        .autoSellCheck input {
+          width: 18px;
+          height: 18px;
+          accent-color: #7c3aed;
+        }
+
         .autoSellThumb {
-          width: 76px;
-          height: 76px;
-          border-radius: 14px;
+          width: 96px;
+          height: 96px;
+          border-radius: 16px;
           background: #f8fafc;
           border: 1px solid #e5e7eb;
           display: flex;
@@ -2008,11 +2132,12 @@ export default function Page() {
         .autoSellFields {
           display: grid;
           gap: 8px;
+          min-width: 0;
         }
 
         .autoSellTitlePriceRow {
           display: grid;
-          grid-template-columns: 1fr 120px;
+          grid-template-columns: minmax(0, 1fr) 150px;
           gap: 8px;
         }
 
@@ -2021,23 +2146,51 @@ export default function Page() {
           width: 100%;
           box-sizing: border-box;
           border: 1px solid #d1d5db;
-          border-radius: 12px;
+          border-radius: 13px;
           padding: 11px 12px;
           color: #111827;
           background: white;
           font-size: 14px;
           font-family: inherit;
+          outline: none;
+        }
+
+        .autoSellInput:focus,
+        .autoSellTextarea:focus {
+          border-color: #8b5cf6;
+          box-shadow: 0 0 0 4px rgba(139,92,246,0.12);
+        }
+
+        .priceInput {
+          font-weight: 950;
         }
 
         .autoSellTextarea {
-          min-height: 70px;
+          min-height: 72px;
           resize: vertical;
+        }
+
+        .autoSellMetaBadges {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          color: #475569;
+          font-size: 12px;
+          font-weight: 850;
+        }
+
+        .autoSellMetaBadges span {
+          border-radius: 999px;
+          padding: 6px 8px;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
         }
 
         .autoSellModalActions {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr auto auto;
           gap: 10px;
+          align-items: center;
           margin-top: 14px;
           padding-top: 12px;
           border-top: 1px solid #e5e7eb;
@@ -2045,6 +2198,12 @@ export default function Page() {
           position: sticky;
           bottom: 0;
           z-index: 5;
+        }
+
+        .autoSellSelectedNote {
+          color: #475569;
+          font-size: 13px;
+          font-weight: 1000;
         }
 
         .autoSellCancelButton {
@@ -2056,6 +2215,12 @@ export default function Page() {
           background: #f8fafc;
           color: #334155;
           cursor: pointer;
+        }
+
+        .autoSellCreateButton {
+          margin-top: 0;
+          width: auto;
+          min-width: 240px;
         }
 
 
@@ -2311,6 +2476,175 @@ export default function Page() {
             box-sizing: border-box;
           }
 
+          .autoSellCard {
+            grid-template-columns: 1fr;
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 14px;
+          }
+
+          .autoSellButton {
+            width: 100%;
+          }
+
+          .autoSellMiniSteps {
+            gap: 6px;
+          }
+
+          .autoSellMiniSteps span {
+            flex: 1 1 auto;
+            text-align: center;
+          }
+
+          .autoSellOverlay {
+            padding: 10px;
+            align-items: center;
+          }
+
+          .autoSellModal {
+            width: min(760px, 100%);
+            max-height: 94vh;
+            min-height: min(760px, 88vh);
+            border-radius: 24px;
+            padding: 16px;
+          }
+
+          .autoSellModalHeader {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            padding-right: 42px;
+          }
+
+          .autoSellModalIcon {
+            display: none;
+          }
+
+          .autoSellModalTitle {
+            font-size: 24px;
+          }
+
+          .autoSellModalText {
+            font-size: 14px;
+            line-height: 1.45;
+          }
+
+          .autoSellSummaryGrid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+          }
+
+          .autoSellSummaryCard {
+            padding: 10px;
+            text-align: center;
+          }
+
+          .autoSellSummaryCard span {
+            font-size: 11px;
+            margin-bottom: 4px;
+          }
+
+          .autoSellSummaryCard strong {
+            font-size: 22px;
+          }
+
+          .autoSellToolbar {
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+          }
+
+          .autoSellHint {
+            width: 100%;
+            font-size: 12px;
+            text-align: center;
+          }
+
+          .autoSellToolbarButtons {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+          }
+
+          .autoSellSmallButton {
+            width: 100%;
+            min-height: 42px;
+          }
+
+          .autoSellModalList {
+            min-height: 320px;
+            max-height: calc(94vh - 360px);
+            padding: 8px;
+          }
+
+          .autoSellItem {
+            grid-template-columns: 44px 64px minmax(0, 1fr);
+            gap: 8px;
+            padding: 10px;
+            align-items: start;
+          }
+
+          .autoSellCheck {
+            min-height: 64px;
+            padding: 6px;
+          }
+
+          .autoSellThumb {
+            width: 64px;
+            height: 64px;
+            border-radius: 14px;
+          }
+
+          .autoSellFields {
+            gap: 7px;
+          }
+
+          .autoSellTitlePriceRow {
+            grid-template-columns: minmax(0, 1fr) 110px;
+            gap: 8px;
+          }
+
+          .autoSellInput,
+          .autoSellTextarea {
+            min-height: 44px;
+            font-size: 14px;
+            padding: 10px 11px;
+          }
+
+          .autoSellTextarea {
+            min-height: 56px;
+          }
+
+          .autoSellMetaBadges {
+            gap: 5px;
+          }
+
+          .autoSellMetaBadges span {
+            font-size: 11px;
+            padding: 5px 7px;
+          }
+
+          .autoSellModalActions {
+            grid-template-columns: 1fr auto auto;
+            gap: 8px;
+            padding-top: 10px;
+            margin-top: 10px;
+          }
+
+          .autoSellSelectedNote {
+            font-size: 12px;
+          }
+
+          .autoSellCancelButton,
+          .autoSellCreateButton {
+            min-height: 46px;
+          }
+
+          .autoSellCreateButton {
+            width: auto;
+            min-width: 190px;
+          }
+
           .eliteUpgradeWall {
             display: grid;
             padding: 16px;
@@ -2400,57 +2734,6 @@ export default function Page() {
             box-sizing: border-box;
           }
 
-
-          .autoSellCard {
-            display: grid;
-            border-radius: 20px;
-            padding: 15px;
-            margin-bottom: 14px;
-          }
-
-  
-        .autoSellToolbar {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          align-items: center;
-          justify-content: space-between;
-          margin-top: 14px;
-          padding: 10px;
-          border-radius: 16px;
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
-        }
-
-        .autoSellToolbarButtons {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .autoSellSmallButton {
-          min-height: 40px;
-          border-radius: 12px;
-          border: 1px solid #d1d5db;
-          background: #ffffff;
-          color: #334155;
-          font-weight: 950;
-          padding: 9px 12px;
-          cursor: pointer;
-        }
-
-        .autoSellHint {
-          color: #64748b;
-          font-size: 12px;
-          font-weight: 850;
-          line-height: 1.35;
-        }
-
-
-        .autoSellButton {
-            width: 100%;
-          }
-
           .publicProfileRow {
             display: grid;
           }
@@ -2508,48 +2791,83 @@ export default function Page() {
           }
         }
 
+@media (max-width: 420px) {
+          .autoSellModal {
+            padding: 14px;
+          }
 
+          .autoSellSummaryGrid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 6px;
+          }
 
-          .autoSellToolbar {
-            align-items: stretch;
+          .autoSellSummaryCard {
+            padding: 8px;
+          }
+
+          .autoSellSummaryCard span {
+            font-size: 10px;
+          }
+
+          .autoSellSummaryCard strong {
+            font-size: 20px;
           }
 
           .autoSellToolbarButtons {
-            display: grid;
             grid-template-columns: 1fr 1fr;
-            width: 100%;
           }
 
-          .autoSellSmallButton {
-            width: 100%;
+          .autoSellModalList {
+            min-height: 300px;
+            max-height: calc(94vh - 350px);
+          }
+
+          .autoSellItem {
+            grid-template-columns: 38px 58px minmax(0, 1fr);
+            gap: 7px;
+            padding: 8px;
+          }
+
+          .autoSellCheck {
+            min-height: 58px;
+            font-size: 11px;
+          }
+
+          .autoSellThumb {
+            width: 58px;
+            height: 58px;
           }
 
           .autoSellTitlePriceRow {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 1fr) 96px;
+            gap: 6px;
           }
 
           .autoSellInput,
           .autoSellTextarea {
-            min-height: 46px;
-            font-size: 15px;
+            font-size: 13px;
+            padding: 9px 10px;
           }
 
-
-          .autoSellItem {
-            grid-template-columns: 1fr;
+          .autoSellTextarea {
+            min-height: 52px;
           }
 
-          .autoSellThumb {
-            width: 100%;
-            height: 150px;
+          .autoSellMetaBadges span {
+            font-size: 10px;
+            padding: 4px 6px;
           }
 
           .autoSellModalActions {
             grid-template-columns: 1fr;
           }
 
+          .autoSellCancelButton,
+          .autoSellCreateButton {
+            width: 100%;
+            min-width: 0;
+          }
 
-        @media (max-width: 420px) {
           .statsSection {
             grid-template-columns: 1fr;
           }
@@ -2563,6 +2881,7 @@ export default function Page() {
             box-sizing: border-box;
           }
         }
+
       `}</style>
 
       <div className="galaxyStars">
@@ -2822,7 +3141,14 @@ export default function Page() {
             <div className="autoSellTitle">Auto-list your extras 💸</div>
             <div className="autoSellText">
               You currently have <strong>{extrasCount}</strong> extra Doorable{extrasCount === 1 ? "" : "s"}.
-              Create Marketplace listings from your extras in one click. Existing active or pending listings are skipped.
+              Review them first, choose which ones to list, add prices, then create Marketplace listings.
+              Existing active or pending listings are skipped.
+            </div>
+
+            <div className="autoSellMiniSteps">
+              <span>1. Pick extras</span>
+              <span>2. Add prices</span>
+              <span>3. Create listings</span>
             </div>
           </div>
 
@@ -2835,7 +3161,7 @@ export default function Page() {
             {autoSellLoading
               ? "Listing extras..."
               : extrasCount > 0
-                ? `List ${extrasCount} Extra${extrasCount === 1 ? "" : "s"}`
+                ? `Review ${extrasCount} Extra${extrasCount === 1 ? "" : "s"}`
                 : "No Extras Yet"}
           </button>
         </section>
@@ -2987,74 +3313,118 @@ export default function Page() {
         </section>
 
         <section className="panelCard">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-            <div style={{ fontSize: 18, fontWeight: 900 }}>Series Progress</div>
-            {isMobile && seriesProgress.length > 6 && (
-              <button
-                type="button"
-                className="clearFiltersButton"
-                onClick={() => setExpandedSeries((prev) => !prev)}
-              >
-                {expandedSeries ? "Show Less" : "Show All"}
-              </button>
-            )}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              marginBottom: showSeriesProgress ? 12 : 0,
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 900 }}>Series Progress</div>
+              <div style={{ fontSize: 13, color: "#64748b", marginTop: 3, fontWeight: 700 }}>
+                {seriesProgress.length} series tracked • open when you want to jump by series
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="clearFiltersButton"
+              onClick={() => setShowSeriesProgress((prev) => !prev)}
+            >
+              {showSeriesProgress ? "Hide Series" : "Show Series"}
+            </button>
           </div>
 
-          <div className="seriesProgressGrid">
-            {visibleSeriesProgress.map((entry) => (
-              <button
-                key={entry.series}
-                onClick={() => jumpToSeries(entry.series)}
-                className="seriesProgressButton"
-              >
-                <div style={{ fontWeight: 800, marginBottom: 6 }}>
-                  {entry.series}
-                  {entry.subcategoryLabel && (
-                    <span
+          {showSeriesProgress && (
+            <>
+              <div className="seriesProgressGrid" style={{ marginTop: 12 }}>
+                {visibleSeriesProgress.map((entry) => (
+                  <button
+                    key={entry.series}
+                    onClick={() => jumpToSeries(entry.series)}
+                    className="seriesProgressButton"
+                  >
+                    <div style={{ fontWeight: 800, marginBottom: 6 }}>
+                      {entry.series}
+                      {entry.subcategoryLabel && (
+                        <span
+                          style={{
+                            marginLeft: 8,
+                            color: "#6366f1",
+                            fontWeight: 700,
+                          }}
+                        >
+                          • {entry.subcategoryLabel}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
+                      {entry.owned}/{entry.total} collected • {entry.percent}%
+                    </div>
+
+                    <div
                       style={{
-                        marginLeft: 8,
-                        color: "#6366f1",
-                        fontWeight: 700,
+                        height: 10,
+                        borderRadius: 999,
+                        background: "#e5e7eb",
+                        overflow: "hidden",
                       }}
                     >
-                      • {entry.subcategoryLabel}
-                    </span>
-                  )}
-                </div>
+                      <div
+                        style={{
+                          width: `${entry.percent}%`,
+                          height: "100%",
+                          background: "linear-gradient(90deg,#60a5fa,#a78bfa)",
+                        }}
+                      />
+                    </div>
+                  </button>
+                ))}
+              </div>
 
-                <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
-                  {entry.owned}/{entry.total} collected • {entry.percent}%
-                </div>
-
-                <div
-                  style={{
-                    height: 10,
-                    borderRadius: 999,
-                    background: "#e5e7eb",
-                    overflow: "hidden",
-                  }}
+              {isMobile && seriesProgress.length > 6 && (
+                <button
+                  type="button"
+                  className="showMoreButton"
+                  onClick={() => setExpandedSeries((prev) => !prev)}
                 >
-                  <div
-                    style={{
-                      width: `${entry.percent}%`,
-                      height: "100%",
-                      background: "linear-gradient(90deg,#60a5fa,#a78bfa)",
-                    }}
-                  />
-                </div>
+                  {expandedSeries ? "Show fewer series" : `Show all ${seriesProgress.length} series`}
+                </button>
+              )}
+            </>
+          )}
+        </section>
+
+        <section className="panelCard jumpPanel">
+          <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 10 }}>Quick Jump</div>
+          <div className="quickMobileChips forceShowChips">
+            {[
+              { value: "all", label: "All" },
+              { value: "have", label: "Have" },
+              { value: "need", label: "Need" },
+              { value: "extra", label: "Extras" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`quickChip ${collectionFilter === option.value ? "active" : ""}`}
+                onClick={() => {
+                  setCollectionFilter(option.value);
+                  document.getElementById("cards-grid")?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  });
+                }}
+              >
+                {option.label}
               </button>
             ))}
           </div>
-
-          {isMobile && seriesProgress.length > 6 && (
-            <button
-              type="button"
-              className="showMoreButton"
-              onClick={() => setExpandedSeries((prev) => !prev)}
-            >
-              {expandedSeries ? "Show fewer series" : `Show all ${seriesProgress.length} series`}
-            </button>
-          )}
         </section>
 
         <section id="cards-grid" className="cardsGrid">
@@ -3346,17 +3716,8 @@ export default function Page() {
         )}
 
         {showAutoSellModal && (
-          <div className="eliteModalOverlay">
-            <div
-              className="eliteModal"
-              style={{
-                width: "min(860px, 100%)",
-                textAlign: "left",
-                maxHeight: "88vh",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
+          <div className="eliteModalOverlay autoSellOverlay">
+            <div className="eliteModal autoSellModal">
               <button
                 type="button"
                 className="eliteModalClose"
@@ -3365,16 +3726,37 @@ export default function Page() {
                 ×
               </button>
 
-              <div className="eliteModalIcon" style={{ margin: "0 0 12px" }}>💸</div>
-              <h2 className="eliteModalTitle">Choose extras to list</h2>
+              <div className="autoSellModalHeader">
+                <div className="eliteModalIcon autoSellModalIcon">💸</div>
 
-              <div className="eliteModalText" style={{ marginLeft: 0 }}>
-                Pick which extras should become Marketplace listings. You can add prices now or leave them blank and edit later.
+                <div>
+                  <h2 className="eliteModalTitle autoSellModalTitle">Review extras to list</h2>
+                  <div className="eliteModalText autoSellModalText">
+                    Choose which extras should become Marketplace listings. Add prices now, or leave prices blank and edit later.
+                  </div>
+                </div>
+              </div>
+
+              <div className="autoSellSummaryGrid">
+                <div className="autoSellSummaryCard">
+                  <span>Eligible extras</span>
+                  <strong>{autoSellDrafts.length}</strong>
+                </div>
+
+                <div className="autoSellSummaryCard">
+                  <span>Selected</span>
+                  <strong>{autoSellDrafts.filter((draft) => draft.selected).length}</strong>
+                </div>
+
+                <div className="autoSellSummaryCard">
+                  <span>Auto-priced</span>
+                  <strong>{autoSellDrafts.filter((draft) => draft.price.trim()).length}</strong>
+                </div>
               </div>
 
               <div className="autoSellToolbar">
                 <div className="autoSellHint">
-                  Prices auto-fill only when this item has a sold listing average. Otherwise, price stays blank and can be edited later.
+                  Prices auto-fill only when that Doorable already has sold listings with an average sale price. Otherwise the price stays blank.
                 </div>
 
                 <div className="autoSellToolbarButtons">
@@ -3402,8 +3784,8 @@ export default function Page() {
                   const extraQty = item ? Math.max(1, Number(item.qty || 0) - 1) : 1;
 
                   return (
-                    <div key={draft.cardId} className="autoSellItem">
-                      <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 900 }}>
+                    <div key={draft.cardId} className={`autoSellItem ${draft.selected ? "selected" : ""}`}>
+                      <label className="autoSellCheck">
                         <input
                           type="checkbox"
                           checked={draft.selected}
@@ -3413,7 +3795,7 @@ export default function Page() {
                             })
                           }
                         />
-                        List
+                        <span>List</span>
                       </label>
 
                       <div className="autoSellThumb">
@@ -3438,14 +3820,14 @@ export default function Page() {
                           />
 
                           <input
-                            className="autoSellInput"
+                            className="autoSellInput priceInput"
                             value={draft.price}
                             onChange={(e) =>
                               updateAutoSellDraft(draft.cardId, {
                                 price: e.target.value,
                               })
                             }
-                            placeholder="Price example: 3.00"
+                            placeholder="Example: 3.00"
                             inputMode="decimal"
                           />
                         </div>
@@ -3458,11 +3840,14 @@ export default function Page() {
                               description: e.target.value,
                             })
                           }
-                          placeholder="Description"
+                          placeholder="Listing description"
                         />
 
-                        <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800 }}>
-                          Qty extra: {extraQty} • {item?.series || "Unknown Series"} • {item?.rarity || "Unknown rarity"}
+                        <div className="autoSellMetaBadges">
+                          <span>Qty extra: {extraQty}</span>
+                          <span>{item?.series || "Unknown Series"}</span>
+                          <span>{item?.rarity || "Unknown rarity"}</span>
+                          <span>{draft.price.trim() ? "Price ready" : "No price yet"}</span>
                         </div>
                       </div>
                     </div>
@@ -3470,11 +3855,11 @@ export default function Page() {
                 })}
               </div>
 
-              <div style={{ marginTop: 12, color: "#475569", fontSize: 13, fontWeight: 900 }}>
-                {autoSellDrafts.filter((draft) => draft.selected).length} selected to list
-              </div>
-
               <div className="autoSellModalActions">
+                <div className="autoSellSelectedNote">
+                  {autoSellDrafts.filter((draft) => draft.selected).length} selected to list
+                </div>
+
                 <button
                   type="button"
                   className="autoSellCancelButton"
@@ -3486,10 +3871,9 @@ export default function Page() {
 
                 <button
                   type="button"
-                  className="eliteModalButton"
+                  className="eliteModalButton autoSellCreateButton"
                   onClick={() => void handleAutoSellExtras()}
                   disabled={autoSellLoading}
-                  style={{ marginTop: 0 }}
                 >
                   {autoSellLoading ? "Creating listings..." : "Create Selected Listings 💜"}
                 </button>

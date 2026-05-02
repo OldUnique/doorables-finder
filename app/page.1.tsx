@@ -942,100 +942,21 @@ export default function HomePage() {
           max-width: 640px;
         }
 
-        .previewLinkGrid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-          margin-top: 20px;
-        }
-
-        .previewLinkCard,
-        .previewLinkCard:visited {
-          display: grid;
-          grid-template-columns: 54px 1fr auto;
-          gap: 12px;
-          align-items: center;
-          min-height: 86px;
-          border-radius: 24px;
-          padding: 14px;
-          text-decoration: none !important;
-          color: #ffffff !important;
-          background:
-            radial-gradient(circle at top right, rgba(255,255,255,0.12), transparent 34%),
-            linear-gradient(135deg, rgba(15,23,42,0.62), rgba(79,70,229,0.64));
-          border: 1px solid rgba(255,255,255,0.22);
-          box-shadow:
-            0 16px 34px rgba(0,0,0,0.24),
-            inset 0 1px 0 rgba(255,255,255,0.10);
-          transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
-        }
-
-        .previewLinkCard:hover {
-          transform: translateY(-2px);
-          border-color: rgba(255,255,255,0.40);
-          box-shadow:
-            0 22px 42px rgba(0,0,0,0.30),
-            0 0 26px rgba(168,85,247,0.20),
-            inset 0 1px 0 rgba(255,255,255,0.14);
-        }
-
-        .previewLinkCard.alt {
-          background:
-            radial-gradient(circle at top right, rgba(250,204,21,0.16), transparent 36%),
-            linear-gradient(135deg, rgba(88,28,135,0.66), rgba(15,23,42,0.66));
-        }
-
-        .previewLinkIcon {
-          width: 54px;
-          height: 54px;
-          border-radius: 18px;
-          display: grid;
-          place-items: center;
-          font-size: 28px;
-          color: #312e81;
-          background: linear-gradient(135deg, #ffffff, #fef3c7);
-          box-shadow: 0 12px 24px rgba(255,255,255,0.12);
-        }
-
-        .previewLinkKicker {
-          display: block;
-          color: #fde68a;
-          font-size: 11px;
-          font-weight: 1000;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          margin-bottom: 4px;
-        }
-
-        .previewLinkTitle {
-          display: block;
-          color: #ffffff;
-          font-size: 16px;
-          font-weight: 1000;
-          line-height: 1.12;
-        }
-
-        .previewLinkSub {
-          display: block;
-          margin-top: 4px;
-          color: rgba(255,255,255,0.78);
-          font-size: 12px;
-          font-weight: 850;
-          line-height: 1.35;
-        }
-
-        .previewLinkArrow {
-          min-height: 42px;
+        .previewButton {
+          min-height: 58px;
           border-radius: 999px;
-          padding: 9px 12px;
+          padding: 15px 22px;
+          text-decoration: none !important;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          white-space: nowrap;
+          font-weight: 1000;
           color: #312e81 !important;
           background: linear-gradient(90deg, #ffffff, #fef3c7);
-          font-size: 12px;
-          font-weight: 1000;
+          border: 1px solid rgba(255,255,255,0.66);
+          box-shadow:
+            0 18px 42px rgba(255,255,255,0.18),
+            0 16px 34px rgba(168,85,247,0.34);
         }
 
         .previewMiniGrid {
@@ -1093,128 +1014,51 @@ export default function HomePage() {
         .fakeCards {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
+          gap: 10px;
         }
 
         .fakeCard {
-          border-radius: 22px;
-          padding: 12px;
-          min-height: 190px;
-          box-shadow: 0 16px 34px rgba(0,0,0,0.18);
-          border: 3px solid transparent;
-          position: relative;
-          overflow: hidden;
-          background: linear-gradient(180deg, #ffffff, #f8fafc);
-          color: #111827;
-        }
-
-        .fakeCard.special {
-          background:
-            linear-gradient(180deg, rgba(255,255,255,0.96), rgba(250,245,255,0.96));
-          border-color: #7c3aed;
-        }
-
-        .fakeCard.limited {
-          background:
-            linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,251,227,0.96));
-          border-color: #d4a500;
-        }
-
-        .fakeCardHeader {
-          display: flex;
-          align-items: start;
-          justify-content: space-between;
-          gap: 10px;
-          margin-bottom: 10px;
+          border-radius: 18px;
+          padding: 10px;
+          background: #e6d2ff;
+          border: 3px solid #7c3aed;
+          color: #2f1458;
+          min-height: 145px;
+          box-shadow: 0 14px 28px rgba(0,0,0,0.18);
         }
 
         .fakeImage {
-          width: 68px;
-          height: 68px;
-          flex: 0 0 auto;
-          border-radius: 18px;
+          height: 70px;
+          border-radius: 14px;
           display: grid;
           place-items: center;
-          background: rgba(255,255,255,0.86);
-          font-size: 30px;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
-        }
-
-        .fakeRarity {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 30px;
-          border-radius: 999px;
-          padding: 6px 10px;
-          font-size: 11px;
-          font-weight: 1000;
-          white-space: nowrap;
-        }
-
-        .fakeCard.special .fakeRarity {
-          background: #c084fc;
-          color: #2f1458;
-        }
-
-        .fakeCard.limited .fakeRarity {
-          background: #f2d64c;
-          color: #403000;
+          background: rgba(255,255,255,0.72);
+          font-size: 28px;
+          margin-bottom: 8px;
         }
 
         .fakeTitle {
-          font-size: 16px;
-          line-height: 1.08;
+          font-size: 14px;
+          line-height: 1.1;
           font-weight: 1000;
         }
 
         .fakeSub {
           margin-top: 4px;
+          color: rgba(47,20,88,0.72);
           font-size: 12px;
           font-weight: 900;
-          opacity: 0.78;
         }
 
-        .fakeTagRow {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 7px;
-          margin-top: 12px;
-        }
-
-        .fakeTag {
+        .fakeStatus {
+          margin-top: 8px;
           display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 28px;
           border-radius: 999px;
-          padding: 5px 9px;
-          background: rgba(15,23,42,0.06);
-          border: 1px solid rgba(15,23,42,0.08);
+          padding: 5px 8px;
+          background: rgba(255,255,255,0.62);
+          color: #166534;
           font-size: 11px;
           font-weight: 1000;
-          color: #374151;
-        }
-
-        .fakeTag.have {
-          background: #dcfce7;
-          color: #166534;
-          border-color: #86efac;
-        }
-
-        .fakeTag.need {
-          background: #ede9fe;
-          color: #6d28d9;
-          border-color: #c4b5fd;
-        }
-
-        .fakeMetaRow {
-          display: grid;
-          gap: 4px;
-          margin-top: 11px;
-          font-size: 11.5px;
-          font-weight: 850;
-          opacity: 0.78;
         }
 
         .featureGrid {
@@ -1735,28 +1579,6 @@ export default function HomePage() {
             padding: 22px;
           }
 
-          .previewLinkGrid {
-            grid-template-columns: 1fr;
-          }
-
-          .previewLinkCard {
-            grid-template-columns: 48px 1fr;
-            border-radius: 21px;
-          }
-
-          .previewLinkIcon {
-            width: 48px;
-            height: 48px;
-            border-radius: 16px;
-            font-size: 24px;
-          }
-
-          .previewLinkArrow {
-            grid-column: 1 / -1;
-            width: 100%;
-            box-sizing: border-box;
-          }
-
           .previewMiniGrid {
             grid-template-columns: 1fr;
           }
@@ -2018,25 +1840,12 @@ export default function HomePage() {
               people what Adorable Vault feels like before they commit.
             </div>
 
-            <div className="previewLinkGrid">
-              <Link href="/demo" className="previewLinkCard">
-                <span className="previewLinkIcon">👀</span>
-                <span>
-                  <span className="previewLinkKicker">No signup needed</span>
-                  <span className="previewLinkTitle">Open the sample vault</span>
-                  <span className="previewLinkSub">See how the tracker, filters, and collection cards work first.</span>
-                </span>
-                <span className="previewLinkArrow">Preview now →</span>
+            <div className="buttonRow">
+              <Link href="/demo" className="previewButton">
+                Open Sample Vault 👀
               </Link>
-
-              <Link href="/collection" className="previewLinkCard alt">
-                <span className="previewLinkIcon">💜</span>
-                <span>
-                  <span className="previewLinkKicker">Ready to start?</span>
-                  <span className="previewLinkTitle">Create your own vault</span>
-                  <span className="previewLinkSub">Jump into the real tracker and start saving your collection.</span>
-                </span>
-                <span className="previewLinkArrow">Start free →</span>
+              <Link href="/collection" className="secondaryButton">
+                Start Your Own Vault 💜
               </Link>
             </div>
 
@@ -2055,40 +1864,20 @@ export default function HomePage() {
             </div>
 
             <div className="fakeCards">
-              <div className="fakeCard special">
-                <div className="fakeCardHeader">
-                  <div className="fakeImage">💜</div>
-                  <div className="fakeRarity">Special Edition</div>
-                </div>
+              <div className="fakeCard">
+                <div className="fakeImage">💜</div>
                 <div className="fakeTitle">Sparkle Sample</div>
-                <div className="fakeSub">Series 12 • Pixel Perfect</div>
-                <div className="fakeTagRow">
-                  <div className="fakeTag have">Have</div>
-                  <div className="fakeTag">Qty 1</div>
-                  <div className="fakeTag">Wishlist off</div>
-                </div>
-                <div className="fakeMetaRow">
-                  <div>Movie: Sample Magic</div>
-                  <div>Preview style card • looks like your site</div>
-                </div>
+                <div className="fakeSub">Series Preview • Special Edition</div>
+                <div className="fakeStatus">Have · Qty 1</div>
               </div>
 
-              <div className="fakeCard limited">
-                <div className="fakeCardHeader">
-                  <div className="fakeImage">💎</div>
-                  <div className="fakeRarity">Limited Edition</div>
-                </div>
+              <div className="fakeCard" style={{ background: "#f8ef9b", borderColor: "#d4a500", color: "#403000" }}>
+                <div className="fakeImage">💎</div>
                 <div className="fakeTitle">Golden Sample</div>
-                <div className="fakeSub">Series 10 • Collector Peek</div>
-                <div className="fakeTagRow">
-                  <div className="fakeTag need">Need</div>
-                  <div className="fakeTag">Qty 0</div>
-                  <div className="fakeTag">Trade target</div>
+                <div className="fakeSub" style={{ color: "rgba(64,48,0,0.72)" }}>
+                  Series Preview • Limited
                 </div>
-                <div className="fakeMetaRow">
-                  <div>Movie: Preview Dreams</div>
-                  <div>Shows have / need / extras style at a glance</div>
-                </div>
+                <div className="fakeStatus" style={{ color: "#7c3aed" }}>Need · Qty 0</div>
               </div>
             </div>
           </div>

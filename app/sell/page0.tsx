@@ -650,7 +650,6 @@ export default function SellPage() {
           font-weight: 950;
           letter-spacing: 0.01em;
           transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
-          backdrop-filter: blur(8px);
         }
 
         .pageLink:hover {
@@ -659,20 +658,18 @@ export default function SellPage() {
 
         .pageLinkCollection,
         .pageLinkCollection:visited {
-          color: white;
-          background: rgba(15, 23, 42, 0.72);
-          border: 1px solid rgba(255,255,255,0.28);
-          box-shadow: 0 12px 26px rgba(15,23,42,0.28);
-          text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+          color: #111827;
+          background: rgba(255,255,255,0.96);
+          border: 1px solid rgba(255,255,255,0.92);
+          box-shadow: 0 10px 24px rgba(15,23,42,0.24);
         }
 
         .pageLinkMarketplace,
         .pageLinkMarketplace:visited {
           color: white;
           background: linear-gradient(135deg, #4f46e5, #7c3aed);
-          border: 1px solid rgba(255,255,255,0.34);
-          box-shadow: 0 14px 30px rgba(79,70,229,0.38);
-          text-shadow: 0 1px 0 rgba(0,0,0,0.22);
+          border: 1px solid rgba(196,181,253,0.8);
+          box-shadow: 0 14px 30px rgba(79,70,229,0.34);
         }
 
         .hero {

@@ -342,11 +342,6 @@ export default function Page() {
   const [autoSellLoading, setAutoSellLoading] = useState(false);
   const [showAutoSellModal, setShowAutoSellModal] = useState(false);
   const [autoSellDrafts, setAutoSellDrafts] = useState<AutoSellDraft[]>([]);
-  const [autoSellShippingAvailable, setAutoSellShippingAvailable] = useState(true);
-  const [autoSellShippingPrice, setAutoSellShippingPrice] = useState("");
-  const [autoSellLocalPickupAvailable, setAutoSellLocalPickupAvailable] = useState(false);
-  const [autoSellPickupLocation, setAutoSellPickupLocation] = useState("");
-  const [showAutoSellShippingOptions, setShowAutoSellShippingOptions] = useState(false);
 
   const [visibility, setVisibility] = useState<"private" | "extras_only" | "full">("private");
   const [savingVisibility, setSavingVisibility] = useState(false);
@@ -825,10 +820,6 @@ export default function Page() {
     });
 
     setAutoSellDrafts(drafts);
-    setAutoSellShippingAvailable(true);
-    setAutoSellShippingPrice("");
-    setAutoSellLocalPickupAvailable(false);
-    setAutoSellPickupLocation("");
     setShowAutoSellModal(true);
   }
 
@@ -898,22 +889,6 @@ export default function Page() {
         return;
       }
 
-      const cleanShippingPrice = autoSellShippingPrice.trim();
-
-      if (
-        autoSellShippingAvailable &&
-        cleanShippingPrice !== "" &&
-        Number.isNaN(Number(cleanShippingPrice))
-      ) {
-        setError("Shipping price needs to be a valid number or blank.");
-        return;
-      }
-
-      const shippingPrice =
-        autoSellShippingAvailable && cleanShippingPrice !== ""
-          ? Number(cleanShippingPrice)
-          : null;
-
       const { data: existingListings, error: existingError } = await supabase
         .from("marketplace_listings")
         .select("id, title, status, user_id")
@@ -948,12 +923,10 @@ export default function Page() {
             user_id: user.id,
             status: "active",
             sold_at: null,
-            shipping_available: autoSellShippingAvailable,
-            shipping_price: shippingPrice,
-            local_pickup_available: autoSellLocalPickupAvailable,
-            pickup_location: autoSellLocalPickupAvailable
-              ? autoSellPickupLocation.trim() || null
-              : null,
+            shipping_available: false,
+            shipping_price: null,
+            local_pickup_available: false,
+            pickup_location: null,
           };
         });
 
@@ -1414,7 +1387,7 @@ export default function Page() {
 
         .autoSellCard {
           background:
-            radial-gradient(circle at top right, rgba(192,132,252,0.30), transparent 32%),
+            radial-gradient(circle at top right, rgba(192,132,252,0.28), transparent 32%),
             linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
           color: #111827;
           border-radius: 24px;
@@ -1422,10 +1395,11 @@ export default function Page() {
           box-shadow: 0 12px 28px rgba(0,0,0,0.18);
           margin-bottom: 18px;
           border: 1px solid rgba(255,255,255,0.55);
-          display: grid;
-          grid-template-columns: 1fr auto;
+          display: flex;
           align-items: center;
+          justify-content: space-between;
           gap: 16px;
+          flex-wrap: wrap;
         }
 
         .autoSellEyebrow {
@@ -1448,25 +1422,9 @@ export default function Page() {
           color: #4b5563;
           line-height: 1.55;
           font-size: 14px;
-          max-width: 830px;
+          max-width: 760px;
         }
 
-        .autoSellMiniSteps {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-          margin-top: 10px;
-        }
-
-        .autoSellMiniSteps span {
-          border-radius: 999px;
-          padding: 7px 10px;
-          background: #eef2ff;
-          color: #3730a3;
-          border: 1px solid #c7d2fe;
-          font-size: 12px;
-          font-weight: 950;
-        }
 
         .autoSellToolbar {
           display: flex;
@@ -1475,8 +1433,8 @@ export default function Page() {
           align-items: center;
           justify-content: space-between;
           margin-top: 14px;
-          padding: 12px;
-          border-radius: 18px;
+          padding: 10px;
+          border-radius: 16px;
           background: #f8fafc;
           border: 1px solid #e5e7eb;
         }
@@ -1488,13 +1446,13 @@ export default function Page() {
         }
 
         .autoSellSmallButton {
-          min-height: 42px;
-          border-radius: 14px;
+          min-height: 40px;
+          border-radius: 12px;
           border: 1px solid #d1d5db;
           background: #ffffff;
           color: #334155;
           font-weight: 950;
-          padding: 9px 13px;
+          padding: 9px 12px;
           cursor: pointer;
         }
 
@@ -1503,119 +1461,541 @@ export default function Page() {
           font-size: 12px;
           font-weight: 850;
           line-height: 1.35;
-          max-width: 680px;
         }
 
-        .autoSellShippingPanel {
-          margin-top: 10px;
-          border-radius: 18px;
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
-          padding: 8px;
+
+        .autoSellButton {
+          min-height: 50px;
+          border: none;
+          border-radius: 16px;
+          padding: 13px 18px;
+          font-weight: 1000;
+          color: white;
+          background: linear-gradient(135deg, #16a34a, #4f46e5);
+          box-shadow: 0 14px 26px rgba(79,70,229,0.22);
+          cursor: pointer;
+          white-space: nowrap;
         }
 
-        .autoSellShippingToggle {
-          width: 100%;
-          min-height: 44px;
+        .autoSellButton:disabled {
+          opacity: 0.62;
+          cursor: wait;
+        }
+
+        .statsSection {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 14px;
+          margin-bottom: 18px;
+        }
+
+        .statButton {
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          border-radius: 20px;
+          padding: 18px;
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          border: 1px solid rgba(255,255,255,0.35);
+          cursor: pointer;
+          text-align: left;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .statButton:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 14px 28px rgba(0,0,0,0.22);
+        }
+
+        .panelCard {
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          border-radius: 24px;
+          padding: 16px;
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          margin-bottom: 18px;
+          border: 1px solid rgba(255,255,255,0.35);
+        }
+
+        .filterPanel {
+          position: relative;
+          z-index: 1;
+        }
+
+        .filterHeader {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 10px;
+          align-items: center;
+        }
+
+        .filterToggleButton {
+          display: none;
           border: none;
           border-radius: 14px;
-          background: #ffffff;
+          padding: 13px 14px;
+          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          color: #ffffff;
+          font-weight: 950;
+          min-height: 50px;
+          cursor: pointer;
+        }
+
+        .filterBody {
+          margin-top: 12px;
+        }
+
+        .filterWrap {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .collectionToggleWrap {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          padding: 6px;
+          border-radius: 14px;
+          background: #eef2ff;
+          border: 1px solid #c7d2fe;
+          flex-wrap: wrap;
+          width: auto;
+          justify-content: flex-start;
+        }
+
+        .quickMobileChips {
+          display: none;
+          gap: 8px;
+          overflow-x: auto;
+          padding-bottom: 2px;
+          scrollbar-width: none;
+        }
+
+        .quickMobileChips::-webkit-scrollbar {
+          display: none;
+        }
+
+        .quickChip {
+          min-height: 42px;
+          border-radius: 999px;
+          border: 1px solid #c7d2fe;
+          padding: 9px 13px;
+          font-weight: 900;
+          background: #eef2ff;
+          color: #3730a3;
+          white-space: nowrap;
+          cursor: pointer;
+        }
+
+        .quickChip.active {
+          background: #4f46e5;
+          color: #ffffff;
+        }
+
+        .clearFiltersButton {
+          border: none;
+          border-radius: 12px;
+          padding: 10px 12px;
+          background: #f1f5f9;
           color: #334155;
+          font-weight: 900;
+          min-height: 42px;
+          cursor: pointer;
+        }
+
+        .cardImageWrap {
+          height: 180px;
+          background: rgba(255,255,255,0.92);
+          border-radius: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 12px;
+          overflow: hidden;
+          padding: 14px;
+        }
+
+        .cardImage {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          transition: transform 0.2s ease;
+        }
+
+        .cardImageWrap:hover .cardImage {
+          transform: scale(1.05);
+        }
+
+        .pager {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-top: 18px;
+        }
+
+        .pagerButton {
+          padding: 10px 14px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.16);
+          background: rgba(255,255,255,0.08);
+          color: white;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .pagerButton:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+
+        .upgradeBox {
+          margin-top: 12px;
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          border-radius: 18px;
+          padding: 14px;
+          border: 1px solid rgba(255,255,255,0.35);
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+        }
+
+        .publicProfileRow {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .publicProfileButton,
+        .publicProfileButton:visited {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 12px 16px;
+          border-radius: 14px;
+          text-decoration: none;
+          color: white;
+          font-weight: 800;
+          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          box-shadow: 0 10px 18px rgba(79,70,229,0.28);
+          min-height: 46px;
+          border: none;
+          cursor: pointer;
+          font-size: 15px;
+          font-family: inherit;
+        }
+
+        .publicProfileButton.secondary {
+          background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+        }
+
+        .publicProfileActions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: flex-end;
+        }
+
+        .publicProfileMeta {
+          font-size: 13px;
+          color: #4b5563;
+          line-height: 1.5;
+        }
+
+        .copyStatus {
+          margin-top: 8px;
+          display: inline-flex;
+          padding: 8px 10px;
+          border-radius: 999px;
+          background: #ecfdf5;
+          color: #065f46;
+          border: 1px solid #bbf7d0;
+          font-size: 12px;
+          font-weight: 900;
+        }
+
+        .spotlightGrid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .spotlightCard {
+          display: block;
+          text-decoration: none;
+          background: #ffffff;
+          color: #111827;
+          border-radius: 18px;
+          padding: 14px;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 8px 18px rgba(0,0,0,0.10);
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .spotlightCard:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 24px rgba(0,0,0,0.14);
+        }
+
+        .qtyControls {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 10px;
-          text-align: left;
-          padding: 10px 12px;
-          cursor: pointer;
-          font-weight: 950;
-          border: 1px solid #e5e7eb;
-        }
-
-        .autoSellShippingToggle span {
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .autoSellShippingToggle strong {
-          color: #4f46e5;
-          font-weight: 1000;
-          flex-shrink: 0;
-        }
-
-        .autoSellShippingTitle {
-          font-weight: 1000;
-          color: #312e81;
-        }
-
-        .autoSellShippingText {
-          color: #64748b;
-          font-size: 12px;
-          font-weight: 850;
-          line-height: 1.35;
-          padding: 8px 4px 0;
-        }
-
-        .autoSellShippingControls {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px;
           margin-top: 8px;
         }
 
-        .autoSellShippingOption {
-          min-height: 44px;
-          border-radius: 13px;
-          background: #ffffff;
-          border: 1px solid #d1d5db;
-          color: #334155;
-          display: flex;
+        .qtyButton {
+          width: 46px;
+          height: 46px;
+          min-width: 46px;
+          border-radius: 14px;
+          font-size: 22px;
+          font-weight: 900;
+          line-height: 1;
+          display: inline-flex;
           align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          touch-action: manipulation;
+          user-select: none;
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        .qtyValue {
+          min-width: 44px;
+          text-align: center;
+          font-weight: 900;
+          font-size: 22px;
+        }
+
+        .photoBox {
+          margin-top: 10px;
+          padding: 10px;
+          border-radius: 12px;
+          background: rgba(255,255,255,0.55);
+          border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        .photoToggleButton {
+          width: 100%;
+          margin-top: 10px;
+          min-height: 42px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.6);
+          background: rgba(255,255,255,0.68);
+          color: #111827;
+          font-weight: 900;
+          cursor: pointer;
+        }
+
+        .mobileSelect {
+          padding: 14px;
+          border-radius: 14px;
+          border: 1px solid #d1d5db;
+          font-size: 15px;
+          background: white;
+          width: auto;
+          min-width: 180px;
+        }
+
+        .searchBox {
+          flex: 1 1 280px;
+          padding: 14px 16px;
+          border-radius: 14px;
+          border: 1px solid #d1d5db;
+          font-size: 15px;
+          min-height: 52px;
+          height: 52px;
+          max-height: 52px;
+          background: white;
+          box-sizing: border-box;
+          width: auto;
+          min-width: 280px;
+        }
+
+        .seriesProgressGrid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 12px;
+        }
+
+        .seriesProgressButton {
+          border-radius: 18px;
+          border: 1px solid #e5e7eb;
+          padding: 14px;
+          background: #ffffff;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .jumpPanel {
+          margin-bottom: 14px;
+        }
+
+        .forceShowChips {
+          display: flex !important;
+          flex-wrap: wrap;
+          overflow: visible;
+          padding-bottom: 0;
           gap: 8px;
-          padding: 9px 10px;
-          font-size: 13px;
+        }
+
+        .forceShowChips .quickChip {
+          min-width: 96px;
+          justify-content: center;
+        }
+
+        .showMoreButton {
+          margin-top: 12px;
+          width: 100%;
+          min-height: 44px;
+          border: none;
+          border-radius: 14px;
+          background: #eef2ff;
+          color: #3730a3;
           font-weight: 950;
           cursor: pointer;
         }
 
-        .autoSellShippingOption.active {
-          background: #eef2ff;
+        .eliteStatusStack {
+          position: sticky;
+          top: 8px;
+          z-index: 60;
+          display: grid;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .eliteNotice,
+        .eliteError {
+          border-radius: 18px;
+          padding: 12px 14px;
+          font-weight: 900;
+          box-shadow: 0 12px 26px rgba(0,0,0,0.20);
+        }
+
+        .eliteNotice {
+          background: #ecfdf5;
+          color: #065f46;
+          border: 1px solid #bbf7d0;
+        }
+
+        .eliteError {
+          background: #fff1f2;
+          color: #9f1239;
+          border: 1px solid #fecdd3;
+        }
+
+        .eliteUpgradeWall {
+          margin-bottom: 18px;
+          border-radius: 26px;
+          padding: 20px;
+          color: #111827;
+          background: radial-gradient(circle at top right, rgba(196,181,253,0.42), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          border: 1px solid rgba(255,255,255,0.55);
+          box-shadow: 0 18px 38px rgba(0,0,0,0.20);
+          display: flex;
+          justify-content: space-between;
+          gap: 18px;
+          align-items: center;
+        }
+
+        .eliteUpgradeEyebrow {
+          color: #6d28d9;
+          font-size: 13px;
+          font-weight: 1000;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin-bottom: 7px;
+        }
+
+        .eliteUpgradeTitle {
+          font-size: clamp(1.35rem, 3vw, 2rem);
+          font-weight: 1000;
+          letter-spacing: -0.6px;
+          line-height: 1.1;
+          margin-bottom: 8px;
+        }
+
+        .eliteUpgradeText {
+          color: #4b5563;
+          line-height: 1.6;
+          font-size: 15px;
+          max-width: 760px;
+        }
+
+        .elitePlanRow {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 14px;
+        }
+
+        .eliteMiniPlan {
+          border-radius: 17px;
+          padding: 11px 13px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          min-width: 130px;
+        }
+
+        .eliteMiniPlan.best {
+          background: linear-gradient(135deg, #f5f3ff, #eff6ff);
           border-color: #a78bfa;
-          color: #3730a3;
+          box-shadow: 0 10px 20px rgba(124,58,237,0.10);
         }
 
-        .autoSellShippingOption input {
-          accent-color: #7c3aed;
+        .eliteMiniPlan span {
+          display: block;
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 900;
+          margin-bottom: 4px;
         }
 
-        .autoSellShippingPriceInput,
-        .autoSellPickupInput {
-          min-height: 44px;
+        .eliteMiniPlan strong {
+          color: #312e81;
+          font-size: 20px;
+          font-weight: 1000;
         }
+
+        .eliteUpgradeButton,
+        .eliteModalButton {
+          min-height: 50px;
+          border-radius: 17px;
+          padding: 13px 18px;
+          font-weight: 1000;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(90deg, #4f46e5, #7c3aed);
+          color: white;
+          box-shadow: 0 14px 26px rgba(79,70,229,0.26);
+        }
+
 
         .autoSellModalList {
           display: grid;
           gap: 12px;
-          margin-top: 8px;
+          margin-top: 18px;
           max-height: none;
-          overflow-y: auto;
-          overflow-x: hidden;
-          padding: 10px;
-          flex: 1 1 auto;
+          overflow: auto;
+          padding-right: 4px;
+          flex: 1;
           min-height: 0;
-          border-radius: 20px;
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
-          overscroll-behavior: contain;
         }
 
         .autoSellItem {
           display: grid;
-          grid-template-columns: 60px 96px minmax(0, 1fr);
+          grid-template-columns: auto 92px 1fr;
           gap: 12px;
-          align-items: stretch;
+          align-items: start;
           text-align: left;
           border-radius: 18px;
           border: 1px solid #e5e7eb;
@@ -1624,36 +2004,10 @@ export default function Page() {
           box-shadow: 0 8px 18px rgba(0,0,0,0.06);
         }
 
-        .autoSellItem.selected {
-          border-color: #a78bfa;
-          box-shadow: 0 8px 20px rgba(124,58,237,0.12);
-        }
-
-        .autoSellCheck {
-          min-height: 76px;
-          border-radius: 15px;
-          background: #eef2ff;
-          color: #3730a3;
-          border: 1px solid #c7d2fe;
-          display: grid;
-          place-items: center;
-          align-content: center;
-          gap: 5px;
-          font-weight: 1000;
-          font-size: 12px;
-          cursor: pointer;
-        }
-
-        .autoSellCheck input {
-          width: 18px;
-          height: 18px;
-          accent-color: #7c3aed;
-        }
-
         .autoSellThumb {
-          width: 96px;
-          height: 96px;
-          border-radius: 16px;
+          width: 76px;
+          height: 76px;
+          border-radius: 14px;
           background: #f8fafc;
           border: 1px solid #e5e7eb;
           display: flex;
@@ -1671,12 +2025,11 @@ export default function Page() {
         .autoSellFields {
           display: grid;
           gap: 8px;
-          min-width: 0;
         }
 
         .autoSellTitlePriceRow {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) 150px;
+          grid-template-columns: 1fr 120px;
           gap: 8px;
         }
 
@@ -1685,51 +2038,23 @@ export default function Page() {
           width: 100%;
           box-sizing: border-box;
           border: 1px solid #d1d5db;
-          border-radius: 13px;
+          border-radius: 12px;
           padding: 11px 12px;
           color: #111827;
           background: white;
           font-size: 14px;
           font-family: inherit;
-          outline: none;
-        }
-
-        .autoSellInput:focus,
-        .autoSellTextarea:focus {
-          border-color: #8b5cf6;
-          box-shadow: 0 0 0 4px rgba(139,92,246,0.12);
-        }
-
-        .priceInput {
-          font-weight: 950;
         }
 
         .autoSellTextarea {
-          min-height: 72px;
+          min-height: 70px;
           resize: vertical;
-        }
-
-        .autoSellMetaBadges {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          color: #475569;
-          font-size: 12px;
-          font-weight: 850;
-        }
-
-        .autoSellMetaBadges span {
-          border-radius: 999px;
-          padding: 6px 8px;
-          background: #f1f5f9;
-          border: 1px solid #e2e8f0;
         }
 
         .autoSellModalActions {
           display: grid;
-          grid-template-columns: 1fr auto auto;
+          grid-template-columns: 1fr 1fr;
           gap: 10px;
-          align-items: center;
           margin-top: 14px;
           padding-top: 12px;
           border-top: 1px solid #e5e7eb;
@@ -1737,12 +2062,6 @@ export default function Page() {
           position: sticky;
           bottom: 0;
           z-index: 5;
-        }
-
-        .autoSellSelectedNote {
-          color: #475569;
-          font-size: 13px;
-          font-weight: 1000;
         }
 
         .autoSellCancelButton {
@@ -1754,12 +2073,6 @@ export default function Page() {
           background: #f8fafc;
           color: #334155;
           cursor: pointer;
-        }
-
-        .autoSellCreateButton {
-          margin-top: 0;
-          width: auto;
-          min-width: 240px;
         }
 
 
@@ -2015,208 +2328,6 @@ export default function Page() {
             box-sizing: border-box;
           }
 
-          .autoSellCard {
-            grid-template-columns: 1fr;
-            border-radius: 20px;
-            padding: 15px;
-            margin-bottom: 14px;
-          }
-
-          .autoSellButton {
-            width: 100%;
-          }
-
-          .autoSellMiniSteps {
-            gap: 6px;
-          }
-
-          .autoSellMiniSteps span {
-            flex: 1 1 auto;
-            text-align: center;
-          }
-
-          .autoSellOverlay {
-            padding: 10px;
-            align-items: center;
-          }
-
-          .autoSellModal {
-            width: min(760px, 100%);
-            height: calc(100dvh - 22px);
-            max-height: calc(100dvh - 22px);
-            min-height: 0;
-            border-radius: 24px;
-            padding: 14px;
-            overflow: hidden;
-          }
-
-          .autoSellModalHeader {
-            grid-template-columns: 1fr;
-            gap: 8px;
-            padding-right: 42px;
-          }
-
-          .autoSellModalIcon {
-            display: none;
-          }
-
-          .autoSellModalTitle {
-            font-size: 24px;
-          }
-
-          .autoSellModalText {
-            font-size: 14px;
-            line-height: 1.45;
-          }
-
-          .autoSellSummaryGrid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 8px;
-          }
-
-          .autoSellSummaryCard {
-            padding: 10px;
-            text-align: center;
-          }
-
-          .autoSellSummaryCard span {
-            font-size: 11px;
-            margin-bottom: 4px;
-          }
-
-          .autoSellSummaryCard strong {
-            font-size: 22px;
-          }
-
-          .autoSellToolbar {
-            align-items: center;
-            gap: 8px;
-            padding: 8px;
-            margin-top: 8px;
-          }
-
-          .autoSellHint {
-            width: 100%;
-            font-size: 12px;
-            text-align: center;
-          }
-
-          .autoSellToolbarButtons {
-            width: 100%;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-          }
-
-          .autoSellSmallButton {
-            width: 100%;
-            min-height: 42px;
-          }
-
-          .autoSellShippingPanel {
-            padding: 6px;
-            margin-top: 8px;
-          }
-
-          .autoSellShippingToggle {
-            min-height: 40px;
-            padding: 9px 10px;
-          }
-
-          .autoSellShippingControls {
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-          }
-
-          .autoSellShippingOption {
-            min-height: 42px;
-            width: 100%;
-            box-sizing: border-box;
-          }
-
-          .autoSellShippingPriceInput,
-          .autoSellPickupInput {
-            min-height: 42px;
-            width: 100%;
-          }
-
-          .autoSellModalList {
-            flex: 1 1 auto;
-            min-height: 0;
-            max-height: none;
-            padding: 8px;
-          }
-
-          .autoSellItem {
-            grid-template-columns: 44px 64px minmax(0, 1fr);
-            gap: 8px;
-            padding: 10px;
-            align-items: start;
-          }
-
-          .autoSellCheck {
-            min-height: 64px;
-            padding: 6px;
-          }
-
-          .autoSellThumb {
-            width: 64px;
-            height: 64px;
-            border-radius: 14px;
-          }
-
-          .autoSellFields {
-            gap: 7px;
-          }
-
-          .autoSellTitlePriceRow {
-            grid-template-columns: minmax(0, 1fr) 110px;
-            gap: 8px;
-          }
-
-          .autoSellInput,
-          .autoSellTextarea {
-            min-height: 44px;
-            font-size: 14px;
-            padding: 10px 11px;
-          }
-
-          .autoSellTextarea {
-            min-height: 56px;
-          }
-
-          .autoSellMetaBadges {
-            gap: 5px;
-          }
-
-          .autoSellMetaBadges span {
-            font-size: 11px;
-            padding: 5px 7px;
-          }
-
-          .autoSellModalActions {
-            grid-template-columns: 1fr auto auto;
-            gap: 8px;
-            padding-top: 8px;
-            margin-top: 8px;
-            position: relative;
-            bottom: auto;
-          }
-
-          .autoSellSelectedNote {
-            font-size: 12px;
-          }
-
-          .autoSellCancelButton,
-          .autoSellCreateButton {
-            min-height: 46px;
-          }
-
-          .autoSellCreateButton {
-            width: auto;
-            min-width: 190px;
-          }
-
           .eliteUpgradeWall {
             display: grid;
             padding: 16px;
@@ -2306,6 +2417,57 @@ export default function Page() {
             box-sizing: border-box;
           }
 
+
+          .autoSellCard {
+            display: grid;
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 14px;
+          }
+
+  
+        .autoSellToolbar {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: 14px;
+          padding: 10px;
+          border-radius: 16px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+        }
+
+        .autoSellToolbarButtons {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .autoSellSmallButton {
+          min-height: 40px;
+          border-radius: 12px;
+          border: 1px solid #d1d5db;
+          background: #ffffff;
+          color: #334155;
+          font-weight: 950;
+          padding: 9px 12px;
+          cursor: pointer;
+        }
+
+        .autoSellHint {
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 850;
+          line-height: 1.35;
+        }
+
+
+        .autoSellButton {
+            width: 100%;
+          }
+
           .publicProfileRow {
             display: grid;
           }
@@ -2363,90 +2525,48 @@ export default function Page() {
           }
         }
 
-@media (max-width: 420px) {
-          .autoSellModal {
-            padding: 14px;
-          }
 
-          .autoSellSummaryGrid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 6px;
-          }
 
-          .autoSellSummaryCard {
-            padding: 8px;
-          }
-
-          .autoSellSummaryCard span {
-            font-size: 10px;
-          }
-
-          .autoSellSummaryCard strong {
-            font-size: 20px;
+          .autoSellToolbar {
+            align-items: stretch;
           }
 
           .autoSellToolbarButtons {
+            display: grid;
             grid-template-columns: 1fr 1fr;
+            width: 100%;
           }
 
-          .autoSellShippingControls {
-            grid-template-columns: 1fr;
-          }
-
-          .autoSellModalList {
-            flex: 1 1 auto;
-            min-height: 0;
-            max-height: none;
-          }
-
-          .autoSellItem {
-            grid-template-columns: 38px 58px minmax(0, 1fr);
-            gap: 7px;
-            padding: 8px;
-          }
-
-          .autoSellCheck {
-            min-height: 58px;
-            font-size: 11px;
-          }
-
-          .autoSellThumb {
-            width: 58px;
-            height: 58px;
+          .autoSellSmallButton {
+            width: 100%;
           }
 
           .autoSellTitlePriceRow {
-            grid-template-columns: minmax(0, 1fr) 96px;
-            gap: 6px;
+            grid-template-columns: 1fr;
           }
 
           .autoSellInput,
           .autoSellTextarea {
-            font-size: 13px;
-            padding: 9px 10px;
+            min-height: 46px;
+            font-size: 15px;
           }
 
-          .autoSellTextarea {
-            min-height: 52px;
+
+          .autoSellItem {
+            grid-template-columns: 1fr;
           }
 
-          .autoSellMetaBadges span {
-            font-size: 10px;
-            padding: 4px 6px;
+          .autoSellThumb {
+            width: 100%;
+            height: 150px;
           }
 
           .autoSellModalActions {
             grid-template-columns: 1fr;
-            position: relative;
-            bottom: auto;
           }
 
-          .autoSellCancelButton,
-          .autoSellCreateButton {
-            width: 100%;
-            min-width: 0;
-          }
 
+        @media (max-width: 420px) {
           .statsSection {
             grid-template-columns: 1fr;
           }
@@ -2460,7 +2580,6 @@ export default function Page() {
             box-sizing: border-box;
           }
         }
-
       `}</style>
 
       <div className="galaxyStars">
@@ -2720,14 +2839,7 @@ export default function Page() {
             <div className="autoSellTitle">Auto-list your extras 💸</div>
             <div className="autoSellText">
               You currently have <strong>{extrasCount}</strong> extra Doorable{extrasCount === 1 ? "" : "s"}.
-              Review them first, choose which ones to list, add prices, then create Marketplace listings.
-              Existing active or pending listings are skipped.
-            </div>
-
-            <div className="autoSellMiniSteps">
-              <span>1. Pick extras</span>
-              <span>2. Add prices</span>
-              <span>3. Create listings</span>
+              Create Marketplace listings from your extras in one click. Existing active or pending listings are skipped.
             </div>
           </div>
 
@@ -2740,7 +2852,7 @@ export default function Page() {
             {autoSellLoading
               ? "Listing extras..."
               : extrasCount > 0
-                ? `Review ${extrasCount} Extra${extrasCount === 1 ? "" : "s"}`
+                ? `List ${extrasCount} Extra${extrasCount === 1 ? "" : "s"}`
                 : "No Extras Yet"}
           </button>
         </section>
@@ -3295,8 +3407,17 @@ export default function Page() {
         )}
 
         {showAutoSellModal && (
-          <div className="eliteModalOverlay autoSellOverlay">
-            <div className="eliteModal autoSellModal">
+          <div className="eliteModalOverlay">
+            <div
+              className="eliteModal"
+              style={{
+                width: "min(860px, 100%)",
+                textAlign: "left",
+                maxHeight: "88vh",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
               <button
                 type="button"
                 className="eliteModalClose"
@@ -3305,37 +3426,16 @@ export default function Page() {
                 ×
               </button>
 
-              <div className="autoSellModalHeader">
-                <div className="eliteModalIcon autoSellModalIcon">💸</div>
+              <div className="eliteModalIcon" style={{ margin: "0 0 12px" }}>💸</div>
+              <h2 className="eliteModalTitle">Choose extras to list</h2>
 
-                <div>
-                  <h2 className="eliteModalTitle autoSellModalTitle">Review extras to list</h2>
-                  <div className="eliteModalText autoSellModalText">
-                    Choose which extras should become Marketplace listings. Add prices now, or leave prices blank and edit later.
-                  </div>
-                </div>
-              </div>
-
-              <div className="autoSellSummaryGrid">
-                <div className="autoSellSummaryCard">
-                  <span>Eligible extras</span>
-                  <strong>{autoSellDrafts.length}</strong>
-                </div>
-
-                <div className="autoSellSummaryCard">
-                  <span>Selected</span>
-                  <strong>{autoSellDrafts.filter((draft) => draft.selected).length}</strong>
-                </div>
-
-                <div className="autoSellSummaryCard">
-                  <span>Auto-priced</span>
-                  <strong>{autoSellDrafts.filter((draft) => draft.price.trim()).length}</strong>
-                </div>
+              <div className="eliteModalText" style={{ marginLeft: 0 }}>
+                Pick which extras should become Marketplace listings. You can add prices now or leave them blank and edit later.
               </div>
 
               <div className="autoSellToolbar">
                 <div className="autoSellHint">
-                  Prices auto-fill only when that Doorable already has sold listings with an average sale price. Otherwise the price stays blank.
+                  Prices auto-fill only when this item has a sold listing average. Otherwise, price stays blank and can be edited later.
                 </div>
 
                 <div className="autoSellToolbarButtons">
@@ -3357,81 +3457,14 @@ export default function Page() {
                 </div>
               </div>
 
-              <div className="autoSellShippingPanel">
-                <button
-                  type="button"
-                  className="autoSellShippingToggle"
-                  onClick={() => setShowAutoSellShippingOptions((prev) => !prev)}
-                >
-                  <span>
-                    Shipping: {autoSellShippingAvailable ? "Available" : "Not offered"}
-                    {autoSellShippingPrice.trim() ? ` • $${autoSellShippingPrice.trim()}` : ""}
-                    {autoSellLocalPickupAvailable ? " • Local pickup" : ""}
-                  </span>
-                  <strong>{showAutoSellShippingOptions ? "Hide" : "Edit"}</strong>
-                </button>
-
-                {showAutoSellShippingOptions && (
-                  <>
-                    <div className="autoSellShippingText">
-                      Applies to every listing in this batch. Keep it simple — buyers can still message you.
-                    </div>
-
-                    <div className="autoSellShippingControls">
-                      <label className={`autoSellShippingOption ${autoSellShippingAvailable ? "active" : ""}`}>
-                        <input
-                          type="checkbox"
-                          checked={autoSellShippingAvailable}
-                          onChange={(e) => setAutoSellShippingAvailable(e.target.checked)}
-                        />
-                        <span>Shipping available</span>
-                      </label>
-
-                      <input
-                        className="autoSellInput autoSellShippingPriceInput"
-                        value={autoSellShippingPrice}
-                        onChange={(e) => setAutoSellShippingPrice(e.target.value)}
-                        placeholder="Shipping price optional"
-                        inputMode="decimal"
-                        disabled={!autoSellShippingAvailable}
-                      />
-
-                      <label className={`autoSellShippingOption ${autoSellLocalPickupAvailable ? "active" : ""}`}>
-                        <input
-                          type="checkbox"
-                          checked={autoSellLocalPickupAvailable}
-                          onChange={(e) => setAutoSellLocalPickupAvailable(e.target.checked)}
-                        />
-                        <span>Local pickup</span>
-                      </label>
-
-                      <input
-                        className="autoSellInput autoSellPickupInput"
-                        value={autoSellPickupLocation}
-                        onChange={(e) => setAutoSellPickupLocation(e.target.value)}
-                        placeholder="Pickup area optional"
-                        disabled={!autoSellLocalPickupAvailable}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="autoSellListHeader">
-                <div>
-                  <strong>Items being listed</strong>
-                  <span>Scroll this section to review each extra.</span>
-                </div>
-              </div>
-
               <div className="autoSellModalList">
                 {autoSellDrafts.map((draft) => {
                   const item = cards.find((card) => card.id === draft.cardId);
                   const extraQty = item ? Math.max(1, Number(item.qty || 0) - 1) : 1;
 
                   return (
-                    <div key={draft.cardId} className={`autoSellItem ${draft.selected ? "selected" : ""}`}>
-                      <label className="autoSellCheck">
+                    <div key={draft.cardId} className="autoSellItem">
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 900 }}>
                         <input
                           type="checkbox"
                           checked={draft.selected}
@@ -3441,7 +3474,7 @@ export default function Page() {
                             })
                           }
                         />
-                        <span>List</span>
+                        List
                       </label>
 
                       <div className="autoSellThumb">
@@ -3466,14 +3499,14 @@ export default function Page() {
                           />
 
                           <input
-                            className="autoSellInput priceInput"
+                            className="autoSellInput"
                             value={draft.price}
                             onChange={(e) =>
                               updateAutoSellDraft(draft.cardId, {
                                 price: e.target.value,
                               })
                             }
-                            placeholder="Example: 3.00"
+                            placeholder="Price example: 3.00"
                             inputMode="decimal"
                           />
                         </div>
@@ -3486,14 +3519,11 @@ export default function Page() {
                               description: e.target.value,
                             })
                           }
-                          placeholder="Listing description"
+                          placeholder="Description"
                         />
 
-                        <div className="autoSellMetaBadges">
-                          <span>Qty extra: {extraQty}</span>
-                          <span>{item?.series || "Unknown Series"}</span>
-                          <span>{item?.rarity || "Unknown rarity"}</span>
-                          <span>{draft.price.trim() ? "Price ready" : "No price yet"}</span>
+                        <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800 }}>
+                          Qty extra: {extraQty} • {item?.series || "Unknown Series"} • {item?.rarity || "Unknown rarity"}
                         </div>
                       </div>
                     </div>
@@ -3501,11 +3531,11 @@ export default function Page() {
                 })}
               </div>
 
-              <div className="autoSellModalActions">
-                <div className="autoSellSelectedNote">
-                  {autoSellDrafts.filter((draft) => draft.selected).length} selected to list
-                </div>
+              <div style={{ marginTop: 12, color: "#475569", fontSize: 13, fontWeight: 900 }}>
+                {autoSellDrafts.filter((draft) => draft.selected).length} selected to list
+              </div>
 
+              <div className="autoSellModalActions">
                 <button
                   type="button"
                   className="autoSellCancelButton"
@@ -3517,9 +3547,10 @@ export default function Page() {
 
                 <button
                   type="button"
-                  className="eliteModalButton autoSellCreateButton"
+                  className="eliteModalButton"
                   onClick={() => void handleAutoSellExtras()}
                   disabled={autoSellLoading}
+                  style={{ marginTop: 0 }}
                 >
                   {autoSellLoading ? "Creating listings..." : "Create Selected Listings 💜"}
                 </button>

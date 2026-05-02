@@ -48,8 +48,6 @@ type AutoSellDraft = {
   selected: boolean;
 };
 
-type AutoSellView = "all" | "selected" | "priced" | "needs_price";
-
 const FREE_LIMIT = 50;
 const MONTHLY_PRICE_LABEL = "$3/month";
 const YEARLY_PRICE_LABEL = "$15/year";
@@ -344,8 +342,6 @@ export default function Page() {
   const [autoSellLoading, setAutoSellLoading] = useState(false);
   const [showAutoSellModal, setShowAutoSellModal] = useState(false);
   const [autoSellDrafts, setAutoSellDrafts] = useState<AutoSellDraft[]>([]);
-  const [autoSellSearch, setAutoSellSearch] = useState("");
-  const [autoSellView, setAutoSellView] = useState<AutoSellView>("all");
 
   const [visibility, setVisibility] = useState<"private" | "extras_only" | "full">("private");
   const [savingVisibility, setSavingVisibility] = useState(false);
@@ -823,8 +819,6 @@ export default function Page() {
     });
 
     setAutoSellDrafts(drafts);
-    setAutoSellSearch("");
-    setAutoSellView("all");
     setShowAutoSellModal(true);
   }
 
@@ -850,21 +844,6 @@ export default function Page() {
     );
   }
 
-  function setVisibleAutoSellDraftsSelected(selected: boolean) {
-    const visibleIds = new Set(visibleAutoSellDrafts.map((draft) => draft.cardId));
-
-    setAutoSellDrafts((prev) =>
-      prev.map((draft) =>
-        visibleIds.has(draft.cardId)
-          ? {
-              ...draft,
-              selected,
-            }
-          : draft
-      )
-    );
-  }
-
   function selectPricedAutoSellDraftsOnly() {
     setAutoSellDrafts((prev) =>
       prev.map((draft) => ({
@@ -872,7 +851,6 @@ export default function Page() {
         selected: draft.price.trim() !== "",
       }))
     );
-    setAutoSellView("priced");
   }
 
 
@@ -980,8 +958,6 @@ export default function Page() {
       setMonthlyListings((prev) => prev + listingsToCreate.length);
       setShowAutoSellModal(false);
       setAutoSellDrafts([]);
-      setAutoSellSearch("");
-      setAutoSellView("all");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not auto-list extras.");
     } finally {
@@ -1252,40 +1228,6 @@ export default function Page() {
       needsPrice,
     };
   }, [autoSellDrafts]);
-
-  const visibleAutoSellDrafts = useMemo(() => {
-    const q = autoSellSearch.trim().toLowerCase();
-
-    return autoSellDrafts.filter((draft) => {
-      const item = cards.find((card) => card.id === draft.cardId);
-
-      const searchText = [
-        draft.title,
-        draft.description,
-        item?.name,
-        item?.series,
-        item?.rarity,
-        item?.movie,
-        item?.subcategory,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      const matchesSearch = !q || searchText.includes(q);
-
-      const matchesView =
-        autoSellView === "all"
-          ? true
-          : autoSellView === "selected"
-            ? draft.selected
-            : autoSellView === "priced"
-              ? draft.price.trim() !== ""
-              : draft.price.trim() === "";
-
-      return matchesSearch && matchesView;
-    });
-  }, [autoSellDrafts, autoSellSearch, autoSellView, cards]);
 
   if (loading) {
     return (
@@ -2112,6 +2054,212 @@ export default function Page() {
         }
 
 
+        .autoSellSimpleHeader {
+          display: grid;
+          grid-template-columns: auto 1fr;
+          gap: 14px;
+          align-items: center;
+          padding-right: 44px;
+        }
+
+        .autoSellSimpleIcon {
+          margin: 0;
+        }
+
+        .autoSellSimpleText {
+          margin-left: 0;
+          margin-top: 8px;
+          max-width: 760px;
+        }
+
+        .autoSellTopControls {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 10px;
+          align-items: center;
+          margin-top: 14px;
+          padding: 10px;
+          border-radius: 16px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+        }
+
+        .autoSellTopStats {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 7px;
+        }
+
+        .autoSellTopStats span {
+          border-radius: 999px;
+          padding: 7px 10px;
+          background: #eef2ff;
+          color: #3730a3;
+          border: 1px solid #c7d2fe;
+          font-size: 12px;
+          font-weight: 950;
+        }
+
+        .autoSellListTitle {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          align-items: end;
+          margin-top: 12px;
+          padding: 0 2px;
+        }
+
+        .autoSellListTitle strong {
+          color: #111827;
+          font-size: 14px;
+          font-weight: 1000;
+        }
+
+        .autoSellListTitle span {
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 850;
+          text-align: right;
+        }
+
+        .autoSellBigList {
+          display: grid;
+          gap: 10px;
+          flex: 1 1 auto;
+          min-height: 360px;
+          overflow-y: auto;
+          overflow-x: hidden;
+          margin-top: 8px;
+          padding: 10px;
+          border-radius: 18px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          overscroll-behavior: contain;
+        }
+
+        .autoSellCompactItem {
+          display: grid;
+          grid-template-columns: 58px 74px minmax(0, 1fr);
+          gap: 10px;
+          align-items: stretch;
+          padding: 10px;
+          border-radius: 16px;
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+        }
+
+        .autoSellCompactItem.selected {
+          border-color: #a78bfa;
+          box-shadow: 0 8px 20px rgba(124,58,237,0.12);
+        }
+
+        .autoSellCompactCheck {
+          min-height: 74px;
+          border-radius: 14px;
+          background: #eef2ff;
+          color: #3730a3;
+          border: 1px solid #c7d2fe;
+          display: grid;
+          place-items: center;
+          align-content: center;
+          gap: 5px;
+          font-size: 12px;
+          font-weight: 1000;
+          cursor: pointer;
+        }
+
+        .autoSellCompactCheck input {
+          width: 18px;
+          height: 18px;
+          accent-color: #7c3aed;
+        }
+
+        .autoSellCompactThumb {
+          width: 74px;
+          height: 74px;
+          border-radius: 14px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          color: #64748b;
+          font-size: 11px;
+          font-weight: 900;
+        }
+
+        .autoSellCompactThumb img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+
+        .autoSellCompactBody {
+          display: grid;
+          gap: 7px;
+          min-width: 0;
+        }
+
+        .autoSellCompactRow {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 120px;
+          gap: 8px;
+        }
+
+        .autoSellCompactTitle,
+        .autoSellCompactPrice {
+          min-height: 40px;
+        }
+
+        .autoSellCompactPrice {
+          font-weight: 950;
+        }
+
+        .autoSellCompactDescription {
+          min-height: 54px;
+          max-height: 74px;
+          resize: vertical;
+        }
+
+        .autoSellPriceReady {
+          border-color: #86efac;
+          background: #f0fdf4;
+        }
+
+        .autoSellCompactMeta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 5px;
+          color: #475569;
+          font-size: 11px;
+          font-weight: 850;
+        }
+
+        .autoSellCompactMeta span {
+          border-radius: 999px;
+          padding: 4px 7px;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+        }
+
+        .autoSellCompactMeta span.ready {
+          background: #ecfdf5;
+          border-color: #bbf7d0;
+          color: #065f46;
+        }
+
+        .autoSellCompactMeta span.needs {
+          background: #fff7ed;
+          border-color: #fed7aa;
+          color: #9a3412;
+        }
+
+        .autoSellSimpleActions {
+          flex-shrink: 0;
+        }
+
         .autoSellModalList {
           display: grid;
           gap: 12px;
@@ -2835,6 +2983,145 @@ export default function Page() {
             box-sizing: border-box;
           }
         }
+
+        @media (max-width: 920px) {
+          .autoSellModal {
+            width: 100% !important;
+            height: calc(100dvh - 22px) !important;
+            max-height: calc(100dvh - 22px) !important;
+            padding: 14px !important;
+          }
+
+          .autoSellSimpleHeader {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            padding-right: 42px;
+          }
+
+          .autoSellSimpleIcon {
+            display: none;
+          }
+
+          .autoSellTopControls {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 8px;
+          }
+
+          .autoSellTopControls .autoSellToolbarButtons {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            width: 100%;
+          }
+
+          .autoSellTopControls .autoSellSmallButton {
+            width: 100%;
+            padding: 8px 7px;
+            white-space: normal;
+            font-size: 12px;
+          }
+
+          .autoSellTopStats span {
+            flex: 1 1 auto;
+            text-align: center;
+            padding: 6px 8px;
+          }
+
+          .autoSellListTitle {
+            align-items: start;
+            display: grid;
+          }
+
+          .autoSellListTitle span {
+            text-align: left;
+          }
+
+          .autoSellBigList {
+            min-height: 0;
+            flex: 1 1 auto;
+            padding: 8px;
+          }
+
+          .autoSellCompactItem {
+            grid-template-columns: 48px 62px minmax(0, 1fr);
+            gap: 8px;
+            padding: 8px;
+          }
+
+          .autoSellCompactCheck {
+            min-height: 62px;
+            font-size: 11px;
+          }
+
+          .autoSellCompactThumb {
+            width: 62px;
+            height: 62px;
+          }
+
+          .autoSellCompactRow {
+            grid-template-columns: minmax(0, 1fr) 92px;
+            gap: 6px;
+          }
+
+          .autoSellCompactTitle,
+          .autoSellCompactPrice {
+            min-height: 38px;
+            font-size: 13px;
+            padding: 8px 9px;
+          }
+
+          .autoSellCompactDescription {
+            min-height: 46px;
+            max-height: 62px;
+            font-size: 13px;
+            padding: 8px 9px;
+          }
+
+          .autoSellCompactMeta span {
+            font-size: 10px;
+            padding: 4px 6px;
+          }
+
+          .autoSellSimpleActions {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-top: 8px;
+            padding-top: 8px;
+            position: relative;
+            bottom: auto;
+          }
+
+          .autoSellSelectedNote {
+            justify-content: center;
+            text-align: center;
+          }
+        }
+
+        @media (max-width: 430px) {
+          .autoSellCompactItem {
+            grid-template-columns: 42px 54px minmax(0, 1fr);
+            gap: 7px;
+          }
+
+          .autoSellCompactCheck {
+            min-height: 54px;
+          }
+
+          .autoSellCompactThumb {
+            width: 54px;
+            height: 54px;
+          }
+
+          .autoSellCompactRow {
+            grid-template-columns: minmax(0, 1fr) 78px;
+          }
+
+          .autoSellTopControls .autoSellToolbarButtons {
+            grid-template-columns: 1fr;
+          }
+        }
+
       `}</style>
 
       <div className="galaxyStars">
@@ -3623,11 +3910,13 @@ export default function Page() {
             <div
               className="eliteModal autoSellModal"
               style={{
-                width: "min(940px, 100%)",
+                width: "min(980px, 100%)",
                 textAlign: "left",
+                height: "min(90vh, 840px)",
                 maxHeight: "90vh",
                 display: "flex",
                 flexDirection: "column",
+                overflow: "hidden",
               }}
             >
               <button
@@ -3638,89 +3927,21 @@ export default function Page() {
                 ×
               </button>
 
-              <div className="eliteModalIcon" style={{ margin: "0 0 12px" }}>💸</div>
-              <h2 className="eliteModalTitle">Review extras to list</h2>
-
-              <div className="eliteModalText" style={{ marginLeft: 0 }}>
-                Search, filter, select, and price your extras before creating Marketplace listings.
-              </div>
-
-              <div className="autoSellSummaryRow">
-                <button
-                  type="button"
-                  className={`autoSellSummaryPill ${autoSellView === "all" ? "active" : ""}`}
-                  onClick={() => setAutoSellView("all")}
-                >
-                  <span>All</span>
-                  <strong>{autoSellStats.total}</strong>
-                </button>
-
-                <button
-                  type="button"
-                  className={`autoSellSummaryPill ${autoSellView === "selected" ? "active" : ""}`}
-                  onClick={() => setAutoSellView("selected")}
-                >
-                  <span>Selected</span>
-                  <strong>{autoSellStats.selected}</strong>
-                </button>
-
-                <button
-                  type="button"
-                  className={`autoSellSummaryPill ${autoSellView === "priced" ? "active" : ""}`}
-                  onClick={() => setAutoSellView("priced")}
-                >
-                  <span>Priced</span>
-                  <strong>{autoSellStats.priced}</strong>
-                </button>
-
-                <button
-                  type="button"
-                  className={`autoSellSummaryPill ${autoSellView === "needs_price" ? "active" : ""}`}
-                  onClick={() => setAutoSellView("needs_price")}
-                >
-                  <span>Needs price</span>
-                  <strong>{autoSellStats.needsPrice}</strong>
-                </button>
-              </div>
-
-              <div className="autoSellManagerRow">
-                <input
-                  className="autoSellSearchInput"
-                  value={autoSellSearch}
-                  onChange={(e) => setAutoSellSearch(e.target.value)}
-                  placeholder="Search extras by name, series, rarity, movie..."
-                />
-
-                <div className="autoSellToolbarButtons">
-                  <button
-                    type="button"
-                    className="autoSellSmallButton"
-                    onClick={() => setVisibleAutoSellDraftsSelected(true)}
-                  >
-                    Select Visible
-                  </button>
-
-                  <button
-                    type="button"
-                    className="autoSellSmallButton"
-                    onClick={() => setVisibleAutoSellDraftsSelected(false)}
-                  >
-                    Deselect Visible
-                  </button>
-
-                  <button
-                    type="button"
-                    className="autoSellSmallButton"
-                    onClick={selectPricedAutoSellDraftsOnly}
-                  >
-                    Priced Only
-                  </button>
+              <div className="autoSellSimpleHeader">
+                <div className="eliteModalIcon autoSellSimpleIcon">💸</div>
+                <div>
+                  <h2 className="eliteModalTitle">Choose extras to list</h2>
+                  <div className="eliteModalText autoSellSimpleText">
+                    Check the extras you want to post, add a price, and keep the description short.
+                  </div>
                 </div>
               </div>
 
-              <div className="autoSellToolbar">
-                <div className="autoSellHint">
-                  Showing {visibleAutoSellDrafts.length} of {autoSellDrafts.length}. Prices auto-fill only when an item has a sold listing average. Blank prices are okay and can be edited later.
+              <div className="autoSellTopControls">
+                <div className="autoSellTopStats">
+                  <span>{autoSellStats.total} extras</span>
+                  <span>{autoSellStats.selected} selected</span>
+                  <span>{autoSellStats.needsPrice} without price</span>
                 </div>
 
                 <div className="autoSellToolbarButtons">
@@ -3739,98 +3960,105 @@ export default function Page() {
                   >
                     Deselect All
                   </button>
+
+                  <button
+                    type="button"
+                    className="autoSellSmallButton"
+                    onClick={selectPricedAutoSellDraftsOnly}
+                  >
+                    Priced Only
+                  </button>
                 </div>
               </div>
 
-              <div className="autoSellModalList">
-                {visibleAutoSellDrafts.length === 0 ? (
-                  <div className="autoSellEmptyState">
-                    No extras match this view. Try clearing the search or switching back to All.
-                  </div>
-                ) : (
-                  visibleAutoSellDrafts.map((draft) => {
-                    const item = cards.find((card) => card.id === draft.cardId);
-                    const extraQty = item ? Math.max(1, Number(item.qty || 0) - 1) : 1;
-                    const hasPrice = draft.price.trim() !== "";
-
-                    return (
-                      <div key={draft.cardId} className={`autoSellItem ${draft.selected ? "selected" : ""}`}>
-                        <label className="autoSellCheckLabel">
-                          <input
-                            type="checkbox"
-                            checked={draft.selected}
-                            onChange={(e) =>
-                              updateAutoSellDraft(draft.cardId, {
-                                selected: e.target.checked,
-                              })
-                            }
-                          />
-                          <span>{draft.selected ? "List" : "Skip"}</span>
-                        </label>
-
-                        <div className="autoSellThumb">
-                          {item?.image ? (
-                            <img src={item.image} alt={item.name} loading="lazy" decoding="async" />
-                          ) : (
-                            <div style={{ color: "#64748b", fontWeight: 900, fontSize: 12 }}>No image</div>
-                          )}
-                        </div>
-
-                        <div className="autoSellFields">
-                          <div className="autoSellTitlePriceRow">
-                            <input
-                              className="autoSellInput"
-                              value={draft.title}
-                              onChange={(e) =>
-                                updateAutoSellDraft(draft.cardId, {
-                                  title: e.target.value,
-                                })
-                              }
-                              placeholder="Listing title"
-                            />
-
-                            <input
-                              className={`autoSellInput ${hasPrice ? "autoSellPriceReady" : ""}`}
-                              value={draft.price}
-                              onChange={(e) =>
-                                updateAutoSellDraft(draft.cardId, {
-                                  price: e.target.value,
-                                })
-                              }
-                              placeholder="Example: 3.00"
-                              inputMode="decimal"
-                            />
-                          </div>
-
-                          <textarea
-                            className="autoSellTextarea"
-                            value={draft.description}
-                            onChange={(e) =>
-                              updateAutoSellDraft(draft.cardId, {
-                                description: e.target.value,
-                              })
-                            }
-                            placeholder="Description"
-                          />
-
-                          <div className="autoSellBadgeRow">
-                            <span>Qty extra: {extraQty}</span>
-                            <span>{item?.series || "Unknown Series"}</span>
-                            <span>{item?.rarity || "Unknown rarity"}</span>
-                            <span className={hasPrice ? "ready" : "needs"}>
-                              {hasPrice ? "Price ready" : "No price yet"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+              <div className="autoSellListTitle">
+                <strong>Extras being reviewed</strong>
+                <span>Scroll this big section. Each row shows the picture, title, price, and short description.</span>
               </div>
 
-              <div className="autoSellModalActions">
+              <div className="autoSellBigList">
+                {autoSellDrafts.map((draft) => {
+                  const item = cards.find((card) => card.id === draft.cardId);
+                  const extraQty = item ? Math.max(1, Number(item.qty || 0) - 1) : 1;
+                  const hasPrice = draft.price.trim() !== "";
+
+                  return (
+                    <div key={draft.cardId} className={`autoSellCompactItem ${draft.selected ? "selected" : ""}`}>
+                      <label className="autoSellCompactCheck">
+                        <input
+                          type="checkbox"
+                          checked={draft.selected}
+                          onChange={(e) =>
+                            updateAutoSellDraft(draft.cardId, {
+                              selected: e.target.checked,
+                            })
+                          }
+                        />
+                        <span>{draft.selected ? "List" : "Skip"}</span>
+                      </label>
+
+                      <div className="autoSellCompactThumb">
+                        {item?.image ? (
+                          <img src={item.image} alt={item.name} loading="lazy" decoding="async" />
+                        ) : (
+                          <div>No image</div>
+                        )}
+                      </div>
+
+                      <div className="autoSellCompactBody">
+                        <div className="autoSellCompactRow">
+                          <input
+                            className="autoSellInput autoSellCompactTitle"
+                            value={draft.title}
+                            onChange={(e) =>
+                              updateAutoSellDraft(draft.cardId, {
+                                title: e.target.value,
+                              })
+                            }
+                            placeholder="Listing title"
+                          />
+
+                          <input
+                            className={`autoSellInput autoSellCompactPrice ${hasPrice ? "autoSellPriceReady" : ""}`}
+                            value={draft.price}
+                            onChange={(e) =>
+                              updateAutoSellDraft(draft.cardId, {
+                                price: e.target.value,
+                              })
+                            }
+                            placeholder="Price"
+                            inputMode="decimal"
+                          />
+                        </div>
+
+                        <textarea
+                          className="autoSellTextarea autoSellCompactDescription"
+                          value={draft.description}
+                          onChange={(e) =>
+                            updateAutoSellDraft(draft.cardId, {
+                              description: e.target.value,
+                            })
+                          }
+                          placeholder="Small description"
+                        />
+
+                        <div className="autoSellCompactMeta">
+                          <span>Extra qty: {extraQty}</span>
+                          <span>{item?.series || "Unknown Series"}</span>
+                          <span>{item?.rarity || "Unknown rarity"}</span>
+                          <span className={hasPrice ? "ready" : "needs"}>
+                            {hasPrice ? "Price ready" : "No price"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="autoSellModalActions autoSellSimpleActions">
                 <div className="autoSellSelectedNote">
-                  {autoSellStats.selected} selected • {autoSellStats.needsPrice} without price
+                  {autoSellStats.selected} selected • {autoSellStats.priced} priced
                 </div>
 
                 <button

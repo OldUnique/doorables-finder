@@ -48,6 +48,8 @@ type AutoSellDraft = {
   selected: boolean;
 };
 
+type AutoSellView = "all" | "selected" | "priced" | "needs_price";
+
 const FREE_LIMIT = 50;
 const MONTHLY_PRICE_LABEL = "$3/month";
 const YEARLY_PRICE_LABEL = "$15/year";
@@ -342,6 +344,8 @@ export default function Page() {
   const [autoSellLoading, setAutoSellLoading] = useState(false);
   const [showAutoSellModal, setShowAutoSellModal] = useState(false);
   const [autoSellDrafts, setAutoSellDrafts] = useState<AutoSellDraft[]>([]);
+  const [autoSellSearch, setAutoSellSearch] = useState("");
+  const [autoSellView, setAutoSellView] = useState<AutoSellView>("all");
 
   const [visibility, setVisibility] = useState<"private" | "extras_only" | "full">("private");
   const [savingVisibility, setSavingVisibility] = useState(false);
@@ -370,7 +374,6 @@ export default function Page() {
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [expandedSeries, setExpandedSeries] = useState(false);
-  const [showSeriesProgress, setShowSeriesProgress] = useState(false);
   const [shareStatus, setShareStatus] = useState("");
 
   useEffect(() => {
@@ -820,6 +823,8 @@ export default function Page() {
     });
 
     setAutoSellDrafts(drafts);
+    setAutoSellSearch("");
+    setAutoSellView("all");
     setShowAutoSellModal(true);
   }
 
@@ -843,6 +848,31 @@ export default function Page() {
         selected,
       }))
     );
+  }
+
+  function setVisibleAutoSellDraftsSelected(selected: boolean) {
+    const visibleIds = new Set(visibleAutoSellDrafts.map((draft) => draft.cardId));
+
+    setAutoSellDrafts((prev) =>
+      prev.map((draft) =>
+        visibleIds.has(draft.cardId)
+          ? {
+              ...draft,
+              selected,
+            }
+          : draft
+      )
+    );
+  }
+
+  function selectPricedAutoSellDraftsOnly() {
+    setAutoSellDrafts((prev) =>
+      prev.map((draft) => ({
+        ...draft,
+        selected: draft.price.trim() !== "",
+      }))
+    );
+    setAutoSellView("priced");
   }
 
 
@@ -946,8 +976,12 @@ export default function Page() {
       }
 
       setNotice(`Auto-listed ${listingsToCreate.length} extra${listingsToCreate.length === 1 ? "" : "s"} in Marketplace 💜`);
+      setActiveListingsCount((prev) => prev + listingsToCreate.length);
+      setMonthlyListings((prev) => prev + listingsToCreate.length);
       setShowAutoSellModal(false);
       setAutoSellDrafts([]);
+      setAutoSellSearch("");
+      setAutoSellView("all");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not auto-list extras.");
     } finally {
@@ -1206,6 +1240,53 @@ export default function Page() {
     safePage * cardsPerPage
   );
 
+  const autoSellStats = useMemo(() => {
+    const selected = autoSellDrafts.filter((draft) => draft.selected).length;
+    const priced = autoSellDrafts.filter((draft) => draft.price.trim() !== "").length;
+    const needsPrice = autoSellDrafts.filter((draft) => draft.price.trim() === "").length;
+
+    return {
+      total: autoSellDrafts.length,
+      selected,
+      priced,
+      needsPrice,
+    };
+  }, [autoSellDrafts]);
+
+  const visibleAutoSellDrafts = useMemo(() => {
+    const q = autoSellSearch.trim().toLowerCase();
+
+    return autoSellDrafts.filter((draft) => {
+      const item = cards.find((card) => card.id === draft.cardId);
+
+      const searchText = [
+        draft.title,
+        draft.description,
+        item?.name,
+        item?.series,
+        item?.rarity,
+        item?.movie,
+        item?.subcategory,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      const matchesSearch = !q || searchText.includes(q);
+
+      const matchesView =
+        autoSellView === "all"
+          ? true
+          : autoSellView === "selected"
+            ? draft.selected
+            : autoSellView === "priced"
+              ? draft.price.trim() !== ""
+              : draft.price.trim() === "";
+
+      return matchesSearch && matchesView;
+    });
+  }, [autoSellDrafts, autoSellSearch, autoSellView, cards]);
+
   if (loading) {
     return (
       <div className="loadingPage">
@@ -1426,6 +1507,72 @@ export default function Page() {
         }
 
 
+        .autoSellSummaryRow {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 8px;
+          margin-top: 14px;
+        }
+
+        .autoSellSummaryPill {
+          border-radius: 15px;
+          border: 1px solid #e5e7eb;
+          background: #f8fafc;
+          color: #111827;
+          padding: 10px;
+          text-align: left;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        .autoSellSummaryPill.active {
+          background: #eef2ff;
+          border-color: #a78bfa;
+          box-shadow: 0 8px 18px rgba(124,58,237,0.12);
+        }
+
+        .autoSellSummaryPill span {
+          display: block;
+          color: #64748b;
+          font-size: 11px;
+          font-weight: 950;
+          margin-bottom: 4px;
+        }
+
+        .autoSellSummaryPill strong {
+          color: #111827;
+          font-size: 24px;
+          font-weight: 1000;
+          line-height: 1;
+        }
+
+        .autoSellManagerRow {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 10px;
+          align-items: center;
+          margin-top: 12px;
+        }
+
+        .autoSellSearchInput {
+          min-height: 42px;
+          width: 100%;
+          box-sizing: border-box;
+          border-radius: 13px;
+          border: 1px solid #d1d5db;
+          padding: 10px 12px;
+          background: #ffffff;
+          color: #111827;
+          font-size: 14px;
+          font-family: inherit;
+          outline: none;
+        }
+
+        .autoSellSearchInput:focus {
+          border-color: #8b5cf6;
+          box-shadow: 0 0 0 4px rgba(139,92,246,0.12);
+        }
+
         .autoSellToolbar {
           display: flex;
           gap: 10px;
@@ -1454,6 +1601,7 @@ export default function Page() {
           font-weight: 950;
           padding: 9px 12px;
           cursor: pointer;
+          white-space: nowrap;
         }
 
         .autoSellHint {
@@ -1517,8 +1665,9 @@ export default function Page() {
         }
 
         .filterPanel {
-          position: relative;
-          z-index: 1;
+          position: sticky;
+          top: 8px;
+          z-index: 55;
         }
 
         .filterHeader {
@@ -1833,23 +1982,6 @@ export default function Page() {
           cursor: pointer;
         }
 
-        .jumpPanel {
-          margin-bottom: 14px;
-        }
-
-        .forceShowChips {
-          display: flex !important;
-          flex-wrap: wrap;
-          overflow: visible;
-          padding-bottom: 0;
-          gap: 8px;
-        }
-
-        .forceShowChips .quickChip {
-          min-width: 96px;
-          justify-content: center;
-        }
-
         .showMoreButton {
           margin-top: 12px;
           width: 100%;
@@ -2004,6 +2136,33 @@ export default function Page() {
           box-shadow: 0 8px 18px rgba(0,0,0,0.06);
         }
 
+        .autoSellItem.selected {
+          border-color: #a78bfa;
+          box-shadow: 0 8px 20px rgba(124,58,237,0.12);
+        }
+
+        .autoSellCheckLabel {
+          min-height: 76px;
+          border-radius: 14px;
+          background: #eef2ff;
+          color: #3730a3;
+          border: 1px solid #c7d2fe;
+          display: grid;
+          place-items: center;
+          align-content: center;
+          gap: 5px;
+          font-weight: 1000;
+          font-size: 12px;
+          cursor: pointer;
+          padding: 6px;
+        }
+
+        .autoSellCheckLabel input {
+          width: 18px;
+          height: 18px;
+          accent-color: #7c3aed;
+        }
+
         .autoSellThumb {
           width: 76px;
           height: 76px;
@@ -2051,9 +2210,63 @@ export default function Page() {
           resize: vertical;
         }
 
+        .autoSellPriceReady {
+          border-color: #86efac;
+          background: #f0fdf4;
+        }
+
+        .autoSellBadgeRow {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          color: #475569;
+          font-size: 12px;
+          font-weight: 850;
+        }
+
+        .autoSellBadgeRow span {
+          border-radius: 999px;
+          padding: 5px 8px;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+        }
+
+        .autoSellBadgeRow span.ready {
+          background: #ecfdf5;
+          border-color: #bbf7d0;
+          color: #065f46;
+        }
+
+        .autoSellBadgeRow span.needs {
+          background: #fff7ed;
+          border-color: #fed7aa;
+          color: #9a3412;
+        }
+
+        .autoSellEmptyState {
+          min-height: 150px;
+          display: grid;
+          place-items: center;
+          text-align: center;
+          color: #64748b;
+          font-weight: 900;
+          border-radius: 16px;
+          background: #ffffff;
+          border: 1px dashed #cbd5e1;
+          padding: 18px;
+        }
+
+        .autoSellSelectedNote {
+          display: flex;
+          align-items: center;
+          color: #475569;
+          font-size: 13px;
+          font-weight: 900;
+        }
+
         .autoSellModalActions {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr auto auto;
           gap: 10px;
           margin-top: 14px;
           padding-top: 12px;
@@ -2418,6 +2631,30 @@ export default function Page() {
           }
 
 
+          .autoSellModal {
+            width: 100% !important;
+            max-height: 94vh !important;
+          }
+
+          .autoSellSummaryRow {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .autoSellManagerRow {
+            grid-template-columns: 1fr;
+          }
+
+          .autoSellManagerRow .autoSellToolbarButtons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            width: 100%;
+          }
+
+          .autoSellManagerRow .autoSellSmallButton {
+            width: 100%;
+            white-space: normal;
+          }
+
           .autoSellCard {
             display: grid;
             border-radius: 20px;
@@ -2454,6 +2691,7 @@ export default function Page() {
           font-weight: 950;
           padding: 9px 12px;
           cursor: pointer;
+          white-space: nowrap;
         }
 
         .autoSellHint {
@@ -2555,6 +2793,23 @@ export default function Page() {
           .autoSellItem {
             grid-template-columns: 1fr;
           }
+
+          .autoSellCheckLabel {
+            min-height: 44px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+
+          .autoSellModalActions {
+            grid-template-columns: 1fr;
+          }
+
+          .autoSellSelectedNote {
+            justify-content: center;
+            text-align: center;
+          }
+
 
           .autoSellThumb {
             width: 100%;
@@ -2839,7 +3094,8 @@ export default function Page() {
             <div className="autoSellTitle">Auto-list your extras 💸</div>
             <div className="autoSellText">
               You currently have <strong>{extrasCount}</strong> extra Doorable{extrasCount === 1 ? "" : "s"}.
-              Create Marketplace listings from your extras in one click. Existing active or pending listings are skipped.
+              Review your extras first, add prices, and choose exactly which ones become Marketplace listings.
+              Existing active or pending listings are skipped.
             </div>
           </div>
 
@@ -2852,7 +3108,7 @@ export default function Page() {
             {autoSellLoading
               ? "Listing extras..."
               : extrasCount > 0
-                ? `List ${extrasCount} Extra${extrasCount === 1 ? "" : "s"}`
+                ? `Review ${extrasCount} Extra${extrasCount === 1 ? "" : "s"}`
                 : "No Extras Yet"}
           </button>
         </section>
@@ -3004,118 +3260,74 @@ export default function Page() {
         </section>
 
         <section className="panelCard">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              marginBottom: showSeriesProgress ? 12 : 0,
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 900 }}>Series Progress</div>
-              <div style={{ fontSize: 13, color: "#64748b", marginTop: 3, fontWeight: 700 }}>
-                {seriesProgress.length} series tracked • open when you want to jump by series
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="clearFiltersButton"
-              onClick={() => setShowSeriesProgress((prev) => !prev)}
-            >
-              {showSeriesProgress ? "Hide Series" : "Show Series"}
-            </button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+            <div style={{ fontSize: 18, fontWeight: 900 }}>Series Progress</div>
+            {isMobile && seriesProgress.length > 6 && (
+              <button
+                type="button"
+                className="clearFiltersButton"
+                onClick={() => setExpandedSeries((prev) => !prev)}
+              >
+                {expandedSeries ? "Show Less" : "Show All"}
+              </button>
+            )}
           </div>
 
-          {showSeriesProgress && (
-            <>
-              <div className="seriesProgressGrid" style={{ marginTop: 12 }}>
-                {visibleSeriesProgress.map((entry) => (
-                  <button
-                    key={entry.series}
-                    onClick={() => jumpToSeries(entry.series)}
-                    className="seriesProgressButton"
-                  >
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>
-                      {entry.series}
-                      {entry.subcategoryLabel && (
-                        <span
-                          style={{
-                            marginLeft: 8,
-                            color: "#6366f1",
-                            fontWeight: 700,
-                          }}
-                        >
-                          • {entry.subcategoryLabel}
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
-                      {entry.owned}/{entry.total} collected • {entry.percent}%
-                    </div>
-
-                    <div
+          <div className="seriesProgressGrid">
+            {visibleSeriesProgress.map((entry) => (
+              <button
+                key={entry.series}
+                onClick={() => jumpToSeries(entry.series)}
+                className="seriesProgressButton"
+              >
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>
+                  {entry.series}
+                  {entry.subcategoryLabel && (
+                    <span
                       style={{
-                        height: 10,
-                        borderRadius: 999,
-                        background: "#e5e7eb",
-                        overflow: "hidden",
+                        marginLeft: 8,
+                        color: "#6366f1",
+                        fontWeight: 700,
                       }}
                     >
-                      <div
-                        style={{
-                          width: `${entry.percent}%`,
-                          height: "100%",
-                          background: "linear-gradient(90deg,#60a5fa,#a78bfa)",
-                        }}
-                      />
-                    </div>
-                  </button>
-                ))}
-              </div>
+                      • {entry.subcategoryLabel}
+                    </span>
+                  )}
+                </div>
 
-              {isMobile && seriesProgress.length > 6 && (
-                <button
-                  type="button"
-                  className="showMoreButton"
-                  onClick={() => setExpandedSeries((prev) => !prev)}
+                <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
+                  {entry.owned}/{entry.total} collected • {entry.percent}%
+                </div>
+
+                <div
+                  style={{
+                    height: 10,
+                    borderRadius: 999,
+                    background: "#e5e7eb",
+                    overflow: "hidden",
+                  }}
                 >
-                  {expandedSeries ? "Show fewer series" : `Show all ${seriesProgress.length} series`}
-                </button>
-              )}
-            </>
-          )}
-        </section>
-
-        <section className="panelCard jumpPanel">
-          <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 10 }}>Quick Jump</div>
-          <div className="quickMobileChips forceShowChips">
-            {[
-              { value: "all", label: "All" },
-              { value: "have", label: "Have" },
-              { value: "need", label: "Need" },
-              { value: "extra", label: "Extras" },
-            ].map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={`quickChip ${collectionFilter === option.value ? "active" : ""}`}
-                onClick={() => {
-                  setCollectionFilter(option.value);
-                  document.getElementById("cards-grid")?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  });
-                }}
-              >
-                {option.label}
+                  <div
+                    style={{
+                      width: `${entry.percent}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg,#60a5fa,#a78bfa)",
+                    }}
+                  />
+                </div>
               </button>
             ))}
           </div>
+
+          {isMobile && seriesProgress.length > 6 && (
+            <button
+              type="button"
+              className="showMoreButton"
+              onClick={() => setExpandedSeries((prev) => !prev)}
+            >
+              {expandedSeries ? "Show fewer series" : `Show all ${seriesProgress.length} series`}
+            </button>
+          )}
         </section>
 
         <section id="cards-grid" className="cardsGrid">
@@ -3409,11 +3621,11 @@ export default function Page() {
         {showAutoSellModal && (
           <div className="eliteModalOverlay">
             <div
-              className="eliteModal"
+              className="eliteModal autoSellModal"
               style={{
-                width: "min(860px, 100%)",
+                width: "min(940px, 100%)",
                 textAlign: "left",
-                maxHeight: "88vh",
+                maxHeight: "90vh",
                 display: "flex",
                 flexDirection: "column",
               }}
@@ -3427,15 +3639,88 @@ export default function Page() {
               </button>
 
               <div className="eliteModalIcon" style={{ margin: "0 0 12px" }}>💸</div>
-              <h2 className="eliteModalTitle">Choose extras to list</h2>
+              <h2 className="eliteModalTitle">Review extras to list</h2>
 
               <div className="eliteModalText" style={{ marginLeft: 0 }}>
-                Pick which extras should become Marketplace listings. You can add prices now or leave them blank and edit later.
+                Search, filter, select, and price your extras before creating Marketplace listings.
+              </div>
+
+              <div className="autoSellSummaryRow">
+                <button
+                  type="button"
+                  className={`autoSellSummaryPill ${autoSellView === "all" ? "active" : ""}`}
+                  onClick={() => setAutoSellView("all")}
+                >
+                  <span>All</span>
+                  <strong>{autoSellStats.total}</strong>
+                </button>
+
+                <button
+                  type="button"
+                  className={`autoSellSummaryPill ${autoSellView === "selected" ? "active" : ""}`}
+                  onClick={() => setAutoSellView("selected")}
+                >
+                  <span>Selected</span>
+                  <strong>{autoSellStats.selected}</strong>
+                </button>
+
+                <button
+                  type="button"
+                  className={`autoSellSummaryPill ${autoSellView === "priced" ? "active" : ""}`}
+                  onClick={() => setAutoSellView("priced")}
+                >
+                  <span>Priced</span>
+                  <strong>{autoSellStats.priced}</strong>
+                </button>
+
+                <button
+                  type="button"
+                  className={`autoSellSummaryPill ${autoSellView === "needs_price" ? "active" : ""}`}
+                  onClick={() => setAutoSellView("needs_price")}
+                >
+                  <span>Needs price</span>
+                  <strong>{autoSellStats.needsPrice}</strong>
+                </button>
+              </div>
+
+              <div className="autoSellManagerRow">
+                <input
+                  className="autoSellSearchInput"
+                  value={autoSellSearch}
+                  onChange={(e) => setAutoSellSearch(e.target.value)}
+                  placeholder="Search extras by name, series, rarity, movie..."
+                />
+
+                <div className="autoSellToolbarButtons">
+                  <button
+                    type="button"
+                    className="autoSellSmallButton"
+                    onClick={() => setVisibleAutoSellDraftsSelected(true)}
+                  >
+                    Select Visible
+                  </button>
+
+                  <button
+                    type="button"
+                    className="autoSellSmallButton"
+                    onClick={() => setVisibleAutoSellDraftsSelected(false)}
+                  >
+                    Deselect Visible
+                  </button>
+
+                  <button
+                    type="button"
+                    className="autoSellSmallButton"
+                    onClick={selectPricedAutoSellDraftsOnly}
+                  >
+                    Priced Only
+                  </button>
+                </div>
               </div>
 
               <div className="autoSellToolbar">
                 <div className="autoSellHint">
-                  Prices auto-fill only when this item has a sold listing average. Otherwise, price stays blank and can be edited later.
+                  Showing {visibleAutoSellDrafts.length} of {autoSellDrafts.length}. Prices auto-fill only when an item has a sold listing average. Blank prices are okay and can be edited later.
                 </div>
 
                 <div className="autoSellToolbarButtons">
@@ -3458,84 +3743,96 @@ export default function Page() {
               </div>
 
               <div className="autoSellModalList">
-                {autoSellDrafts.map((draft) => {
-                  const item = cards.find((card) => card.id === draft.cardId);
-                  const extraQty = item ? Math.max(1, Number(item.qty || 0) - 1) : 1;
+                {visibleAutoSellDrafts.length === 0 ? (
+                  <div className="autoSellEmptyState">
+                    No extras match this view. Try clearing the search or switching back to All.
+                  </div>
+                ) : (
+                  visibleAutoSellDrafts.map((draft) => {
+                    const item = cards.find((card) => card.id === draft.cardId);
+                    const extraQty = item ? Math.max(1, Number(item.qty || 0) - 1) : 1;
+                    const hasPrice = draft.price.trim() !== "";
 
-                  return (
-                    <div key={draft.cardId} className="autoSellItem">
-                      <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 900 }}>
-                        <input
-                          type="checkbox"
-                          checked={draft.selected}
-                          onChange={(e) =>
-                            updateAutoSellDraft(draft.cardId, {
-                              selected: e.target.checked,
-                            })
-                          }
-                        />
-                        List
-                      </label>
-
-                      <div className="autoSellThumb">
-                        {item?.image ? (
-                          <img src={item.image} alt={item.name} loading="lazy" decoding="async" />
-                        ) : (
-                          <div style={{ color: "#64748b", fontWeight: 900, fontSize: 12 }}>No image</div>
-                        )}
-                      </div>
-
-                      <div className="autoSellFields">
-                        <div className="autoSellTitlePriceRow">
+                    return (
+                      <div key={draft.cardId} className={`autoSellItem ${draft.selected ? "selected" : ""}`}>
+                        <label className="autoSellCheckLabel">
                           <input
-                            className="autoSellInput"
-                            value={draft.title}
+                            type="checkbox"
+                            checked={draft.selected}
                             onChange={(e) =>
                               updateAutoSellDraft(draft.cardId, {
-                                title: e.target.value,
+                                selected: e.target.checked,
                               })
                             }
-                            placeholder="Listing title"
                           />
+                          <span>{draft.selected ? "List" : "Skip"}</span>
+                        </label>
 
-                          <input
-                            className="autoSellInput"
-                            value={draft.price}
+                        <div className="autoSellThumb">
+                          {item?.image ? (
+                            <img src={item.image} alt={item.name} loading="lazy" decoding="async" />
+                          ) : (
+                            <div style={{ color: "#64748b", fontWeight: 900, fontSize: 12 }}>No image</div>
+                          )}
+                        </div>
+
+                        <div className="autoSellFields">
+                          <div className="autoSellTitlePriceRow">
+                            <input
+                              className="autoSellInput"
+                              value={draft.title}
+                              onChange={(e) =>
+                                updateAutoSellDraft(draft.cardId, {
+                                  title: e.target.value,
+                                })
+                              }
+                              placeholder="Listing title"
+                            />
+
+                            <input
+                              className={`autoSellInput ${hasPrice ? "autoSellPriceReady" : ""}`}
+                              value={draft.price}
+                              onChange={(e) =>
+                                updateAutoSellDraft(draft.cardId, {
+                                  price: e.target.value,
+                                })
+                              }
+                              placeholder="Example: 3.00"
+                              inputMode="decimal"
+                            />
+                          </div>
+
+                          <textarea
+                            className="autoSellTextarea"
+                            value={draft.description}
                             onChange={(e) =>
                               updateAutoSellDraft(draft.cardId, {
-                                price: e.target.value,
+                                description: e.target.value,
                               })
                             }
-                            placeholder="Price example: 3.00"
-                            inputMode="decimal"
+                            placeholder="Description"
                           />
-                        </div>
 
-                        <textarea
-                          className="autoSellTextarea"
-                          value={draft.description}
-                          onChange={(e) =>
-                            updateAutoSellDraft(draft.cardId, {
-                              description: e.target.value,
-                            })
-                          }
-                          placeholder="Description"
-                        />
-
-                        <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800 }}>
-                          Qty extra: {extraQty} • {item?.series || "Unknown Series"} • {item?.rarity || "Unknown rarity"}
+                          <div className="autoSellBadgeRow">
+                            <span>Qty extra: {extraQty}</span>
+                            <span>{item?.series || "Unknown Series"}</span>
+                            <span>{item?.rarity || "Unknown rarity"}</span>
+                            <span className={hasPrice ? "ready" : "needs"}>
+                              {hasPrice ? "Price ready" : "No price yet"}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div style={{ marginTop: 12, color: "#475569", fontSize: 13, fontWeight: 900 }}>
-                {autoSellDrafts.filter((draft) => draft.selected).length} selected to list
+                    );
+                  })
+                )}
               </div>
 
               <div className="autoSellModalActions">
+                <div className="autoSellSelectedNote">
+                  {autoSellStats.selected} selected • {autoSellStats.needsPrice} without price
+                </div>
+
                 <button
                   type="button"
                   className="autoSellCancelButton"
@@ -3549,7 +3846,7 @@ export default function Page() {
                   type="button"
                   className="eliteModalButton"
                   onClick={() => void handleAutoSellExtras()}
-                  disabled={autoSellLoading}
+                  disabled={autoSellLoading || autoSellStats.selected <= 0}
                   style={{ marginTop: 0 }}
                 >
                   {autoSellLoading ? "Creating listings..." : "Create Selected Listings 💜"}

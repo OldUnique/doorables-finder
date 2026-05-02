@@ -106,7 +106,6 @@ export default function SellPage() {
   const [editingId, setEditingId] = useState("");
   const [title, setTitle] = useState("");
   const [seller, setSeller] = useState("");
-
   const [username, setUsername] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -121,7 +120,6 @@ export default function SellPage() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -630,31 +628,72 @@ export default function SellPage() {
           padding-bottom: 84px;
         }
 
-        .breadcrumbRow {
+        .topNav {
           display: flex;
-          align-items: center;
           justify-content: space-between;
-          gap: 12px;
-          margin-bottom: 14px;
-          flex-wrap: wrap;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 18px;
         }
 
-        .breadcrumbPill,
-        .breadcrumbPill:visited {
-          display: inline-flex;
+        .brand {
+          display: flex;
           align-items: center;
-          justify-content: center;
-          gap: 8px;
-          min-height: 40px;
-          border-radius: 999px;
-          padding: 9px 13px;
-          background: rgba(255,255,255,0.10);
-          color: #ffffff;
-          border: 1px solid rgba(255,255,255,0.14);
+          gap: 12px;
+          color: white;
           text-decoration: none;
-          font-weight: 900;
-          font-size: 13px;
-          box-shadow: 0 10px 22px rgba(0,0,0,0.14);
+          min-width: 0;
+        }
+
+        .brandIcon {
+          width: 58px;
+          height: 58px;
+          border-radius: 20px;
+          display: grid;
+          place-items: center;
+          font-size: 31px;
+          background: radial-gradient(circle at top left, #fef3c7, #a855f7 48%, #020617);
+          box-shadow: 0 18px 38px rgba(168, 85, 247, 0.42);
+          flex: 0 0 auto;
+        }
+
+        .brandTitle {
+          display: block;
+          font-size: clamp(1.45rem, 4vw, 2.15rem);
+          font-weight: 1000;
+          line-height: 0.95;
+          letter-spacing: -0.8px;
+          background: linear-gradient(90deg, #fef3c7, #f0abfc, #bfdbfe);
+          -webkit-background-clip: text;
+          color: transparent;
+        }
+
+        .brandSub {
+          display: block;
+          margin-top: 5px;
+          color: #d8b4fe;
+          font-weight: 950;
+          font-size: 14px;
+        }
+
+        .navActions {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+
+        .navPill,
+        .navPill:visited {
+          color: white;
+          text-decoration: none;
+          font-weight: 950;
+          padding: 11px 14px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.10);
+          border: 1px solid rgba(255,255,255,0.14);
+          box-shadow: 0 10px 24px rgba(0,0,0,0.15);
         }
 
         .hero {
@@ -667,9 +706,9 @@ export default function SellPage() {
           border: 1px solid rgba(255,255,255,0.16);
           box-shadow: 0 26px 64px rgba(0,0,0,0.36);
           display: grid;
-          grid-template-columns: 1fr minmax(260px, 340px);
+          grid-template-columns: 1fr auto;
           gap: 18px;
-          align-items: stretch;
+          align-items: center;
         }
 
         .heroBadge {
@@ -706,47 +745,15 @@ export default function SellPage() {
         .heroBubble {
           border-radius: 24px;
           padding: 18px;
-          background:
-            radial-gradient(circle at top right, rgba(96,165,250,0.18), transparent 45%),
-            rgba(15,23,42,0.58);
+          min-width: 250px;
+          background: rgba(15,23,42,0.58);
           border: 1px solid rgba(255,255,255,0.14);
           box-shadow: 0 14px 28px rgba(0,0,0,0.20);
-          display: grid;
-          align-content: center;
-        }
-
-        .quickStats {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 10px;
-          margin-top: 18px;
-        }
-
-        .quickStat {
-          border-radius: 17px;
-          padding: 11px;
-          background: rgba(255,255,255,0.10);
-          border: 1px solid rgba(255,255,255,0.12);
-        }
-
-        .quickStat strong {
-          display: block;
-          font-size: 19px;
-          font-weight: 1000;
-          color: #fde68a;
-          margin-bottom: 3px;
-        }
-
-        .quickStat span {
-          font-size: 12px;
-          color: rgba(255,255,255,0.78);
-          font-weight: 850;
-          line-height: 1.3;
         }
 
         .layout {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) 380px;
+          grid-template-columns: minmax(0, 1fr) 370px;
           gap: 18px;
           align-items: start;
         }
@@ -762,11 +769,6 @@ export default function SellPage() {
           box-shadow: 0 20px 46px rgba(0,0,0,0.24);
         }
 
-        .previewColumn {
-          position: sticky;
-          top: 88px;
-        }
-
         .sectionTitle {
           color: #312e81;
           font-size: 21px;
@@ -774,41 +776,17 @@ export default function SellPage() {
           margin-bottom: 12px;
         }
 
-        .sectionSubtext {
-          color: #64748b;
-          font-size: 13px;
-          line-height: 1.5;
-          font-weight: 800;
-          margin-top: -5px;
-          margin-bottom: 14px;
-        }
-
         .formGrid {
           display: grid;
           gap: 14px;
         }
 
-        .twoCol {
-          display: grid;
-          grid-template-columns: 1fr 170px;
-          gap: 12px;
-        }
-
         .fieldLabel {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 8px;
+          display: block;
           font-size: 13px;
           font-weight: 950;
           color: #334155;
           margin-bottom: 6px;
-        }
-
-        .labelHint {
-          color: #94a3b8;
-          font-size: 11px;
-          font-weight: 900;
         }
 
         .field,
@@ -822,7 +800,6 @@ export default function SellPage() {
           background: white;
           color: #111827;
           outline: none;
-          transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
 
         .field:focus,
@@ -871,13 +848,6 @@ export default function SellPage() {
           color: #3730a3;
           font-weight: 950;
           cursor: pointer;
-          transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
-        }
-
-        .toggleButton:hover,
-        .statusButton:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 8px 18px rgba(79,70,229,0.12);
         }
 
         .toggleButtonActive,
@@ -944,7 +914,6 @@ export default function SellPage() {
           display: flex;
           gap: 10px;
           flex-wrap: wrap;
-          align-items: center;
         }
 
         .submitButton,
@@ -1007,7 +976,6 @@ export default function SellPage() {
           font-weight: 1000;
           line-height: 1.1;
           margin-bottom: 6px;
-          word-break: break-word;
         }
 
         .listingPreviewPrice {
@@ -1088,22 +1056,32 @@ export default function SellPage() {
             padding-bottom: 60px;
           }
 
+          .topNav {
+            align-items: flex-start;
+          }
+
+          .brandIcon {
+            width: 54px;
+            height: 54px;
+            font-size: 29px;
+          }
+
+          .navPill:not(.marketPill) {
+            display: none;
+          }
+
           .hero {
             grid-template-columns: 1fr;
             border-radius: 25px;
             padding: 21px;
           }
 
-          .quickStats {
-            grid-template-columns: 1fr;
+          .heroBubble {
+            min-width: 0;
           }
 
           .layout {
             grid-template-columns: 1fr;
-          }
-
-          .previewColumn {
-            position: static;
           }
 
           .formCard,
@@ -1111,10 +1089,6 @@ export default function SellPage() {
           .noticeCard {
             border-radius: 23px;
             padding: 18px;
-          }
-
-          .twoCol {
-            grid-template-columns: 1fr;
           }
 
           .toggleWrap,
@@ -1139,14 +1113,27 @@ export default function SellPage() {
       `}</style>
 
       <div className="shell">
-        <div className="breadcrumbRow">
-          <Link href="/marketplace" className="breadcrumbPill">
-            ← Marketplace
+        <nav className="topNav">
+          <Link href="/" className="brand">
+            <span className="brandIcon">💎</span>
+            <span>
+              <span className="brandTitle">Adorable Vault</span>
+              <span className="brandSub">track • trade • showcase</span>
+            </span>
           </Link>
-          <Link href="/collection" className="breadcrumbPill">
-            Collection
-          </Link>
-        </div>
+
+          <div className="navActions">
+            <Link href="/marketplace" className="navPill marketPill">
+              Marketplace
+            </Link>
+            <Link href="/collection" className="navPill">
+              Collection
+            </Link>
+            <Link href="/messages" className="navPill">
+              Messages
+            </Link>
+          </div>
+        </nav>
 
         <section className="hero">
           <div>
@@ -1162,32 +1149,17 @@ export default function SellPage() {
               Add a clear title, photo, price, delivery options, and condition notes.
               Buyers can message you through Adorable Vault, but payment and delivery are handled directly between buyer and seller.
             </div>
-
-            <div className="quickStats">
-              <div className="quickStat">
-                <strong>1</strong>
-                <span>Add title + photo</span>
-              </div>
-              <div className="quickStat">
-                <strong>2</strong>
-                <span>Choose delivery</span>
-              </div>
-              <div className="quickStat">
-                <strong>3</strong>
-                <span>Post to Marketplace</span>
-              </div>
-            </div>
           </div>
 
           <div className="heroBubble">
             <div style={{ color: "#fde68a", fontSize: 13, fontWeight: 1000, marginBottom: 7 }}>
-              Seller profile
+              Seller
             </div>
             <div style={{ fontSize: 22, fontWeight: 1000, lineHeight: 1.1 }}>
               {seller || username || "Collector"}
             </div>
             <div style={{ marginTop: 8, color: "rgba(255,255,255,0.78)", fontSize: 13, lineHeight: 1.45 }}>
-              Your Marketplace listing will show this seller name.
+              Your listing will show this name in Marketplace.
             </div>
           </div>
         </section>
@@ -1195,36 +1167,18 @@ export default function SellPage() {
         <div className="layout">
           <section className="formCard">
             <div className="sectionTitle">Listing details</div>
-            <div className="sectionSubtext">
-              Keep it simple: what it is, condition, price, and how the buyer can get it.
-            </div>
 
             <div className="formGrid">
-              <div className="twoCol">
-                <div>
-                  <label className="fieldLabel">
-                    <span>Title</span>
-                    <span className="labelHint">{title.length}/90</span>
-                  </label>
-                  <input
-                    className="field"
-                    placeholder="Example: Series 11 Stitch extra"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    maxLength={90}
-                  />
-                </div>
-
-                <div>
-                  <label className="fieldLabel">Price</label>
-                  <input
-                    className="field"
-                    placeholder="5.00"
-                    inputMode="decimal"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                  />
-                </div>
+              <div>
+                <label className="fieldLabel">Title</label>
+                <input
+                  className="field"
+                  placeholder="Example: Series 11 Stitch extra"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  maxLength={90}
+                />
+                <div className="noteBox">{title.length}/90 characters</div>
               </div>
 
               <div>
@@ -1240,7 +1194,18 @@ export default function SellPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
-                <div className="noteBox">Mention condition, duplicates, packaging, defects, and any bundle details.</div>
+              </div>
+
+              <div>
+                <label className="fieldLabel">Price</label>
+                <input
+                  className="field"
+                  placeholder="Example: 5 or 5.00"
+                  inputMode="decimal"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
+                <div className="noteBox">Leave blank if you want people to message you for price.</div>
               </div>
 
               {editingId && (
@@ -1377,7 +1342,7 @@ export default function SellPage() {
             </div>
           </section>
 
-          <aside className="previewColumn">
+          <aside>
             <section className="previewCard">
               <div className="sectionTitle">Live preview</div>
 

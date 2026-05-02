@@ -447,6 +447,87 @@ export default function HomePage() {
           box-shadow: 0 10px 20px rgba(0,0,0,0.18);
         }
 
+        .heroPreviewBubble,
+        .heroPreviewBubble:visited {
+          margin-top: 18px;
+          display: grid;
+          grid-template-columns: 58px 1fr auto;
+          gap: 14px;
+          align-items: center;
+          width: 100%;
+          box-sizing: border-box;
+          border-radius: 24px;
+          padding: 15px;
+          color: #ffffff !important;
+          text-decoration: none !important;
+          background:
+            radial-gradient(circle at top right, rgba(250,204,21,0.22), transparent 34%),
+            radial-gradient(circle at bottom left, rgba(236,72,153,0.20), transparent 36%),
+            linear-gradient(135deg, rgba(15,23,42,0.70), rgba(88,28,135,0.76));
+          border: 1px solid rgba(255,255,255,0.22);
+          box-shadow:
+            0 16px 34px rgba(0,0,0,0.26),
+            inset 0 1px 0 rgba(255,255,255,0.12);
+          transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .heroPreviewBubble:hover {
+          transform: translateY(-2px);
+          border-color: rgba(250,204,21,0.48);
+          box-shadow:
+            0 22px 46px rgba(0,0,0,0.32),
+            0 0 30px rgba(168,85,247,0.20),
+            inset 0 1px 0 rgba(255,255,255,0.16);
+        }
+
+        .heroPreviewIcon {
+          width: 58px;
+          height: 58px;
+          border-radius: 20px;
+          display: grid;
+          place-items: center;
+          font-size: 29px;
+          background: linear-gradient(135deg, #ffffff, #fef3c7);
+          box-shadow: 0 14px 26px rgba(255,255,255,0.14);
+        }
+
+        .heroPreviewKicker {
+          color: #fde68a;
+          font-size: 12px;
+          font-weight: 1000;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-bottom: 4px;
+        }
+
+        .heroPreviewTitle {
+          color: #ffffff !important;
+          font-size: 18px;
+          font-weight: 1000;
+          line-height: 1.15;
+        }
+
+        .heroPreviewSub {
+          margin-top: 4px;
+          color: rgba(255,255,255,0.78);
+          font-size: 13px;
+          font-weight: 850;
+          line-height: 1.35;
+        }
+
+        .heroPreviewArrow {
+          min-height: 46px;
+          border-radius: 999px;
+          padding: 11px 14px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #312e81 !important;
+          background: linear-gradient(90deg, #ffffff, #fef3c7);
+          font-weight: 1000;
+          white-space: nowrap;
+        }
+
         .previewPanel {
           padding: 18px;
           display: grid;
@@ -1373,6 +1454,24 @@ export default function HomePage() {
             font-size: 15.5px;
           }
 
+          .heroPreviewBubble {
+            grid-template-columns: 50px 1fr;
+            border-radius: 21px;
+          }
+
+          .heroPreviewIcon {
+            width: 50px;
+            height: 50px;
+            border-radius: 17px;
+            font-size: 25px;
+          }
+
+          .heroPreviewArrow {
+            grid-column: 1 / -1;
+            width: 100%;
+            box-sizing: border-box;
+          }
+
           .premiumDash {
             grid-template-columns: 1fr 1fr;
             gap: 10px;
@@ -1578,12 +1677,24 @@ export default function HomePage() {
               <span className="trustPill">Mobile-friendly collector hub</span>
             </div>
 
+            <Link href="/demo" className="heroPreviewBubble">
+              <span className="heroPreviewIcon">👀</span>
+              <span>
+                <span className="heroPreviewKicker">Peek first</span>
+                <span className="heroPreviewTitle">Preview the sample vault before signing up</span>
+                <span className="heroPreviewSub">
+                  See the tracker, rarity colors, have/need/extras, search, and filters in action.
+                </span>
+              </span>
+              <span className="heroPreviewArrow">Open Preview →</span>
+            </Link>
+
             <div className="buttonRow">
-              <Link href="/demo" className="primaryButton">
-                Preview the Vault 👀
-              </Link>
-              <Link href="/collection" className="secondaryButton">
+              <Link href="/collection" className="primaryButton">
                 Start Free 💜
+              </Link>
+              <Link href="/pricing" className="secondaryButton">
+                View Plans 👑
               </Link>
             </div>
           </div>

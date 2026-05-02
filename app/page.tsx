@@ -701,7 +701,7 @@ export default function HomePage() {
 
         .quickActions {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(4, 1fr);
           gap: 12px;
           margin-top: 18px;
           padding-top: 16px;
@@ -724,6 +724,13 @@ export default function HomePage() {
           text-align: center;
           gap: 7px;
           box-shadow: 0 12px 24px rgba(0,0,0,0.24);
+        }
+
+        .quickAction.previewQuick {
+          background:
+            radial-gradient(circle at top right, rgba(250,204,21,0.20), transparent 42%),
+            linear-gradient(135deg, rgba(124,58,237,0.78), rgba(236,72,153,0.54));
+          border-color: rgba(250,204,21,0.38);
         }
 
         .quickActionIcon {
@@ -785,6 +792,192 @@ export default function HomePage() {
           color: rgba(255,255,255,0.82);
           line-height: 1.6;
           font-size: 14px;
+        }
+
+        .bigPreviewCard {
+          position: relative;
+          overflow: hidden;
+          display: grid;
+          grid-template-columns: 1.02fr 0.98fr;
+          gap: 20px;
+          align-items: center;
+          margin-bottom: 18px;
+          border-radius: 32px;
+          padding: 24px;
+          background:
+            radial-gradient(circle at top right, rgba(250,204,21,0.22), transparent 30%),
+            radial-gradient(circle at bottom left, rgba(236,72,153,0.22), transparent 34%),
+            linear-gradient(135deg, rgba(49,46,129,0.94), rgba(88,28,135,0.90));
+          border: 1px solid rgba(255,255,255,0.18);
+          box-shadow: 0 24px 60px rgba(0,0,0,0.32);
+        }
+
+        .bigPreviewCard::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background:
+            radial-gradient(2px 2px at 22% 28%, rgba(255,255,255,0.80), transparent 40%),
+            radial-gradient(1.5px 1.5px at 76% 18%, rgba(255,255,255,0.70), transparent 40%),
+            radial-gradient(1.8px 1.8px at 62% 78%, rgba(255,255,255,0.62), transparent 40%);
+          pointer-events: none;
+          opacity: 0.7;
+        }
+
+        .bigPreviewContent,
+        .bigPreviewVisual {
+          position: relative;
+          z-index: 1;
+        }
+
+        .previewBadge {
+          display: inline-flex;
+          width: fit-content;
+          align-items: center;
+          gap: 8px;
+          padding: 9px 13px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.13);
+          border: 1px solid rgba(255,255,255,0.20);
+          color: #fde68a;
+          font-size: 13px;
+          font-weight: 1000;
+          margin-bottom: 13px;
+        }
+
+        .previewHeadline {
+          margin: 0;
+          font-size: clamp(2rem, 4.4vw, 3.4rem);
+          line-height: 0.96;
+          letter-spacing: -1.5px;
+          font-weight: 1000;
+        }
+
+        .previewText {
+          margin-top: 14px;
+          color: rgba(255,255,255,0.88);
+          line-height: 1.65;
+          font-size: 15.5px;
+          max-width: 640px;
+        }
+
+        .previewButton {
+          min-height: 58px;
+          border-radius: 999px;
+          padding: 15px 22px;
+          text-decoration: none !important;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 1000;
+          color: #312e81 !important;
+          background: linear-gradient(90deg, #ffffff, #fef3c7);
+          border: 1px solid rgba(255,255,255,0.66);
+          box-shadow:
+            0 18px 42px rgba(255,255,255,0.18),
+            0 16px 34px rgba(168,85,247,0.34);
+        }
+
+        .previewMiniGrid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+          margin-top: 18px;
+        }
+
+        .previewMini {
+          border-radius: 17px;
+          padding: 12px;
+          background: rgba(15,23,42,0.42);
+          border: 1px solid rgba(255,255,255,0.16);
+          color: rgba(255,255,255,0.90);
+          font-size: 13px;
+          font-weight: 900;
+          line-height: 1.35;
+        }
+
+        .bigPreviewVisual {
+          border-radius: 26px;
+          padding: 16px;
+          background: rgba(15,23,42,0.48);
+          border: 1px solid rgba(255,255,255,0.15);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+        }
+
+        .fakeToolbar {
+          display: grid;
+          grid-template-columns: 1fr auto auto;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .fakeSearch,
+        .fakeChip {
+          min-height: 39px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.14);
+          color: rgba(255,255,255,0.74);
+          display: flex;
+          align-items: center;
+          padding: 0 12px;
+          font-size: 12px;
+          font-weight: 900;
+        }
+
+        .fakeChip {
+          justify-content: center;
+          color: #fde68a;
+        }
+
+        .fakeCards {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 10px;
+        }
+
+        .fakeCard {
+          border-radius: 18px;
+          padding: 10px;
+          background: #e6d2ff;
+          border: 3px solid #7c3aed;
+          color: #2f1458;
+          min-height: 145px;
+          box-shadow: 0 14px 28px rgba(0,0,0,0.18);
+        }
+
+        .fakeImage {
+          height: 70px;
+          border-radius: 14px;
+          display: grid;
+          place-items: center;
+          background: rgba(255,255,255,0.72);
+          font-size: 28px;
+          margin-bottom: 8px;
+        }
+
+        .fakeTitle {
+          font-size: 14px;
+          line-height: 1.1;
+          font-weight: 1000;
+        }
+
+        .fakeSub {
+          margin-top: 4px;
+          color: rgba(47,20,88,0.72);
+          font-size: 12px;
+          font-weight: 900;
+        }
+
+        .fakeStatus {
+          margin-top: 8px;
+          display: inline-flex;
+          border-radius: 999px;
+          padding: 5px 8px;
+          background: rgba(255,255,255,0.62);
+          color: #166534;
+          font-size: 11px;
+          font-weight: 1000;
         }
 
         .featureGrid {
@@ -1144,6 +1337,10 @@ export default function HomePage() {
           .priceGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
+
+          .quickActions {
+            grid-template-columns: repeat(2, 1fr);
+          }
         }
 
         @media (max-width: 980px) {
@@ -1159,7 +1356,8 @@ export default function HomePage() {
             font-size: 30px;
           }
 
-          .hero {
+          .hero,
+          .bigPreviewCard {
             grid-template-columns: 1fr;
           }
 
@@ -1282,6 +1480,14 @@ export default function HomePage() {
             padding: 22px;
           }
 
+          .previewMiniGrid {
+            grid-template-columns: 1fr;
+          }
+
+          .fakeToolbar {
+            grid-template-columns: 1fr;
+          }
+
           .mobileSticky {
             position: fixed;
             z-index: 60;
@@ -1339,6 +1545,10 @@ export default function HomePage() {
           .progressPanel {
             padding: 16px;
           }
+
+          .fakeCards {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
 
@@ -1363,8 +1573,18 @@ export default function HomePage() {
 
             <div className="trustRow">
               <span className="trustPill">Free up to 50 saved Doorables</span>
+              <span className="trustPill">Preview before signup</span>
               <span className="trustPill">Unlimited plans from $3/month</span>
               <span className="trustPill">Mobile-friendly collector hub</span>
+            </div>
+
+            <div className="buttonRow">
+              <Link href="/demo" className="primaryButton">
+                Preview the Vault 👀
+              </Link>
+              <Link href="/collection" className="secondaryButton">
+                Start Free 💜
+              </Link>
             </div>
           </div>
 
@@ -1460,33 +1680,95 @@ export default function HomePage() {
             )}
 
             <div className="quickActions">
-                <Link href="/collection" className="quickAction">
-                  <span className="quickActionIcon">🎯</span>
-                  <span>
-                    <span className="quickActionTitle">Open tracker</span>
-                    <br />
-                    <span className="quickActionSub">View collection</span>
-                  </span>
-                </Link>
+              <Link href="/demo" className="quickAction previewQuick">
+                <span className="quickActionIcon">👀</span>
+                <span>
+                  <span className="quickActionTitle">Preview first</span>
+                  <br />
+                  <span className="quickActionSub">No signup needed</span>
+                </span>
+              </Link>
 
-                <Link href="/marketplace" className="quickAction">
-                  <span className="quickActionIcon">🛍️</span>
-                  <span>
-                    <span className="quickActionTitle">Browse Marketplace</span>
-                    <br />
-                    <span className="quickActionSub">Find extras & gaps</span>
-                  </span>
-                </Link>
+              <Link href="/collection" className="quickAction">
+                <span className="quickActionIcon">🎯</span>
+                <span>
+                  <span className="quickActionTitle">Open tracker</span>
+                  <br />
+                  <span className="quickActionSub">View collection</span>
+                </span>
+              </Link>
 
-                <Link href="/feedback" className="quickAction">
-                  <span className="quickActionIcon">💬</span>
-                  <span>
-                    <span className="quickActionTitle">Send feedback</span>
-                    <br />
-                    <span className="quickActionSub">Help us improve</span>
-                  </span>
-                </Link>
+              <Link href="/marketplace" className="quickAction">
+                <span className="quickActionIcon">🛍️</span>
+                <span>
+                  <span className="quickActionTitle">Browse Marketplace</span>
+                  <br />
+                  <span className="quickActionSub">Find extras & gaps</span>
+                </span>
+              </Link>
+
+              <Link href="/feedback" className="quickAction">
+                <span className="quickActionIcon">💬</span>
+                <span>
+                  <span className="quickActionTitle">Send feedback</span>
+                  <br />
+                  <span className="quickActionSub">Help us improve</span>
+                </span>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="bigPreviewCard">
+          <div className="bigPreviewContent">
+            <div className="previewBadge">👀 No signup preview</div>
+            <h2 className="previewHeadline">Want to peek before making an account?</h2>
+            <div className="previewText">
+              Open the sample vault and see what collectors get: colorful rarity cards, have/need/extras tracking,
+              wishlist filters, progress stats, and marketplace-style organization. It is the easiest way to show new
+              people what Adorable Vault feels like before they commit.
+            </div>
+
+            <div className="buttonRow">
+              <Link href="/demo" className="previewButton">
+                Open Sample Vault 👀
+              </Link>
+              <Link href="/collection" className="secondaryButton">
+                Start Your Own Vault 💜
+              </Link>
+            </div>
+
+            <div className="previewMiniGrid">
+              <div className="previewMini">✅ See tracking before signup</div>
+              <div className="previewMini">🔎 Try search and filters</div>
+              <div className="previewMini">💜 Then save 50 free</div>
+            </div>
+          </div>
+
+          <div className="bigPreviewVisual" aria-hidden="true">
+            <div className="fakeToolbar">
+              <div className="fakeSearch">Search sample vault...</div>
+              <div className="fakeChip">Have</div>
+              <div className="fakeChip">Extras</div>
+            </div>
+
+            <div className="fakeCards">
+              <div className="fakeCard">
+                <div className="fakeImage">💜</div>
+                <div className="fakeTitle">Sparkle Sample</div>
+                <div className="fakeSub">Series Preview • Special Edition</div>
+                <div className="fakeStatus">Have · Qty 1</div>
               </div>
+
+              <div className="fakeCard" style={{ background: "#f8ef9b", borderColor: "#d4a500", color: "#403000" }}>
+                <div className="fakeImage">💎</div>
+                <div className="fakeTitle">Golden Sample</div>
+                <div className="fakeSub" style={{ color: "rgba(64,48,0,0.72)" }}>
+                  Series Preview • Limited
+                </div>
+                <div className="fakeStatus" style={{ color: "#7c3aed" }}>Need · Qty 0</div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -1614,7 +1896,7 @@ export default function HomePage() {
               </div>
               <div className="miniListItem">
                 <span>✅</span>
-                <span>Upgrade from a free checklist to unlimited collector access.</span>
+                <span>Preview the sample vault first, then start saving up to 50 Doorables free.</span>
               </div>
             </div>
           </div>
@@ -1756,22 +2038,22 @@ export default function HomePage() {
           </div>
 
           <div className="buttonRow" style={{ justifyContent: "center" }}>
-            <Link href="/collection" className="primaryButton">
-              Open My Collection
+            <Link href="/demo" className="primaryButton">
+              Preview First 👀
             </Link>
-            <Link href="/pricing" className="secondaryButton">
-              View Plans
+            <Link href="/collection" className="secondaryButton">
+              Open My Collection
             </Link>
           </div>
         </section>
       </div>
 
       <div className="mobileSticky">
-        <Link href="/collection" className="primaryButton">
-          🚀 Start Tracking
+        <Link href="/demo" className="primaryButton">
+          👀 Preview
         </Link>
-        <Link href="/pricing" className="secondaryButton">
-          👑 View Plans
+        <Link href="/collection" className="secondaryButton">
+          🚀 Start Free
         </Link>
       </div>
     </main>

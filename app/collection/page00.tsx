@@ -370,7 +370,6 @@ export default function Page() {
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [expandedSeries, setExpandedSeries] = useState(false);
-  const [showSeriesProgress, setShowSeriesProgress] = useState(false);
   const [shareStatus, setShareStatus] = useState("");
 
   useEffect(() => {
@@ -946,6 +945,8 @@ export default function Page() {
       }
 
       setNotice(`Auto-listed ${listingsToCreate.length} extra${listingsToCreate.length === 1 ? "" : "s"} in Marketplace 💜`);
+      setActiveListingsCount((prev) => prev + listingsToCreate.length);
+      setMonthlyListings((prev) => prev + listingsToCreate.length);
       setShowAutoSellModal(false);
       setAutoSellDrafts([]);
     } catch (err) {
@@ -1206,6 +1207,19 @@ export default function Page() {
     safePage * cardsPerPage
   );
 
+  const autoSellStats = useMemo(() => {
+    const selected = autoSellDrafts.filter((draft) => draft.selected).length;
+    const priced = autoSellDrafts.filter((draft) => draft.price.trim() !== "").length;
+    const needsPrice = autoSellDrafts.filter((draft) => draft.price.trim() === "").length;
+
+    return {
+      total: autoSellDrafts.length,
+      selected,
+      priced,
+      needsPrice,
+    };
+  }, [autoSellDrafts]);
+
   if (loading) {
     return (
       <div className="loadingPage">
@@ -1426,6 +1440,72 @@ export default function Page() {
         }
 
 
+        .autoSellSummaryRow {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 8px;
+          margin-top: 14px;
+        }
+
+        .autoSellSummaryPill {
+          border-radius: 15px;
+          border: 1px solid #e5e7eb;
+          background: #f8fafc;
+          color: #111827;
+          padding: 10px;
+          text-align: left;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        .autoSellSummaryPill.active {
+          background: #eef2ff;
+          border-color: #a78bfa;
+          box-shadow: 0 8px 18px rgba(124,58,237,0.12);
+        }
+
+        .autoSellSummaryPill span {
+          display: block;
+          color: #64748b;
+          font-size: 11px;
+          font-weight: 950;
+          margin-bottom: 4px;
+        }
+
+        .autoSellSummaryPill strong {
+          color: #111827;
+          font-size: 24px;
+          font-weight: 1000;
+          line-height: 1;
+        }
+
+        .autoSellManagerRow {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 10px;
+          align-items: center;
+          margin-top: 12px;
+        }
+
+        .autoSellSearchInput {
+          min-height: 42px;
+          width: 100%;
+          box-sizing: border-box;
+          border-radius: 13px;
+          border: 1px solid #d1d5db;
+          padding: 10px 12px;
+          background: #ffffff;
+          color: #111827;
+          font-size: 14px;
+          font-family: inherit;
+          outline: none;
+        }
+
+        .autoSellSearchInput:focus {
+          border-color: #8b5cf6;
+          box-shadow: 0 0 0 4px rgba(139,92,246,0.12);
+        }
+
         .autoSellToolbar {
           display: flex;
           gap: 10px;
@@ -1454,6 +1534,7 @@ export default function Page() {
           font-weight: 950;
           padding: 9px 12px;
           cursor: pointer;
+          white-space: nowrap;
         }
 
         .autoSellHint {
@@ -1517,8 +1598,9 @@ export default function Page() {
         }
 
         .filterPanel {
-          position: relative;
-          z-index: 1;
+          position: sticky;
+          top: 8px;
+          z-index: 55;
         }
 
         .filterHeader {
@@ -1833,23 +1915,6 @@ export default function Page() {
           cursor: pointer;
         }
 
-        .jumpPanel {
-          margin-bottom: 14px;
-        }
-
-        .forceShowChips {
-          display: flex !important;
-          flex-wrap: wrap;
-          overflow: visible;
-          padding-bottom: 0;
-          gap: 8px;
-        }
-
-        .forceShowChips .quickChip {
-          min-width: 96px;
-          justify-content: center;
-        }
-
         .showMoreButton {
           margin-top: 12px;
           width: 100%;
@@ -1980,6 +2045,227 @@ export default function Page() {
         }
 
 
+        .autoSellSimpleHeader {
+          display: grid;
+          grid-template-columns: auto 1fr;
+          gap: 14px;
+          align-items: center;
+          padding-right: 44px;
+        }
+
+        .autoSellSimpleIcon {
+          margin: 0;
+        }
+
+        .autoSellSimpleText {
+          margin-left: 0;
+          margin-top: 8px;
+          max-width: 760px;
+        }
+
+        .autoSellTopControls {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 10px;
+          align-items: center;
+          margin-top: 14px;
+          padding: 10px;
+          border-radius: 16px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+        }
+
+        .autoSellTopStats {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 7px;
+        }
+
+        .autoSellTopStats span {
+          border-radius: 999px;
+          padding: 7px 10px;
+          background: #eef2ff;
+          color: #3730a3;
+          border: 1px solid #c7d2fe;
+          font-size: 12px;
+          font-weight: 950;
+        }
+
+        .autoSellTopSummary {
+          color: #475569;
+          font-size: 13px;
+          font-weight: 900;
+        }
+
+        .autoSellListTitle {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          align-items: end;
+          margin-top: 8px;
+          padding: 0 2px;
+        }
+
+        .autoSellListTitle strong {
+          color: #111827;
+          font-size: 14px;
+          font-weight: 1000;
+        }
+
+        .autoSellListTitle span {
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 850;
+          text-align: right;
+        }
+
+        .autoSellBigList {
+          display: grid;
+          gap: 10px;
+          flex: 1 1 0;
+          min-height: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
+          margin-top: 8px;
+          padding: 10px;
+          padding-bottom: 18px;
+          border-radius: 18px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          overscroll-behavior: contain;
+        }
+
+        .autoSellCompactItem {
+          display: grid;
+          grid-template-columns: 58px 74px minmax(0, 1fr);
+          gap: 10px;
+          align-items: stretch;
+          padding: 10px;
+          border-radius: 16px;
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+        }
+
+        .autoSellCompactItem.selected {
+          border-color: #a78bfa;
+          box-shadow: 0 8px 20px rgba(124,58,237,0.12);
+        }
+
+        .autoSellCompactCheck {
+          min-height: 74px;
+          border-radius: 14px;
+          background: #eef2ff;
+          color: #3730a3;
+          border: 1px solid #c7d2fe;
+          display: grid;
+          place-items: center;
+          align-content: center;
+          gap: 5px;
+          font-size: 12px;
+          font-weight: 1000;
+          cursor: pointer;
+        }
+
+        .autoSellCompactCheck input {
+          width: 18px;
+          height: 18px;
+          accent-color: #7c3aed;
+        }
+
+        .autoSellCompactThumb {
+          width: 74px;
+          height: 74px;
+          border-radius: 14px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          color: #64748b;
+          font-size: 11px;
+          font-weight: 900;
+        }
+
+        .autoSellCompactThumb img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+
+        .autoSellCompactBody {
+          display: grid;
+          gap: 7px;
+          min-width: 0;
+        }
+
+        .autoSellCompactRow {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 120px;
+          gap: 8px;
+        }
+
+        .autoSellCompactTitle,
+        .autoSellCompactPrice {
+          min-height: 40px;
+        }
+
+        .autoSellCompactPrice {
+          font-weight: 950;
+        }
+
+        .autoSellCompactDescription {
+          min-height: 54px;
+          max-height: 74px;
+          resize: vertical;
+        }
+
+        .autoSellPriceReady {
+          border-color: #86efac;
+          background: #f0fdf4;
+        }
+
+        .autoSellCompactMeta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 5px;
+          color: #475569;
+          font-size: 11px;
+          font-weight: 850;
+        }
+
+        .autoSellCompactMeta span {
+          border-radius: 999px;
+          padding: 4px 7px;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+        }
+
+        .autoSellCompactMeta span.ready {
+          background: #ecfdf5;
+          border-color: #bbf7d0;
+          color: #065f46;
+        }
+
+        .autoSellCompactMeta span.needs {
+          background: #fff7ed;
+          border-color: #fed7aa;
+          color: #9a3412;
+        }
+
+        .autoSellSimpleActions {
+          flex-shrink: 0;
+          position: sticky;
+          bottom: 0;
+          z-index: 10;
+          margin-top: 10px;
+          padding: 10px;
+          border-radius: 18px;
+          background: rgba(255,255,255,0.98);
+          box-shadow: 0 -10px 24px rgba(15,23,42,0.08);
+        }
+
         .autoSellModalList {
           display: grid;
           gap: 12px;
@@ -2002,6 +2288,33 @@ export default function Page() {
           background: #ffffff;
           padding: 12px;
           box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+        }
+
+        .autoSellItem.selected {
+          border-color: #a78bfa;
+          box-shadow: 0 8px 20px rgba(124,58,237,0.12);
+        }
+
+        .autoSellCheckLabel {
+          min-height: 76px;
+          border-radius: 14px;
+          background: #eef2ff;
+          color: #3730a3;
+          border: 1px solid #c7d2fe;
+          display: grid;
+          place-items: center;
+          align-content: center;
+          gap: 5px;
+          font-weight: 1000;
+          font-size: 12px;
+          cursor: pointer;
+          padding: 6px;
+        }
+
+        .autoSellCheckLabel input {
+          width: 18px;
+          height: 18px;
+          accent-color: #7c3aed;
         }
 
         .autoSellThumb {
@@ -2051,17 +2364,71 @@ export default function Page() {
           resize: vertical;
         }
 
+        .autoSellPriceReady {
+          border-color: #86efac;
+          background: #f0fdf4;
+        }
+
+        .autoSellBadgeRow {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          color: #475569;
+          font-size: 12px;
+          font-weight: 850;
+        }
+
+        .autoSellBadgeRow span {
+          border-radius: 999px;
+          padding: 5px 8px;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+        }
+
+        .autoSellBadgeRow span.ready {
+          background: #ecfdf5;
+          border-color: #bbf7d0;
+          color: #065f46;
+        }
+
+        .autoSellBadgeRow span.needs {
+          background: #fff7ed;
+          border-color: #fed7aa;
+          color: #9a3412;
+        }
+
+        .autoSellEmptyState {
+          min-height: 150px;
+          display: grid;
+          place-items: center;
+          text-align: center;
+          color: #64748b;
+          font-weight: 900;
+          border-radius: 16px;
+          background: #ffffff;
+          border: 1px dashed #cbd5e1;
+          padding: 18px;
+        }
+
+        .autoSellSelectedNote {
+          display: flex;
+          align-items: center;
+          color: #475569;
+          font-size: 13px;
+          font-weight: 900;
+        }
+
         .autoSellModalActions {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr auto auto;
           gap: 10px;
-          margin-top: 14px;
-          padding-top: 12px;
+          margin-top: 10px;
+          padding-top: 10px;
           border-top: 1px solid #e5e7eb;
-          background: linear-gradient(180deg, rgba(255,255,255,0.92), #ffffff);
-          position: sticky;
-          bottom: 0;
-          z-index: 5;
+          background: linear-gradient(180deg, rgba(255,255,255,0.98), #ffffff);
+          position: relative;
+          bottom: auto;
+          z-index: 1;
         }
 
         .autoSellCancelButton {
@@ -2079,7 +2446,7 @@ export default function Page() {
         .eliteModalOverlay {
           position: fixed;
           inset: 0;
-          z-index: 1000;
+          z-index: 9999;
           display: grid;
           place-items: center;
           padding: 16px;
@@ -2097,6 +2464,7 @@ export default function Page() {
           border: 1px solid rgba(255,255,255,0.75);
           box-shadow: 0 28px 80px rgba(0,0,0,0.42);
           text-align: center;
+          align-self: center;
         }
 
         .eliteModalClose {
@@ -2418,6 +2786,30 @@ export default function Page() {
           }
 
 
+          .autoSellModal {
+            width: 100% !important;
+            max-height: 94vh !important;
+          }
+
+          .autoSellSummaryRow {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .autoSellManagerRow {
+            grid-template-columns: 1fr;
+          }
+
+          .autoSellManagerRow .autoSellToolbarButtons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            width: 100%;
+          }
+
+          .autoSellManagerRow .autoSellSmallButton {
+            width: 100%;
+            white-space: normal;
+          }
+
           .autoSellCard {
             display: grid;
             border-radius: 20px;
@@ -2454,6 +2846,7 @@ export default function Page() {
           font-weight: 950;
           padding: 9px 12px;
           cursor: pointer;
+          white-space: nowrap;
         }
 
         .autoSellHint {
@@ -2556,6 +2949,23 @@ export default function Page() {
             grid-template-columns: 1fr;
           }
 
+          .autoSellCheckLabel {
+            min-height: 44px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+
+          .autoSellModalActions {
+            grid-template-columns: 1fr;
+          }
+
+          .autoSellSelectedNote {
+            justify-content: center;
+            text-align: center;
+          }
+
+
           .autoSellThumb {
             width: 100%;
             height: 150px;
@@ -2580,6 +2990,146 @@ export default function Page() {
             box-sizing: border-box;
           }
         }
+
+        @media (max-width: 920px) {
+          .autoSellModal {
+            width: 100% !important;
+            height: calc(100dvh - 28px) !important;
+            max-height: calc(100dvh - 28px) !important;
+            padding: 14px !important;
+            margin-top: 8px;
+          }
+
+          .autoSellSimpleHeader {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            padding-right: 42px;
+          }
+
+          .autoSellSimpleIcon {
+            display: none;
+          }
+
+          .autoSellTopControls {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 8px;
+          }
+
+          .autoSellTopControls .autoSellToolbarButtons {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            width: 100%;
+          }
+
+          .autoSellTopControls .autoSellSmallButton {
+            width: 100%;
+            padding: 8px 7px;
+            white-space: normal;
+            font-size: 12px;
+          }
+
+          .autoSellTopStats span {
+            flex: 1 1 auto;
+            text-align: center;
+            padding: 6px 8px;
+          }
+
+          .autoSellListTitle {
+            align-items: start;
+            display: grid;
+          }
+
+          .autoSellListTitle span {
+            text-align: left;
+          }
+
+          .autoSellBigList {
+            min-height: 0;
+            flex: 1 1 auto;
+            padding: 8px;
+          }
+
+          .autoSellCompactItem {
+            grid-template-columns: 48px 62px minmax(0, 1fr);
+            gap: 8px;
+            padding: 8px;
+          }
+
+          .autoSellCompactCheck {
+            min-height: 62px;
+            font-size: 11px;
+          }
+
+          .autoSellCompactThumb {
+            width: 62px;
+            height: 62px;
+          }
+
+          .autoSellCompactRow {
+            grid-template-columns: minmax(0, 1fr) 92px;
+            gap: 6px;
+          }
+
+          .autoSellCompactTitle,
+          .autoSellCompactPrice {
+            min-height: 38px;
+            font-size: 13px;
+            padding: 8px 9px;
+          }
+
+          .autoSellCompactDescription {
+            min-height: 46px;
+            max-height: 62px;
+            font-size: 13px;
+            padding: 8px 9px;
+          }
+
+          .autoSellCompactMeta span {
+            font-size: 10px;
+            padding: 4px 6px;
+          }
+
+          .autoSellSimpleActions {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-top: 8px;
+            padding: 8px;
+            position: sticky;
+            bottom: 0;
+          }
+
+          .autoSellSelectedNote {
+            justify-content: center;
+            text-align: center;
+          }
+        }
+
+        @media (max-width: 430px) {
+          .autoSellCompactItem {
+            grid-template-columns: 42px 54px minmax(0, 1fr);
+            gap: 7px;
+          }
+
+          .autoSellCompactCheck {
+            min-height: 54px;
+          }
+
+          .autoSellCompactThumb {
+            width: 54px;
+            height: 54px;
+          }
+
+          .autoSellCompactRow {
+            grid-template-columns: minmax(0, 1fr) 78px;
+          }
+
+          .autoSellTopControls .autoSellToolbarButtons {
+            grid-template-columns: 1fr;
+          }
+        }
+
       `}</style>
 
       <div className="galaxyStars">
@@ -2839,7 +3389,8 @@ export default function Page() {
             <div className="autoSellTitle">Auto-list your extras 💸</div>
             <div className="autoSellText">
               You currently have <strong>{extrasCount}</strong> extra Doorable{extrasCount === 1 ? "" : "s"}.
-              Create Marketplace listings from your extras in one click. Existing active or pending listings are skipped.
+              Review your extras first, add prices, and choose exactly which ones become Marketplace listings.
+              Existing active or pending listings are skipped.
             </div>
           </div>
 
@@ -2852,7 +3403,7 @@ export default function Page() {
             {autoSellLoading
               ? "Listing extras..."
               : extrasCount > 0
-                ? `List ${extrasCount} Extra${extrasCount === 1 ? "" : "s"}`
+                ? `Review ${extrasCount} Extra${extrasCount === 1 ? "" : "s"}`
                 : "No Extras Yet"}
           </button>
         </section>
@@ -3004,118 +3555,74 @@ export default function Page() {
         </section>
 
         <section className="panelCard">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              marginBottom: showSeriesProgress ? 12 : 0,
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 900 }}>Series Progress</div>
-              <div style={{ fontSize: 13, color: "#64748b", marginTop: 3, fontWeight: 700 }}>
-                {seriesProgress.length} series tracked • open when you want to jump by series
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="clearFiltersButton"
-              onClick={() => setShowSeriesProgress((prev) => !prev)}
-            >
-              {showSeriesProgress ? "Hide Series" : "Show Series"}
-            </button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+            <div style={{ fontSize: 18, fontWeight: 900 }}>Series Progress</div>
+            {isMobile && seriesProgress.length > 6 && (
+              <button
+                type="button"
+                className="clearFiltersButton"
+                onClick={() => setExpandedSeries((prev) => !prev)}
+              >
+                {expandedSeries ? "Show Less" : "Show All"}
+              </button>
+            )}
           </div>
 
-          {showSeriesProgress && (
-            <>
-              <div className="seriesProgressGrid" style={{ marginTop: 12 }}>
-                {visibleSeriesProgress.map((entry) => (
-                  <button
-                    key={entry.series}
-                    onClick={() => jumpToSeries(entry.series)}
-                    className="seriesProgressButton"
-                  >
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>
-                      {entry.series}
-                      {entry.subcategoryLabel && (
-                        <span
-                          style={{
-                            marginLeft: 8,
-                            color: "#6366f1",
-                            fontWeight: 700,
-                          }}
-                        >
-                          • {entry.subcategoryLabel}
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
-                      {entry.owned}/{entry.total} collected • {entry.percent}%
-                    </div>
-
-                    <div
+          <div className="seriesProgressGrid">
+            {visibleSeriesProgress.map((entry) => (
+              <button
+                key={entry.series}
+                onClick={() => jumpToSeries(entry.series)}
+                className="seriesProgressButton"
+              >
+                <div style={{ fontWeight: 800, marginBottom: 6 }}>
+                  {entry.series}
+                  {entry.subcategoryLabel && (
+                    <span
                       style={{
-                        height: 10,
-                        borderRadius: 999,
-                        background: "#e5e7eb",
-                        overflow: "hidden",
+                        marginLeft: 8,
+                        color: "#6366f1",
+                        fontWeight: 700,
                       }}
                     >
-                      <div
-                        style={{
-                          width: `${entry.percent}%`,
-                          height: "100%",
-                          background: "linear-gradient(90deg,#60a5fa,#a78bfa)",
-                        }}
-                      />
-                    </div>
-                  </button>
-                ))}
-              </div>
+                      • {entry.subcategoryLabel}
+                    </span>
+                  )}
+                </div>
 
-              {isMobile && seriesProgress.length > 6 && (
-                <button
-                  type="button"
-                  className="showMoreButton"
-                  onClick={() => setExpandedSeries((prev) => !prev)}
+                <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
+                  {entry.owned}/{entry.total} collected • {entry.percent}%
+                </div>
+
+                <div
+                  style={{
+                    height: 10,
+                    borderRadius: 999,
+                    background: "#e5e7eb",
+                    overflow: "hidden",
+                  }}
                 >
-                  {expandedSeries ? "Show fewer series" : `Show all ${seriesProgress.length} series`}
-                </button>
-              )}
-            </>
-          )}
-        </section>
-
-        <section className="panelCard jumpPanel">
-          <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 10 }}>Quick Jump</div>
-          <div className="quickMobileChips forceShowChips">
-            {[
-              { value: "all", label: "All" },
-              { value: "have", label: "Have" },
-              { value: "need", label: "Need" },
-              { value: "extra", label: "Extras" },
-            ].map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={`quickChip ${collectionFilter === option.value ? "active" : ""}`}
-                onClick={() => {
-                  setCollectionFilter(option.value);
-                  document.getElementById("cards-grid")?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  });
-                }}
-              >
-                {option.label}
+                  <div
+                    style={{
+                      width: `${entry.percent}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg,#60a5fa,#a78bfa)",
+                    }}
+                  />
+                </div>
               </button>
             ))}
           </div>
+
+          {isMobile && seriesProgress.length > 6 && (
+            <button
+              type="button"
+              className="showMoreButton"
+              onClick={() => setExpandedSeries((prev) => !prev)}
+            >
+              {expandedSeries ? "Show fewer series" : `Show all ${seriesProgress.length} series`}
+            </button>
+          )}
         </section>
 
         <section id="cards-grid" className="cardsGrid">
@@ -3409,13 +3916,15 @@ export default function Page() {
         {showAutoSellModal && (
           <div className="eliteModalOverlay">
             <div
-              className="eliteModal"
+              className="eliteModal autoSellModal"
               style={{
-                width: "min(860px, 100%)",
+                width: "min(980px, 100%)",
                 textAlign: "left",
-                maxHeight: "88vh",
+                height: "min(82vh, 760px)",
+                maxHeight: "82vh",
                 display: "flex",
                 flexDirection: "column",
+                overflow: "hidden",
               }}
             >
               <button
@@ -3426,16 +3935,19 @@ export default function Page() {
                 ×
               </button>
 
-              <div className="eliteModalIcon" style={{ margin: "0 0 12px" }}>💸</div>
-              <h2 className="eliteModalTitle">Choose extras to list</h2>
-
-              <div className="eliteModalText" style={{ marginLeft: 0 }}>
-                Pick which extras should become Marketplace listings. You can add prices now or leave them blank and edit later.
+              <div className="autoSellSimpleHeader">
+                <div className="eliteModalIcon autoSellSimpleIcon">💸</div>
+                <div>
+                  <h2 className="eliteModalTitle">Choose extras to list</h2>
+                  <div className="eliteModalText autoSellSimpleText">
+                    Check the extras you want to post, add a price, and keep the description short.
+                  </div>
+                </div>
               </div>
 
-              <div className="autoSellToolbar">
-                <div className="autoSellHint">
-                  Prices auto-fill only when this item has a sold listing average. Otherwise, price stays blank and can be edited later.
+              <div className="autoSellTopControls">
+                <div className="autoSellTopSummary">
+                  {autoSellStats.total} extra{autoSellStats.total === 1 ? "" : "s"} • {autoSellStats.selected} selected
                 </div>
 
                 <div className="autoSellToolbarButtons">
@@ -3457,14 +3969,20 @@ export default function Page() {
                 </div>
               </div>
 
-              <div className="autoSellModalList">
+              <div className="autoSellListTitle">
+                <strong>Extras being reviewed</strong>
+                <span>Scroll this big section. Each row shows the picture, title, price, and short description.</span>
+              </div>
+
+              <div className="autoSellBigList">
                 {autoSellDrafts.map((draft) => {
                   const item = cards.find((card) => card.id === draft.cardId);
                   const extraQty = item ? Math.max(1, Number(item.qty || 0) - 1) : 1;
+                  const hasPrice = draft.price.trim() !== "";
 
                   return (
-                    <div key={draft.cardId} className="autoSellItem">
-                      <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 900 }}>
+                    <div key={draft.cardId} className={`autoSellCompactItem ${draft.selected ? "selected" : ""}`}>
+                      <label className="autoSellCompactCheck">
                         <input
                           type="checkbox"
                           checked={draft.selected}
@@ -3474,21 +3992,21 @@ export default function Page() {
                             })
                           }
                         />
-                        List
+                        <span>{draft.selected ? "List" : "Skip"}</span>
                       </label>
 
-                      <div className="autoSellThumb">
+                      <div className="autoSellCompactThumb">
                         {item?.image ? (
                           <img src={item.image} alt={item.name} loading="lazy" decoding="async" />
                         ) : (
-                          <div style={{ color: "#64748b", fontWeight: 900, fontSize: 12 }}>No image</div>
+                          <div>No image</div>
                         )}
                       </div>
 
-                      <div className="autoSellFields">
-                        <div className="autoSellTitlePriceRow">
+                      <div className="autoSellCompactBody">
+                        <div className="autoSellCompactRow">
                           <input
-                            className="autoSellInput"
+                            className="autoSellInput autoSellCompactTitle"
                             value={draft.title}
                             onChange={(e) =>
                               updateAutoSellDraft(draft.cardId, {
@@ -3499,31 +4017,36 @@ export default function Page() {
                           />
 
                           <input
-                            className="autoSellInput"
+                            className={`autoSellInput autoSellCompactPrice ${hasPrice ? "autoSellPriceReady" : ""}`}
                             value={draft.price}
                             onChange={(e) =>
                               updateAutoSellDraft(draft.cardId, {
                                 price: e.target.value,
                               })
                             }
-                            placeholder="Price example: 3.00"
+                            placeholder="Price"
                             inputMode="decimal"
                           />
                         </div>
 
                         <textarea
-                          className="autoSellTextarea"
+                          className="autoSellTextarea autoSellCompactDescription"
                           value={draft.description}
                           onChange={(e) =>
                             updateAutoSellDraft(draft.cardId, {
                               description: e.target.value,
                             })
                           }
-                          placeholder="Description"
+                          placeholder="Small description"
                         />
 
-                        <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800 }}>
-                          Qty extra: {extraQty} • {item?.series || "Unknown Series"} • {item?.rarity || "Unknown rarity"}
+                        <div className="autoSellCompactMeta">
+                          <span>Extra qty: {extraQty}</span>
+                          <span>{item?.series || "Unknown Series"}</span>
+                          <span>{item?.rarity || "Unknown rarity"}</span>
+                          <span className={hasPrice ? "ready" : "needs"}>
+                            {hasPrice ? "Price ready" : "No price"}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -3531,11 +4054,11 @@ export default function Page() {
                 })}
               </div>
 
-              <div style={{ marginTop: 12, color: "#475569", fontSize: 13, fontWeight: 900 }}>
-                {autoSellDrafts.filter((draft) => draft.selected).length} selected to list
-              </div>
+              <div className="autoSellModalActions autoSellSimpleActions">
+                <div className="autoSellSelectedNote">
+                  {autoSellStats.selected} selected
+                </div>
 
-              <div className="autoSellModalActions">
                 <button
                   type="button"
                   className="autoSellCancelButton"
@@ -3549,10 +4072,10 @@ export default function Page() {
                   type="button"
                   className="eliteModalButton"
                   onClick={() => void handleAutoSellExtras()}
-                  disabled={autoSellLoading}
+                  disabled={autoSellLoading || autoSellStats.selected <= 0}
                   style={{ marginTop: 0 }}
                 >
-                  {autoSellLoading ? "Creating listings..." : "Create Selected Listings 💜"}
+                  {autoSellLoading ? "Creating..." : "Create Listings 💜"}
                 </button>
               </div>
             </div>

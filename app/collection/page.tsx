@@ -2102,7 +2102,7 @@ export default function Page() {
           justify-content: space-between;
           gap: 10px;
           align-items: end;
-          margin-top: 12px;
+          margin-top: 8px;
           padding: 0 2px;
         }
 
@@ -2122,13 +2122,13 @@ export default function Page() {
         .autoSellBigList {
           display: grid;
           gap: 10px;
-          flex: 1 1 auto;
-          min-height: 360px;
+          flex: 1 1 0;
+          min-height: 0;
           overflow-y: auto;
           overflow-x: hidden;
           margin-top: 8px;
           padding: 10px;
-          padding-bottom: 16px;
+          padding-bottom: 18px;
           border-radius: 18px;
           background: #f8fafc;
           border: 1px solid #e5e7eb;
@@ -2256,10 +2256,14 @@ export default function Page() {
 
         .autoSellSimpleActions {
           flex-shrink: 0;
-          position: relative;
-          bottom: auto;
-          z-index: 1;
-          margin-top: 12px;
+          position: sticky;
+          bottom: 0;
+          z-index: 10;
+          margin-top: 10px;
+          padding: 10px;
+          border-radius: 18px;
+          background: rgba(255,255,255,0.98);
+          box-shadow: 0 -10px 24px rgba(15,23,42,0.08);
         }
 
         .autoSellModalList {
@@ -2418,8 +2422,8 @@ export default function Page() {
           display: grid;
           grid-template-columns: 1fr auto auto;
           gap: 10px;
-          margin-top: 14px;
-          padding-top: 12px;
+          margin-top: 10px;
+          padding-top: 10px;
           border-top: 1px solid #e5e7eb;
           background: linear-gradient(180deg, rgba(255,255,255,0.98), #ffffff);
           position: relative;
@@ -3091,9 +3095,9 @@ export default function Page() {
             grid-template-columns: 1fr;
             gap: 8px;
             margin-top: 8px;
-            padding-top: 8px;
-            position: relative;
-            bottom: auto;
+            padding: 8px;
+            position: sticky;
+            bottom: 0;
           }
 
           .autoSellSelectedNote {
@@ -3916,8 +3920,8 @@ export default function Page() {
               style={{
                 width: "min(980px, 100%)",
                 textAlign: "left",
-                height: "min(90vh, 840px)",
-                maxHeight: "90vh",
+                height: "min(82vh, 760px)",
+                maxHeight: "82vh",
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
@@ -4071,7 +4075,7 @@ export default function Page() {
                   disabled={autoSellLoading || autoSellStats.selected <= 0}
                   style={{ marginTop: 0 }}
                 >
-                  {autoSellLoading ? "Creating listings..." : "Create Selected Listings 💜"}
+                  {autoSellLoading ? "Creating..." : "Create Listings 💜"}
                 </button>
               </div>
             </div>

@@ -244,6 +244,25 @@ export default function DemoVaultPage() {
     setCollectionFilter("all");
   }
 
+  function jumpToSeries(seriesName: string) {
+    setSeriesFilter(seriesName);
+    window.setTimeout(() => {
+      document.getElementById("sample-cards")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 50);
+  }
+
+  const previewSeriesProgress = [
+    { name: "Series 12", label: "Series 12 • Pixel Perfect", owned: 1, total: 1, percent: 100 },
+    { name: "Series 10", label: "Series 10 • Celebrate 100 Years", owned: 0, total: 1, percent: 0 },
+    { name: "Princess Glitter & Gold Set", label: "Princess Glitter & Gold Set", owned: 1, total: 1, percent: 100 },
+    { name: "Series 5", label: "Series 5 • Classic Finds", owned: 1, total: 1, percent: 100 },
+    { name: "Series 15", label: "Series 15 • In Full Bloom", owned: 1, total: 1, percent: 100 },
+    { name: "Series 1", label: "Series 1 • Original Vault", owned: 0, total: 1, percent: 0 },
+  ];
+
   return (
     <main className="page">
       <style jsx>{`
@@ -630,6 +649,12 @@ export default function DemoVaultPage() {
           cursor: pointer;
         }
 
+        .seriesPreviewInside {
+          margin-bottom: 18px;
+          padding-bottom: 18px;
+          border-bottom: 1px solid #e5e7eb;
+        }
+
         .cardsGrid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -779,6 +804,21 @@ export default function DemoVaultPage() {
           border: 1px solid #e5e7eb;
           background: white;
           padding: 14px;
+          text-align: left;
+          cursor: pointer;
+          transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .seriesCard:hover {
+          transform: translateY(-2px);
+          border-color: #a78bfa;
+          box-shadow: 0 12px 24px rgba(124,58,237,0.14);
+        }
+
+        .seriesCard.active {
+          border-color: #4f46e5;
+          box-shadow: 0 12px 24px rgba(79,70,229,0.18);
+          background: linear-gradient(180deg, #ffffff, #f5f3ff);
         }
 
         .seriesName {
@@ -1107,7 +1147,43 @@ export default function DemoVaultPage() {
         </section>
 
         <section className="whiteCard">
-          <div className="toolbarTop">
+          <div className="seriesPreviewInside">
+            <div className="toolbarTop">
+              <div>
+                <h2 className="sectionTitle">Series progress preview</h2>
+                <div className="muted">
+                  Click a series to jump into matching sample cards, just like the real collection page.
+                </div>
+              </div>
+
+              {seriesFilter !== "all" && (
+                <button type="button" className="clearButton" onClick={() => setSeriesFilter("all")}>
+                  Show All Series
+                </button>
+              )}
+            </div>
+
+            <div className="seriesGrid">
+              {previewSeriesProgress.map((series) => (
+                <button
+                  key={series.name}
+                  type="button"
+                  onClick={() => jumpToSeries(series.name)}
+                  className={`seriesCard ${seriesFilter === series.name ? "active" : ""}`}
+                >
+                  <div className="seriesName">{series.label}</div>
+                  <div className="seriesMeta">
+                    {series.owned}/{series.total} collected • {series.percent}%
+                  </div>
+                  <div className="seriesTrack">
+                    <div className="seriesFill" style={{ width: `${series.percent}%` }} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div id="sample-cards" className="toolbarTop">
             <div>
               <h2 className="sectionTitle">Sample tracker cards</h2>
               <div className="muted">
@@ -1225,42 +1301,13 @@ export default function DemoVaultPage() {
                     {status}
                   </div>
 
-                  <div className="notePreview">{card.note}</div>
+                  <div className="notePreview">Save note here...</div>
                   <button type="button" className="sampleButton">
-                    Sample only
+                    Save Note
                   </button>
                 </div>
               );
             })}
-          </div>
-        </section>
-
-        <section className="whiteCard">
-          <div className="toolbarTop">
-            <div>
-              <h2 className="sectionTitle">Series progress preview</h2>
-              <div className="muted">
-                The real collection page can show progress by series and let collectors jump faster.
-              </div>
-            </div>
-          </div>
-
-          <div className="seriesGrid">
-            {[
-              { name: "Series 12 • Pixel Perfect", owned: 1, total: 2, percent: 50 },
-              { name: "Series 10 • Celebrate 100 Years", owned: 0, total: 1, percent: 0 },
-              { name: "Princess Glitter & Gold Set", owned: 1, total: 1, percent: 100 },
-            ].map((series) => (
-              <div key={series.name} className="seriesCard">
-                <div className="seriesName">{series.name}</div>
-                <div className="seriesMeta">
-                  {series.owned}/{series.total} collected • {series.percent}%
-                </div>
-                <div className="seriesTrack">
-                  <div className="seriesFill" style={{ width: `${series.percent}%` }} />
-                </div>
-              </div>
-            ))}
           </div>
         </section>
 

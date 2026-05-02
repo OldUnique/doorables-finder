@@ -844,15 +844,6 @@ export default function Page() {
     );
   }
 
-  function selectPricedAutoSellDraftsOnly() {
-    setAutoSellDrafts((prev) =>
-      prev.map((draft) => ({
-        ...draft,
-        selected: draft.price.trim() !== "",
-      }))
-    );
-  }
-
 
   async function handleAutoSellExtras() {
     try {
@@ -2100,6 +2091,12 @@ export default function Page() {
           font-weight: 950;
         }
 
+        .autoSellTopSummary {
+          color: #475569;
+          font-size: 13px;
+          font-weight: 900;
+        }
+
         .autoSellListTitle {
           display: flex;
           justify-content: space-between;
@@ -2131,6 +2128,7 @@ export default function Page() {
           overflow-x: hidden;
           margin-top: 8px;
           padding: 10px;
+          padding-bottom: 16px;
           border-radius: 18px;
           background: #f8fafc;
           border: 1px solid #e5e7eb;
@@ -2258,6 +2256,10 @@ export default function Page() {
 
         .autoSellSimpleActions {
           flex-shrink: 0;
+          position: relative;
+          bottom: auto;
+          z-index: 1;
+          margin-top: 12px;
         }
 
         .autoSellModalList {
@@ -2419,10 +2421,10 @@ export default function Page() {
           margin-top: 14px;
           padding-top: 12px;
           border-top: 1px solid #e5e7eb;
-          background: linear-gradient(180deg, rgba(255,255,255,0.92), #ffffff);
-          position: sticky;
-          bottom: 0;
-          z-index: 5;
+          background: linear-gradient(180deg, rgba(255,255,255,0.98), #ffffff);
+          position: relative;
+          bottom: auto;
+          z-index: 1;
         }
 
         .autoSellCancelButton {
@@ -2440,7 +2442,7 @@ export default function Page() {
         .eliteModalOverlay {
           position: fixed;
           inset: 0;
-          z-index: 1000;
+          z-index: 9999;
           display: grid;
           place-items: center;
           padding: 16px;
@@ -2458,6 +2460,7 @@ export default function Page() {
           border: 1px solid rgba(255,255,255,0.75);
           box-shadow: 0 28px 80px rgba(0,0,0,0.42);
           text-align: center;
+          align-self: center;
         }
 
         .eliteModalClose {
@@ -2987,9 +2990,10 @@ export default function Page() {
         @media (max-width: 920px) {
           .autoSellModal {
             width: 100% !important;
-            height: calc(100dvh - 22px) !important;
-            max-height: calc(100dvh - 22px) !important;
+            height: calc(100dvh - 28px) !important;
+            max-height: calc(100dvh - 28px) !important;
             padding: 14px !important;
+            margin-top: 8px;
           }
 
           .autoSellSimpleHeader {
@@ -3011,7 +3015,7 @@ export default function Page() {
 
           .autoSellTopControls .autoSellToolbarButtons {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             width: 100%;
           }
 
@@ -3938,10 +3942,8 @@ export default function Page() {
               </div>
 
               <div className="autoSellTopControls">
-                <div className="autoSellTopStats">
-                  <span>{autoSellStats.total} extras</span>
-                  <span>{autoSellStats.selected} selected</span>
-                  <span>{autoSellStats.needsPrice} without price</span>
+                <div className="autoSellTopSummary">
+                  {autoSellStats.total} extra{autoSellStats.total === 1 ? "" : "s"} • {autoSellStats.selected} selected
                 </div>
 
                 <div className="autoSellToolbarButtons">
@@ -3959,14 +3961,6 @@ export default function Page() {
                     onClick={() => setAllAutoSellDraftsSelected(false)}
                   >
                     Deselect All
-                  </button>
-
-                  <button
-                    type="button"
-                    className="autoSellSmallButton"
-                    onClick={selectPricedAutoSellDraftsOnly}
-                  >
-                    Priced Only
                   </button>
                 </div>
               </div>
@@ -4058,7 +4052,7 @@ export default function Page() {
 
               <div className="autoSellModalActions autoSellSimpleActions">
                 <div className="autoSellSelectedNote">
-                  {autoSellStats.selected} selected • {autoSellStats.priced} priced
+                  {autoSellStats.selected} selected
                 </div>
 
                 <button

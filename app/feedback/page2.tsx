@@ -75,6 +75,10 @@ function getCategoryIcon(category?: string | null) {
   return "💡";
 }
 
+function isLikelyEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 export default function FeedbackPage() {
   const supabase = useMemo(() => getSupabase(), []);
   const [posts, setPosts] = useState<FeedbackPost[]>([]);
@@ -86,6 +90,13 @@ export default function FeedbackPage() {
   const [category, setCategory] = useState("Idea");
   const [anonymous, setAnonymous] = useState(false);
   const [contactMe, setContactMe] = useState(false);
+
+  // Sends a private copy to your email through /api/send-feedback.
+  // The destination email stays hidden in Vercel's FEEDBACK_TO_EMAIL environment variable.
+  const [sendPrivateCopy, setSendPrivateCopy] = useState(true);
+  const [replyEmail, setReplyEmail] = useState("");
+  const [honey, setHoney] = useState("");
+  const [pageUrl, setPageUrl] = useState("");
 
   const [statusMessage, setStatusMessage] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
@@ -104,6 +115,10 @@ export default function FeedbackPage() {
 
     setAdminEmail(email);
     setIsAdmin(admin);
+
+    if (user?.email && !replyEmail) {
+      setReplyEmail(user.email);
+    }
 
     const query = supabase
       .from("feedback_posts")
@@ -135,10 +150,47 @@ export default function FeedbackPage() {
   }
 
   useEffect(() => {
+    document.title = "Feedback | Adorable Vault";
+    setPageUrl(typeof window !== "undefined" ? window.location.href : "");
     void loadPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
+  async function sendPrivateFeedbackEmail(params: {
+    displayName: string;
+    replyEmail: string;
+    category: string;
+    message: string;
+  }) {
+    const res = await fetch("/api/send-feedback", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: params.displayName,
+        replyEmail: params.replyEmail || null,
+        type: params.category,
+        subject: `${params.category} feedback`,
+        message: params.message,
+        pageUrl,
+        honey,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data?.error || "Feedback was posted, but the private email copy could not send.");
+    }
+  }
+
   async function handleSubmit() {
+    if (honey.trim()) {
+      setStatusMessage("Spam check failed.");
+      return;
+    }
+
     if (!message.trim()) {
       setStatusMessage("Please enter a message.");
       return;
@@ -149,15 +201,28 @@ export default function FeedbackPage() {
       return;
     }
 
+    if (contactMe && !replyEmail.trim()) {
+      setStatusMessage("Please add a reply email if you want to be contacted.");
+      return;
+    }
+
+    if (replyEmail.trim() && !isLikelyEmail(replyEmail)) {
+      setStatusMessage("Please enter a valid reply email, or leave it blank.");
+      return;
+    }
+
     setSubmitting(true);
     setStatusMessage("");
 
     const { data: authData } = await supabase.auth.getUser();
     const user = authData.user;
 
+    const displayName = anonymous ? "Anonymous" : name.trim() || null;
+    const cleanMessage = message.trim();
+
     const { error } = await supabase.from("feedback_posts").insert({
-      name: anonymous ? "Anonymous" : name.trim() || null,
-      message: message.trim(),
+      name: displayName,
+      message: cleanMessage,
       category,
       anonymous,
       contact_me: contactMe,
@@ -175,13 +240,37 @@ export default function FeedbackPage() {
       return;
     }
 
+    try {
+      if (sendPrivateCopy || contactMe) {
+        await sendPrivateFeedbackEmail({
+          displayName: displayName || "Anonymous collector",
+          replyEmail: replyEmail.trim(),
+          category,
+          message: cleanMessage,
+        });
+      }
+
+      setStatusMessage(
+        sendPrivateCopy || contactMe
+          ? "Thanks! Your feedback was submitted for approval and sent to the Adorable Vault inbox 💜"
+          : "Thanks! Your feedback was submitted for approval 💜"
+      );
+    } catch (emailError) {
+      setStatusMessage(
+        emailError instanceof Error
+          ? emailError.message
+          : "Feedback was posted, but the private email copy could not send."
+      );
+    }
+
     setMessage("");
     setName("");
     setCategory("Idea");
     setAnonymous(false);
     setContactMe(false);
+    setSendPrivateCopy(true);
+    if (!user?.email) setReplyEmail("");
     setSubmitting(false);
-    setStatusMessage("Thanks! Your feedback was submitted for approval 💜");
     await loadPosts();
   }
 
@@ -544,6 +633,26 @@ export default function FeedbackPage() {
           line-height: 1.55;
           font-size: 14px;
           font-weight: 750;
+        }
+
+        .hiddenField {
+          position: absolute;
+          left: -9999px;
+          opacity: 0;
+          height: 0;
+          width: 0;
+        }
+
+        .privateNote {
+          margin: 12px 0 14px;
+          border-radius: 18px;
+          padding: 12px;
+          background: #eef2ff;
+          color: #3730a3;
+          border: 1px solid #c7d2fe;
+          font-size: 13px;
+          font-weight: 900;
+          line-height: 1.45;
         }
 
         .formGrid {
@@ -995,6 +1104,7 @@ export default function FeedbackPage() {
             <div className="heroText">
               Share bugs, ideas, missing Doorables, marketplace concerns, and requests.
               Feedback helps make Adorable Vault cleaner, safer, and more useful for collectors.
+              Private messages can also be sent to the Adorable Vault inbox without showing the email address on the site.
             </div>
 
             {isAdmin ? (
@@ -1028,7 +1138,8 @@ export default function FeedbackPage() {
               statusMessage.toLowerCase().includes("cleared")
                 ? "successStatus"
                 : statusMessage.toLowerCase().includes("could not") ||
-                    statusMessage.toLowerCase().includes("please")
+                    statusMessage.toLowerCase().includes("please") ||
+                    statusMessage.toLowerCase().includes("spam")
                   ? "errorStatus"
                   : ""
             }`}
@@ -1045,7 +1156,18 @@ export default function FeedbackPage() {
                 Tell me what should be fixed, added, clarified, or improved. Posts are reviewed before they appear publicly.
               </div>
 
+              <div className="privateNote">
+                🔒 The feedback inbox email stays hidden. This form sends messages behind the scenes.
+              </div>
+
               <div className="formGrid">
+                <div className="hiddenField">
+                  <label>
+                    Leave this blank
+                    <input value={honey} onChange={(e) => setHoney(e.target.value)} tabIndex={-1} />
+                  </label>
+                </div>
+
                 <div>
                   <label className="fieldLabel">Name</label>
                   <input
@@ -1086,6 +1208,22 @@ export default function FeedbackPage() {
                   </div>
                 </div>
 
+                {(contactMe || sendPrivateCopy) && (
+                  <div>
+                    <label className="fieldLabel">
+                      Reply email {contactMe ? "" : "(optional)"}
+                    </label>
+                    <input
+                      value={replyEmail}
+                      onChange={(e) => setReplyEmail(e.target.value)}
+                      placeholder={contactMe ? "Required if you want a reply" : "Optional if you want a reply"}
+                      className="field"
+                      inputMode="email"
+                      autoComplete="email"
+                    />
+                  </div>
+                )}
+
                 <div className="checkGrid">
                   <label className="checkLabel">
                     <input
@@ -1100,9 +1238,21 @@ export default function FeedbackPage() {
                     <input
                       type="checkbox"
                       checked={contactMe}
-                      onChange={(e) => setContactMe(e.target.checked)}
+                      onChange={(e) => {
+                        setContactMe(e.target.checked);
+                        if (e.target.checked) setSendPrivateCopy(true);
+                      }}
                     />
                     Contact me about this
+                  </label>
+
+                  <label className="checkLabel">
+                    <input
+                      type="checkbox"
+                      checked={sendPrivateCopy}
+                      onChange={(e) => setSendPrivateCopy(e.target.checked)}
+                    />
+                    Also send this directly to the private Adorable Vault inbox
                   </label>
                 </div>
 

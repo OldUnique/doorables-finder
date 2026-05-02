@@ -458,6 +458,7 @@ export default function FeedbackPage() {
           max-width: 1180px;
           margin: 0 auto;
           padding: 22px;
+          padding-top: 28px;
           padding-bottom: 84px;
         }
 
@@ -1005,6 +1006,7 @@ export default function FeedbackPage() {
         @media (max-width: 980px) {
           .shell {
             padding: 14px;
+            padding-top: 18px;
             padding-bottom: 60px;
           }
 
@@ -1072,32 +1074,7 @@ export default function FeedbackPage() {
       `}</style>
 
       <div className="shell">
-        <nav className="topNav">
-          <Link href="/" className="brand">
-            <span className="brandIcon">💎</span>
-            <span>
-              <span className="brandTitle">Adorable Vault</span>
-              <span className="brandSub">track • trade • showcase</span>
-            </span>
-          </Link>
-
-          <div className="navActions">
-            <Link href="/" className="navPill homePill">
-              Home
-            </Link>
-            <Link href="/collection" className="navPill">
-              Collection
-            </Link>
-            <Link href="/marketplace" className="navPill">
-              Marketplace
-            </Link>
-            <Link href="/about" className="navPill">
-              About
-            </Link>
-          </div>
-        </nav>
-
-        <section className="hero">
+<section className="hero">
           <div>
             <div className="heroBadge">💜 Help build the vault</div>
             <h1 className="heroTitle">Feedback Wall</h1>

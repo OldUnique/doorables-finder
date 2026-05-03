@@ -1706,8 +1706,9 @@ export default function Page() {
         }
 
         .filterPanel {
-          position: relative;
-          z-index: 1;
+          position: sticky;
+          top: 8px;
+          z-index: 55;
         }
 
         .filterHeader {
@@ -2698,6 +2699,10 @@ export default function Page() {
             border-radius: 20px;
             padding: 14px;
             margin-bottom: 14px;
+          }
+
+          .filterPanel {
+            top: 6px;
           }
 
           .filterHeader {

@@ -52,6 +52,38 @@ const FREE_LIMIT = 50;
 const MONTHLY_PRICE_LABEL = "$3/month";
 const YEARLY_PRICE_LABEL = "$15/year";
 
+function normalizeVisibility(value: unknown): "private" | "extras_only" | "full" {
+  const clean = String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/-/g, "_")
+    .replace(/\+/g, "_");
+
+  if (
+    clean === "full" ||
+    clean === "public" ||
+    clean === "full_collection" ||
+    clean === "full_public" ||
+    clean === "all"
+  ) {
+    return "full";
+  }
+
+  if (
+    clean === "extras_only" ||
+    clean === "wishlist_extras" ||
+    clean === "wishlist_and_extras" ||
+    clean === "wishlist_extras_" ||
+    clean === "wishlist" ||
+    clean === "extras"
+  ) {
+    return "extras_only";
+  }
+
+  return "private";
+}
+
 function rarityTheme(rarity: string): Theme {
   const value = String(rarity || "").toLowerCase().trim();
 
@@ -426,30 +458,27 @@ export default function Page() {
       setIsSubscribed(!!profile?.is_subscribed);
       setUsername(String(profile?.username ?? ""));
 
-      if (
-        profile?.collection_visibility === "private" ||
-        profile?.collection_visibility === "extras_only" ||
-        profile?.collection_visibility === "full"
-      ) {
-        setVisibility(profile.collection_visibility);
-      }
+      setVisibility(normalizeVisibility(profile?.collection_visibility));
 
       const { data: spotlightUsers } = await supabase
         .from("users")
         .select("id, username, collection_visibility")
-        .neq("collection_visibility", "private")
         .not("username", "is", null)
         .order("username", { ascending: true })
-        .limit(24);
+        .limit(50);
 
       setPublicCollectors(
         ((spotlightUsers || []) as any[])
-          .filter((row) => String(row.username ?? "").trim() !== "")
           .map((row) => ({
             id: String(row.id),
-            username: String(row.username),
-            collection_visibility: row.collection_visibility,
+            username: String(row.username ?? "").trim(),
+            collection_visibility: normalizeVisibility(row.collection_visibility),
           }))
+          .filter(
+            (row) =>
+              row.username !== "" && row.collection_visibility !== "private"
+          )
+          .slice(0, 24)
       );
 
       const { data: doorables, error: doorablesError } = await supabase
@@ -639,8 +668,11 @@ export default function Page() {
 
   async function saveVisibility(next: "private" | "extras_only" | "full") {
     try {
+      const normalizedNext = normalizeVisibility(next);
+
       setSavingVisibility(true);
       setError("");
+      setNotice("");
 
       const supabase = getSupabase();
 
@@ -653,18 +685,58 @@ export default function Page() {
         return;
       }
 
-      const { error } = await supabase
+      const { data: updatedById, error: updateError } = await supabase
         .from("users")
-        .update({ collection_visibility: next })
-        .eq("id", user.id);
+        .update({ collection_visibility: normalizedNext })
+        .eq("id", user.id)
+        .select("id, username, collection_visibility")
+        .maybeSingle();
 
-      if (error) {
-        setError("Could not save visibility: " + error.message);
+      if (updateError) {
+        setError("Could not save visibility: " + updateError.message);
         setSavingVisibility(false);
         return;
       }
 
-      setVisibility(next);
+      const currentUsername = String(updatedById?.username || username || "").trim();
+
+      // If the user row did not update, try to create/repair it.
+      // Supabase update() can return no error even when zero rows matched.
+      if (!updatedById?.id) {
+        const { error: upsertError } = await supabase.from("users").upsert(
+          {
+            id: user.id,
+            email: user.email,
+            username: currentUsername || username || null,
+            collection_visibility: normalizedNext,
+          },
+          { onConflict: "id" }
+        );
+
+        if (upsertError) {
+          setError("Could not save visibility: " + upsertError.message);
+          setSavingVisibility(false);
+          return;
+        }
+      }
+
+      // Repair duplicate/stale username rows if they exist.
+      // This helps the public /collector/[username] page stop finding an older private row.
+      if (currentUsername) {
+        await supabase
+          .from("users")
+          .update({ collection_visibility: normalizedNext })
+          .ilike("username", currentUsername);
+      }
+
+      setVisibility(normalizedNext);
+      setNotice(`Visibility saved as ${
+        normalizedNext === "full"
+          ? "Full Collection"
+          : normalizedNext === "extras_only"
+            ? "Wishlist + Extras"
+            : "Private"
+      } 💜`);
       setSavingVisibility(false);
     } catch (err) {
       setSavingVisibility(false);

@@ -184,19 +184,25 @@ export default function PublicCollectorPage() {
   async function findCollectorByUsername(supabase: ReturnType<typeof getSupabase>) {
     const wantedUsername = rawUsername.trim();
 
-    const exact = await supabase
+    const { data, error } = await supabase
       .from("users")
       .select("id, username, collection_visibility")
-      .eq("username", wantedUsername)
-      .maybeSingle();
+      .ilike("username", wantedUsername);
 
-    if (exact.data?.id || exact.error) return exact;
+    if (error) return { data: null, error };
 
-    return await supabase
-      .from("users")
-      .select("id, username, collection_visibility")
-      .ilike("username", wantedUsername)
-      .maybeSingle();
+    const rows = ((data || []) as any[]).filter((row) =>
+      String(row.username || "").toLowerCase().trim() === wantedUsername.toLowerCase()
+    );
+
+    if (!rows.length) return { data: null, error: null };
+
+    // If duplicate username rows exist, prefer the one that is actually public.
+    // This prevents an old/stale private row from hiding a public profile.
+    const publicRow = rows.find((row) => normalizeVisibility(row.collection_visibility) !== "private");
+    const exactCaseRow = rows.find((row) => String(row.username || "").trim() === wantedUsername);
+
+    return { data: publicRow || exactCaseRow || rows[0], error: null };
   }
 
   async function loadPage() {

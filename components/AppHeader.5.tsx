@@ -8,7 +8,7 @@ import { getSupabase } from "../lib/supabase";
 const links = [
   { href: "/", icon: "🏠", label: "Home" },
   { href: "/about", icon: "💜", label: "About" },
-  { href: "/collection", icon: "🧸", label: "Collection" },
+  { href: "/app", icon: "🧸", label: "Collection" },
   { href: "/sell", icon: "🏷️", label: "Sell" },
   { href: "/marketplace", icon: "🛍️", label: "Marketplace" },
   { href: "/messages", icon: "💬", label: "Messages" },
@@ -22,7 +22,7 @@ export default function AppHeader() {
   const supabase = useMemo(() => getSupabase(), []);
 
   const [email, setEmail] = useState<string | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -33,53 +33,33 @@ export default function AppHeader() {
   useEffect(() => {
     let active = true;
 
-    async function safeLoadUnreadCount(userId: string) {
-      try {
-        await loadUnreadCount(userId);
-      } catch {
-        if (active) setUnreadCount(0);
-      }
-    }
-
     async function refreshUnread() {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-        if (!active) return;
+      if (!active) return;
 
-        if (session?.user?.id) {
-          void safeLoadUnreadCount(session.user.id);
-        } else {
-          setUnreadCount(0);
-        }
-      } catch {
-        if (active) setUnreadCount(0);
+      if (user?.id) {
+        await loadUnreadCount(user.id);
+      } else {
+        setUnreadCount(0);
       }
     }
 
     async function loadUser() {
-      try {
-        // getSession is faster for UI display than getUser and avoids a visible header loading message.
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-        if (!active) return;
+      if (!active) return;
 
-        setEmail(session?.user?.email ?? null);
-        setAuthChecked(true);
+      setEmail(user?.email ?? null);
+      setLoading(false);
 
-        if (session?.user?.id) {
-          void safeLoadUnreadCount(session.user.id);
-        } else {
-          setUnreadCount(0);
-        }
-      } catch {
-        if (!active) return;
-        setEmail(null);
-        setAuthChecked(true);
+      if (user?.id) {
+        await loadUnreadCount(user.id);
+      } else {
         setUnreadCount(0);
       }
     }
@@ -87,13 +67,11 @@ export default function AppHeader() {
     void loadUser();
 
     const authSub = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!active) return;
-
       setEmail(session?.user?.email ?? null);
-      setAuthChecked(true);
+      setLoading(false);
 
       if (session?.user?.id) {
-        void safeLoadUnreadCount(session.user.id);
+        void loadUnreadCount(session.user.id);
       } else {
         setUnreadCount(0);
       }
@@ -104,15 +82,15 @@ export default function AppHeader() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "marketplace_messages" },
-        () => {
-          void refreshUnread();
+        async () => {
+          await refreshUnread();
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "marketplace_conversations" },
-        () => {
-          void refreshUnread();
+        async () => {
+          await refreshUnread();
         }
       )
       .subscribe();
@@ -167,8 +145,6 @@ export default function AppHeader() {
   async function handleLogout() {
     setMenuOpen(false);
     await supabase.auth.signOut();
-    setEmail(null);
-    setUnreadCount(0);
     router.push("/login");
   }
 
@@ -232,8 +208,8 @@ export default function AppHeader() {
         </nav>
 
         <div className="accountArea">
-          {!authChecked ? (
-            <span className="accountPlaceholder" aria-hidden="true" />
+          {loading ? (
+            <span className="loadingText">Loading...</span>
           ) : email ? (
             <>
               <span className="emailText">{email}</span>
@@ -456,16 +432,10 @@ export default function AppHeader() {
           font-weight: 800;
           flex-wrap: wrap;
           justify-content: flex-end;
-          min-height: 42px;
         }
 
-        .accountPlaceholder {
-          display: inline-flex;
-          width: 84px;
-          min-height: 42px;
-          border-radius: 14px;
-          opacity: 0;
-          pointer-events: none;
+        .loadingText {
+          opacity: 0.84;
         }
 
         .emailText {

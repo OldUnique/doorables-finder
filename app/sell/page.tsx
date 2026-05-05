@@ -106,7 +106,6 @@ export default function SellPage() {
   const [editingId, setEditingId] = useState("");
   const [title, setTitle] = useState("");
   const [seller, setSeller] = useState("");
-
   const [username, setUsername] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -122,7 +121,6 @@ export default function SellPage() {
   const [uploading, setUploading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  const [isSubscribed, setIsSubscribed] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -146,7 +144,7 @@ export default function SellPage() {
 
       const { data: profile, error: profileError } = await supabase
         .from("users")
-        .select("username, is_subscribed")
+        .select("username")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -156,7 +154,6 @@ export default function SellPage() {
 
       const resolvedUsername = String(profile?.username ?? "");
       setUsername(resolvedUsername);
-      setIsSubscribed(!!profile?.is_subscribed);
       setSeller(resolvedUsername || user.email || "");
 
       const editId =
@@ -164,7 +161,7 @@ export default function SellPage() {
           ? new URLSearchParams(window.location.search).get("edit") || ""
           : "";
 
-      if (editId && profile?.is_subscribed) {
+      if (editId) {
         await loadListingForEdit(editId, user.id);
       }
 
@@ -445,147 +442,7 @@ export default function SellPage() {
 
         <div className="loadingCard">
           <div style={{ fontSize: 34, marginBottom: 10 }}>🛍️</div>
-          <div style={{ fontWeight: 1000, fontSize: 22 }}>Checking your seller access...</div>
-        </div>
-      </main>
-    );
-  }
-
-  if (!isSubscribed) {
-    return (
-      <main className="page">
-        <style jsx>{`
-          .page {
-            min-height: 100vh;
-            color: white;
-            background:
-              radial-gradient(circle at 8% 4%, rgba(168, 85, 247, 0.42) 0%, transparent 28%),
-              radial-gradient(circle at 88% 10%, rgba(59, 130, 246, 0.30) 0%, transparent 27%),
-              linear-gradient(180deg, #030712 0%, #080b1f 45%, #020617 100%);
-            padding: 22px;
-          }
-
-          .gate {
-            max-width: 920px;
-            margin: 0 auto;
-          }
-
-          .hero,
-          .card {
-            border-radius: 28px;
-            box-shadow: 0 22px 50px rgba(0,0,0,0.28);
-          }
-
-          .hero {
-            background:
-              radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
-              linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
-            padding: 26px;
-            border: 1px solid rgba(255,255,255,0.14);
-            margin-bottom: 18px;
-          }
-
-          .card {
-            background: linear-gradient(180deg, #ffffff, #f8fafc);
-            color: #111827;
-            padding: 24px;
-            border: 1px solid rgba(255,255,255,0.55);
-          }
-
-          .button,
-          .button:visited {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 50px;
-            border-radius: 999px;
-            padding: 13px 18px;
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            color: white;
-            text-decoration: none;
-            font-weight: 1000;
-            box-shadow: 0 14px 28px rgba(79,70,229,0.28);
-          }
-
-          .miniGrid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-            margin: 16px 0;
-          }
-
-          .mini {
-            border-radius: 18px;
-            padding: 13px;
-            background: #f8fafc;
-            border: 1px solid #e5e7eb;
-            color: #475569;
-            font-weight: 850;
-            line-height: 1.4;
-          }
-
-          @media (max-width: 800px) {
-            .page {
-              padding: 14px;
-            }
-
-            .hero,
-            .card {
-              border-radius: 22px;
-              padding: 18px;
-            }
-
-            .miniGrid {
-              grid-template-columns: 1fr;
-            }
-
-            .button {
-              width: 100%;
-            }
-          }
-        `}</style>
-
-        <div className="gate">
-          <section className="hero">
-            <div style={{ fontWeight: 1000, color: "#fde68a", marginBottom: 8 }}>
-              Full Access Feature
-            </div>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: "clamp(2rem, 6vw, 3.2rem)",
-                fontWeight: 1000,
-                letterSpacing: -1.2,
-                lineHeight: 1,
-              }}
-            >
-              Create marketplace listings with Full Access.
-            </h1>
-            <div style={{ marginTop: 12, opacity: 0.90, lineHeight: 1.6 }}>
-              Selling tools are included with the paid plan so collectors can list extras,
-              message through the site, and keep Marketplace organized.
-            </div>
-          </section>
-
-          <section className="card">
-            <div style={{ fontSize: 25, fontWeight: 1000, color: "#312e81", marginBottom: 8 }}>
-              Upgrade to unlock selling 💜
-            </div>
-            <div style={{ color: "#475569", lineHeight: 1.65 }}>
-              Free accounts can save up to 50 Doorables in collection. Full Access unlocks
-              unlimited collection saves, Marketplace browsing, listing creation, and collector messages.
-            </div>
-
-            <div className="miniGrid">
-              <div className="mini">🛍️ Create and manage listings</div>
-              <div className="mini">💬 Message buyers and sellers</div>
-              <div className="mini">♾️ Unlimited collection saves</div>
-            </div>
-
-            <Link href="/pricing" className="button">
-              View Plans
-            </Link>
-          </section>
+          <div style={{ fontWeight: 1000, fontSize: 22 }}>Checking your account...</div>
         </div>
       </main>
     );

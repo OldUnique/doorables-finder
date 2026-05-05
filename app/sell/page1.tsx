@@ -106,6 +106,7 @@ export default function SellPage() {
   const [editingId, setEditingId] = useState("");
   const [title, setTitle] = useState("");
   const [seller, setSeller] = useState("");
+
   const [username, setUsername] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -120,6 +121,7 @@ export default function SellPage() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -628,72 +630,49 @@ export default function SellPage() {
           padding-bottom: 84px;
         }
 
-        .topNav {
+        .pageLinks {
           display: flex;
-          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
           align-items: center;
-          gap: 14px;
           margin-bottom: 18px;
         }
 
-        .brand {
-          display: flex;
+        .pageLink,
+        .pageLink:visited {
+          display: inline-flex;
           align-items: center;
-          gap: 12px;
-          color: white;
-          text-decoration: none;
-          min-width: 0;
-        }
-
-        .brandIcon {
-          width: 58px;
-          height: 58px;
-          border-radius: 20px;
-          display: grid;
-          place-items: center;
-          font-size: 31px;
-          background: radial-gradient(circle at top left, #fef3c7, #a855f7 48%, #020617);
-          box-shadow: 0 18px 38px rgba(168, 85, 247, 0.42);
-          flex: 0 0 auto;
-        }
-
-        .brandTitle {
-          display: block;
-          font-size: clamp(1.45rem, 4vw, 2.15rem);
-          font-weight: 1000;
-          line-height: 0.95;
-          letter-spacing: -0.8px;
-          background: linear-gradient(90deg, #fef3c7, #f0abfc, #bfdbfe);
-          -webkit-background-clip: text;
-          color: transparent;
-        }
-
-        .brandSub {
-          display: block;
-          margin-top: 5px;
-          color: #d8b4fe;
-          font-weight: 950;
-          font-size: 14px;
-        }
-
-        .navActions {
-          display: flex;
-          gap: 10px;
-          align-items: center;
-          flex-wrap: wrap;
-          justify-content: flex-end;
-        }
-
-        .navPill,
-        .navPill:visited {
-          color: white;
+          justify-content: center;
+          min-height: 48px;
+          padding: 12px 18px;
+          border-radius: 16px;
           text-decoration: none;
           font-weight: 950;
-          padding: 11px 14px;
-          border-radius: 999px;
-          background: rgba(255,255,255,0.10);
-          border: 1px solid rgba(255,255,255,0.14);
-          box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+          letter-spacing: 0.01em;
+          transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+          backdrop-filter: blur(8px);
+        }
+
+        .pageLink:hover {
+          transform: translateY(-1px);
+        }
+
+        .pageLinkCollection,
+        .pageLinkCollection:visited {
+          color: white;
+          background: rgba(15, 23, 42, 0.72);
+          border: 1px solid rgba(255,255,255,0.28);
+          box-shadow: 0 12px 26px rgba(15,23,42,0.28);
+          text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+        }
+
+        .pageLinkMarketplace,
+        .pageLinkMarketplace:visited {
+          color: white;
+          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          border: 1px solid rgba(255,255,255,0.34);
+          box-shadow: 0 14px 30px rgba(79,70,229,0.38);
+          text-shadow: 0 1px 0 rgba(0,0,0,0.22);
         }
 
         .hero {
@@ -740,6 +719,40 @@ export default function SellPage() {
           font-size: 16px;
           line-height: 1.65;
           max-width: 760px;
+        }
+
+        .heroSteps {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+          margin-top: 18px;
+        }
+
+        .heroStep {
+          border-radius: 16px;
+          padding: 12px;
+          background: rgba(255,255,255,0.10);
+          border: 1px solid rgba(255,255,255,0.14);
+        }
+
+        .heroStepNumber {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          border-radius: 999px;
+          margin-bottom: 8px;
+          background: rgba(255,255,255,0.18);
+          font-size: 13px;
+          font-weight: 1000;
+        }
+
+        .heroStepText {
+          font-size: 13px;
+          line-height: 1.45;
+          color: rgba(255,255,255,0.88);
+          font-weight: 850;
         }
 
         .heroBubble {
@@ -1056,18 +1069,13 @@ export default function SellPage() {
             padding-bottom: 60px;
           }
 
-          .topNav {
-            align-items: flex-start;
+          .pageLinks {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
           }
 
-          .brandIcon {
-            width: 54px;
-            height: 54px;
-            font-size: 29px;
-          }
-
-          .navPill:not(.marketPill) {
-            display: none;
+          .pageLink {
+            width: 100%;
           }
 
           .hero {
@@ -1078,6 +1086,10 @@ export default function SellPage() {
 
           .heroBubble {
             min-width: 0;
+          }
+
+          .heroSteps {
+            grid-template-columns: 1fr;
           }
 
           .layout {
@@ -1110,30 +1122,23 @@ export default function SellPage() {
             min-height: 190px;
           }
         }
+
+        @media (max-width: 640px) {
+          .pageLinks {
+            grid-template-columns: 1fr;
+          }
+        }
       `}</style>
 
       <div className="shell">
-        <nav className="topNav">
-          <Link href="/" className="brand">
-            <span className="brandIcon">💎</span>
-            <span>
-              <span className="brandTitle">Adorable Vault</span>
-              <span className="brandSub">track • trade • showcase</span>
-            </span>
+        <div className="pageLinks">
+          <Link href="/collection" className="pageLink pageLinkCollection">
+            ← Collection
           </Link>
-
-          <div className="navActions">
-            <Link href="/marketplace" className="navPill marketPill">
-              Marketplace
-            </Link>
-            <Link href="/collection" className="navPill">
-              Collection
-            </Link>
-            <Link href="/messages" className="navPill">
-              Messages
-            </Link>
-          </div>
-        </nav>
+          <Link href="/marketplace" className="pageLink pageLinkMarketplace">
+            Marketplace
+          </Link>
+        </div>
 
         <section className="hero">
           <div>
@@ -1149,17 +1154,32 @@ export default function SellPage() {
               Add a clear title, photo, price, delivery options, and condition notes.
               Buyers can message you through Adorable Vault, but payment and delivery are handled directly between buyer and seller.
             </div>
+
+            <div className="heroSteps">
+              <div className="heroStep">
+                <div className="heroStepNumber">1</div>
+                <div className="heroStepText">Add a title, photo, and a few details buyers will care about.</div>
+              </div>
+              <div className="heroStep">
+                <div className="heroStepNumber">2</div>
+                <div className="heroStepText">Choose shipping, pickup, or both so your delivery options are clear.</div>
+              </div>
+              <div className="heroStep">
+                <div className="heroStepNumber">3</div>
+                <div className="heroStepText">Post to Marketplace and let buyers message you directly.</div>
+              </div>
+            </div>
           </div>
 
           <div className="heroBubble">
             <div style={{ color: "#fde68a", fontSize: 13, fontWeight: 1000, marginBottom: 7 }}>
-              Seller
+              Seller profile
             </div>
             <div style={{ fontSize: 22, fontWeight: 1000, lineHeight: 1.1 }}>
               {seller || username || "Collector"}
             </div>
             <div style={{ marginTop: 8, color: "rgba(255,255,255,0.78)", fontSize: 13, lineHeight: 1.45 }}>
-              Your listing will show this name in Marketplace.
+              Your Marketplace listing will show this seller name.
             </div>
           </div>
         </section>

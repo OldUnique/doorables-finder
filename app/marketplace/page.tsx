@@ -47,7 +47,6 @@ export default function MarketplacePage() {
 
   const [listings, setListings] = useState<Listing[]>([]);
   const [userId, setUserId] = useState("");
-  const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [busyId, setBusyId] = useState("");
@@ -84,18 +83,6 @@ export default function MarketplacePage() {
       } = await supabase.auth.getUser();
 
       setUserId(user?.id ?? "");
-
-      if (user?.id) {
-        const { data: profile } = await supabase
-          .from("users")
-          .select("is_subscribed")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        setIsSubscribed(!!profile?.is_subscribed);
-      } else {
-        setIsSubscribed(false);
-      }
 
       const { data, error } = await supabase
         .from("marketplace_listings")
@@ -192,7 +179,12 @@ export default function MarketplacePage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        router.push("/login");
+        const next =
+          typeof window !== "undefined"
+            ? `${window.location.pathname}${window.location.search}`
+            : "/marketplace";
+
+        router.push(`/login?next=${encodeURIComponent(next)}`);
         return;
       }
 
@@ -355,149 +347,6 @@ export default function MarketplacePage() {
     );
   }
 
-  if (!isSubscribed) {
-    return (
-      <main className="gatePage">
-        <style jsx>{`
-          .gatePage {
-            min-height: 100vh;
-            padding: 24px;
-            color: white;
-            background:
-              radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%),
-              radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%),
-              linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%);
-          }
-
-          .gateShell {
-            max-width: 900px;
-            margin: 0 auto;
-          }
-
-          .gateHero {
-            background:
-              radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 34%),
-              linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
-            border-radius: 28px;
-            padding: 24px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.30);
-            margin-bottom: 18px;
-            border: 1px solid rgba(255,255,255,0.12);
-          }
-
-          .gateCard {
-            background: rgba(255,255,255,0.96);
-            color: #111827;
-            border-radius: 24px;
-            padding: 22px;
-            box-shadow: 0 12px 28px rgba(0,0,0,0.14);
-            margin-bottom: 14px;
-          }
-
-          .safetyGate {
-            background: #f8fafc;
-            border: 1px solid #e5e7eb;
-            border-radius: 18px;
-            padding: 14px;
-            color: #475569;
-            line-height: 1.55;
-            font-size: 14px;
-            margin-top: 14px;
-          }
-
-          .buttonRow {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 14px;
-          }
-
-          .primaryLink,
-          .secondaryLink,
-          .primaryLink:visited,
-          .secondaryLink:visited {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 12px 16px;
-            border-radius: 999px;
-            text-decoration: none !important;
-            font-weight: 900;
-            min-height: 46px;
-          }
-
-          .primaryLink,
-          .primaryLink:visited {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            color: white !important;
-            box-shadow: 0 12px 22px rgba(79,70,229,0.28);
-          }
-
-          .secondaryLink,
-          .secondaryLink:visited {
-            background: #eef2ff;
-            color: #3730a3 !important;
-            border: 1px solid #c7d2fe;
-          }
-
-          @media (max-width: 720px) {
-            .gatePage {
-              padding: 14px;
-            }
-
-            .gateHero,
-            .gateCard {
-              border-radius: 22px;
-              padding: 18px;
-            }
-
-            .primaryLink,
-            .secondaryLink {
-              width: 100%;
-            }
-          }
-        `}</style>
-
-        <div className="gateShell">
-          <section className="gateHero">
-            <h1 style={{ margin: 0, fontSize: "clamp(2rem, 6vw, 2.9rem)", fontWeight: 1000 }}>
-              Marketplace
-            </h1>
-            <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16 }}>
-              Browse collector listings, message sellers, and find pieces your vault still needs.
-            </div>
-          </section>
-
-          <section className="gateCard">
-            <div style={{ fontSize: 24, fontWeight: 1000, marginBottom: 8 }}>
-              Upgrade to unlock Marketplace 💜
-            </div>
-            <div style={{ color: "#4b5563", lineHeight: 1.6 }}>
-              Free accounts can save up to 50 Doorables in collection. Upgrade to browse Marketplace,
-              message through listings, and unlock selling.
-            </div>
-
-            <div className="buttonRow">
-              <Link href="/pricing" className="primaryLink">
-                Upgrade Now
-              </Link>
-
-              {!userId && (
-                <Link href="/login" className="secondaryLink">
-                  Log In / Sign Up
-                </Link>
-              )}
-            </div>
-
-            <div className="safetyGate">
-              <strong>Marketplace safety note:</strong> {MARKETPLACE_SAFETY_NOTE}
-            </div>
-          </section>
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main className="marketplacePage">
       <style jsx>{`
@@ -520,6 +369,35 @@ export default function MarketplacePage() {
         .shell {
           max-width: 1280px;
           margin: 0 auto;
+        }
+
+        .visitorCard {
+          background:
+            radial-gradient(circle at top right, rgba(196,181,253,0.26), transparent 30%),
+            rgba(255,255,255,0.96);
+          color: #111827;
+          border-radius: 24px;
+          padding: 16px;
+          box-shadow: 0 12px 28px rgba(0,0,0,0.14);
+          margin-bottom: 18px;
+          border: 1px solid rgba(255,255,255,0.50);
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
+        .visitorTitle {
+          font-weight: 1000;
+          color: #312e81;
+          margin-bottom: 4px;
+        }
+
+        .visitorText {
+          color: #475569;
+          font-size: 14px;
+          line-height: 1.45;
         }
 
         .hero {
@@ -898,6 +776,7 @@ export default function MarketplacePage() {
             box-sizing: border-box;
           }
 
+          .visitorCard,
           .safetyCard,
           .filterCard,
           .card,
@@ -905,6 +784,7 @@ export default function MarketplacePage() {
             border-radius: 20px;
           }
 
+          .visitorCard,
           .safetyCard,
           .filterCard,
           .card {
@@ -977,7 +857,7 @@ export default function MarketplacePage() {
               Marketplace
             </h1>
             <div style={{ marginTop: 8, opacity: 0.92, fontSize: 16, lineHeight: 1.5 }}>
-              Browse listings, check shipping or pickup options, and message sellers directly.
+              Browse active listings for free. Log in to message sellers or create your own listings.
             </div>
           </div>
 
@@ -985,6 +865,27 @@ export default function MarketplacePage() {
             ✨ Create Listing
           </Link>
         </section>
+
+        {!userId && (
+          <section className="visitorCard">
+            <div>
+              <div className="visitorTitle">Browsing as a guest 💜</div>
+              <div className="visitorText">
+                You can look around without an account. To message sellers or post your own listing, log in or start free.
+              </div>
+            </div>
+
+            <div className="bubbleRow">
+              <Link href="/login" className="bubbleButton bubblePrimary">
+                🔐 Log In / Sign Up
+              </Link>
+
+              <Link href="/pricing" className="bubbleButton bubbleLight">
+                See Plans
+              </Link>
+            </div>
+          </section>
+        )}
 
         <section className="safetyCard">
           <div className="safetyTitle">Marketplace safety note</div>

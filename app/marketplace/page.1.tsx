@@ -138,7 +138,7 @@ export default function MarketplacePage() {
       const isMine = !!userId && item.user_id === userId;
       const listingStatus = item.status || "active";
 
-      // Safety/privacy: visitors only see active listings. Owners can see their own pending/sold listings.
+      // Visitors only see active listings. Owners can still see their own pending/sold listings.
       if (!isMine && listingStatus !== "active") return false;
 
       const matchesSearch =
@@ -158,8 +158,7 @@ export default function MarketplacePage() {
               ? !!item.local_pickup_available
               : !!item.shipping_available && !!item.local_pickup_available;
 
-      const matchesStatus =
-        statusFilter === "all" ? true : listingStatus === statusFilter;
+      const matchesStatus = statusFilter === "all" ? true : listingStatus === statusFilter;
 
       return matchesSearch && matchesDelivery && matchesStatus;
     });
@@ -414,26 +413,30 @@ export default function MarketplacePage() {
           }
 
           .primaryLink,
-          .secondaryLink {
+          .secondaryLink,
+          .primaryLink:visited,
+          .secondaryLink:visited {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             padding: 12px 16px;
-            border-radius: 14px;
-            text-decoration: none;
+            border-radius: 999px;
+            text-decoration: none !important;
             font-weight: 900;
             min-height: 46px;
           }
 
-          .primaryLink {
+          .primaryLink,
+          .primaryLink:visited {
             background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            color: white;
+            color: white !important;
             box-shadow: 0 12px 22px rgba(79,70,229,0.28);
           }
 
-          .secondaryLink {
+          .secondaryLink,
+          .secondaryLink:visited {
             background: #eef2ff;
-            color: #3730a3;
+            color: #3730a3 !important;
             border: 1px solid #c7d2fe;
           }
 
@@ -509,6 +512,11 @@ export default function MarketplacePage() {
             linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%);
         }
 
+        .marketplacePage a,
+        .marketplacePage a:visited {
+          text-decoration: none !important;
+        }
+
         .shell {
           max-width: 1280px;
           margin: 0 auto;
@@ -542,19 +550,23 @@ export default function MarketplacePage() {
           margin-bottom: 10px;
         }
 
-        .heroAction {
+        .heroAction,
+        .heroAction:visited {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-height: 50px;
-          padding: 12px 16px;
-          border-radius: 16px;
+          min-height: 52px;
+          padding: 13px 18px;
+          border-radius: 999px;
           background: linear-gradient(135deg, #ffffff, #fef3c7);
-          color: #312e81;
-          text-decoration: none;
+          color: #312e81 !important;
+          text-decoration: none !important;
           font-weight: 1000;
-          box-shadow: 0 18px 34px rgba(255,255,255,0.18);
+          box-shadow:
+            0 18px 34px rgba(255,255,255,0.18),
+            0 10px 24px rgba(0,0,0,0.22);
           white-space: nowrap;
+          border: 1px solid rgba(255,255,255,0.58);
         }
 
         .safetyCard {
@@ -607,9 +619,6 @@ export default function MarketplacePage() {
           padding: 18px;
           box-shadow: 0 12px 28px rgba(0,0,0,0.14);
           margin-bottom: 18px;
-          position: sticky;
-          top: 8px;
-          z-index: 40;
           border: 1px solid rgba(255,255,255,0.45);
         }
 
@@ -623,7 +632,7 @@ export default function MarketplacePage() {
         .filterToggle {
           display: none;
           border: none;
-          border-radius: 14px;
+          border-radius: 999px;
           padding: 12px 14px;
           background: linear-gradient(135deg, #4f46e5, #7c3aed);
           color: #ffffff;
@@ -705,56 +714,72 @@ export default function MarketplacePage() {
           transform: scale(1.08);
         }
 
-        .primaryButton {
-          padding: 12px 16px;
-          border-radius: 14px;
-          border: none;
-          background: linear-gradient(135deg, #60a5fa, #8b5cf6);
-          color: white;
-          font-weight: 900;
-          cursor: pointer;
-          min-height: 46px;
+        .bubbleRow {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          align-items: center;
         }
 
-        .secondaryButton {
+        .bubbleButton,
+        .bubbleButton:visited {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          padding: 12px 16px;
-          border-radius: 14px;
-          border: 1px solid #d1d5db;
-          background: #f3f4f6;
-          color: #111827;
-          text-decoration: none;
-          font-weight: 800;
+          gap: 7px;
           min-height: 46px;
+          padding: 11px 15px;
+          border-radius: 999px;
+          border: 1px solid transparent;
+          text-decoration: none !important;
+          font-weight: 950;
+          cursor: pointer;
           box-sizing: border-box;
+          line-height: 1.1;
+          white-space: nowrap;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
 
-        .dangerButton {
-          padding: 12px 16px;
-          border-radius: 14px;
-          border: 1px solid #fecaca;
-          background: #fef2f2;
-          color: #b91c1c;
-          font-weight: 800;
-          cursor: pointer;
-          min-height: 46px;
+        .bubbleButton:hover {
+          transform: translateY(-2px);
         }
 
-        .reportLink {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 38px;
-          padding: 8px 10px;
-          border-radius: 12px;
-          text-decoration: none;
+        .bubblePrimary,
+        .bubblePrimary:visited {
+          background: linear-gradient(135deg, #60a5fa, #8b5cf6);
+          color: white !important;
+          box-shadow: 0 12px 22px rgba(79,70,229,0.28);
+        }
+
+        .bubbleLight,
+        .bubbleLight:visited {
+          background: #eef2ff;
+          color: #3730a3 !important;
+          border-color: #c7d2fe;
+          box-shadow: 0 8px 18px rgba(99,102,241,0.10);
+        }
+
+        .bubbleNeutral,
+        .bubbleNeutral:visited {
+          background: #f8fafc;
+          color: #111827 !important;
+          border-color: #d1d5db;
+          box-shadow: 0 8px 18px rgba(15,23,42,0.08);
+        }
+
+        .bubbleWarn,
+        .bubbleWarn:visited {
           background: #fff7ed;
-          color: #9a3412;
-          border: 1px solid #fed7aa;
-          font-size: 12px;
-          font-weight: 900;
+          color: #9a3412 !important;
+          border-color: #fed7aa;
+          box-shadow: 0 8px 18px rgba(234,88,12,0.10);
+        }
+
+        .bubbleDanger {
+          background: #fef2f2;
+          color: #b91c1c !important;
+          border-color: #fecaca;
+          box-shadow: 0 8px 18px rgba(185,28,28,0.08);
         }
 
         .pillRow {
@@ -783,7 +808,7 @@ export default function MarketplacePage() {
 
         .toggleButton {
           padding: 10px 14px;
-          border-radius: 12px;
+          border-radius: 999px;
           border: 1px solid #c7d2fe;
           background: #eef2ff;
           color: #3730a3;
@@ -815,7 +840,7 @@ export default function MarketplacePage() {
 
         .pagerButton {
           padding: 10px 14px;
-          border-radius: 12px;
+          border-radius: 999px;
           border: 1px solid rgba(255,255,255,0.16);
           background: rgba(255,255,255,0.08);
           color: white;
@@ -920,16 +945,20 @@ export default function MarketplacePage() {
             grid-template-columns: repeat(1, minmax(0, 1fr));
           }
 
-          .toggleButton,
-          .primaryButton,
-          .secondaryButton,
-          .dangerButton {
-            width: 100%;
-          }
-
           .toggleWrap {
             display: grid;
             grid-template-columns: 1fr 1fr;
+          }
+
+          .bubbleRow {
+            display: grid;
+            grid-template-columns: 1fr;
+          }
+
+          .bubbleButton,
+          .heroAction {
+            width: 100%;
+            white-space: normal;
           }
         }
 
@@ -953,7 +982,7 @@ export default function MarketplacePage() {
           </div>
 
           <Link href="/sell" className="heroAction">
-            Create Listing
+            ✨ Create Listing
           </Link>
         </section>
 
@@ -1033,23 +1062,24 @@ export default function MarketplacePage() {
               </div>
             )}
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Link href="/sell" className="secondaryButton">
-                Create Listing
+            <div className="bubbleRow">
+              <Link href="/sell" className="bubbleButton bubblePrimary">
+                ✨ Create Listing
               </Link>
+
               {userId ? (
-                <Link href="/messages" className="secondaryButton">
-                  Open Messages
+                <Link href="/messages" className="bubbleButton bubbleLight">
+                  💬 Open Messages
                 </Link>
               ) : (
-                <Link href="/login" className="secondaryButton">
-                  Log In / Sign Up
+                <Link href="/login" className="bubbleButton bubbleLight">
+                  🔐 Log In / Sign Up
                 </Link>
               )}
 
               {activeFilterCount > 0 && (
-                <button type="button" className="secondaryButton" onClick={clearFilters}>
-                  Clear Filters
+                <button type="button" className="bubbleButton bubbleNeutral" onClick={clearFilters}>
+                  🧹 Clear Filters
                 </button>
               )}
             </div>
@@ -1144,73 +1174,71 @@ export default function MarketplacePage() {
                         <div className="ownerActions">
                           <button
                             type="button"
-                            className="primaryButton"
+                            className="bubbleButton bubblePrimary"
                             disabled={busyId === listing.id}
                             onClick={() => void updateListingStatus(listing.id, "active")}
                           >
-                            Active
+                            🟢 Active
                           </button>
 
                           <button
                             type="button"
-                            className="secondaryButton"
-                            style={{ cursor: "pointer" }}
+                            className="bubbleButton bubbleLight"
                             disabled={busyId === listing.id}
                             onClick={() => void updateListingStatus(listing.id, "pending")}
                           >
-                            Pending
+                            ⏳ Pending
                           </button>
 
                           <button
                             type="button"
-                            className="secondaryButton"
-                            style={{ cursor: "pointer" }}
+                            className="bubbleButton bubbleNeutral"
                             disabled={busyId === listing.id}
                             onClick={() => void updateListingStatus(listing.id, "sold")}
                           >
-                            Sold
+                            ✅ Sold
                           </button>
 
                           <button
                             type="button"
-                            className="dangerButton"
+                            className="bubbleButton bubbleDanger"
                             disabled={busyId === listing.id}
                             onClick={() => void deleteListing(listing.id)}
                           >
-                            Delete
+                            🗑️ Delete
                           </button>
                         </div>
 
-                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                          <Link href={`/sell?edit=${listing.id}`} className="secondaryButton">
-                            Edit Listing
+                        <div className="bubbleRow">
+                          <Link href={`/sell?edit=${listing.id}`} className="bubbleButton bubbleLight">
+                            ✏️ Edit Listing
                           </Link>
 
-                          <Link href="/messages" className="secondaryButton">
-                            Open Messages
+                          <Link href="/messages" className="bubbleButton bubbleLight">
+                            💬 Open Messages
                           </Link>
 
-                          <Link href="/sell" className="secondaryButton">
-                            New Listing
+                          <Link href="/sell" className="bubbleButton bubblePrimary">
+                            ✨ New Listing
                           </Link>
                         </div>
                       </div>
                     ) : (
-                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: "auto" }}>
+                      <div className="bubbleRow" style={{ marginTop: "auto" }}>
                         <button
                           type="button"
-                          className="primaryButton"
+                          className="bubbleButton bubblePrimary"
                           onClick={() => void handleStartConversation(listing)}
                         >
-                          Message Seller
+                          💬 Message Seller
                         </button>
 
-                        <Link href="/sell" className="secondaryButton">
-                          Sell Similar
+                        <Link href="/sell" className="bubbleButton bubbleLight">
+                          🛍️ Sell Similar
                         </Link>
 
-                        <Link href="/feedback" className="reportLink">
-                          Report Concern
+                        <Link href={`/feedback?listing=${listing.id}`} className="bubbleButton bubbleWarn">
+                          ⚠️ Report Concern
                         </Link>
                       </div>
                     )}

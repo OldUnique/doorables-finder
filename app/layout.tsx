@@ -2,8 +2,8 @@
 import AppHeader from "../components/AppHeader";
 
 export const metadata = {
-  title: "Doorables Finder",
-  description: "Track your collection, browse the marketplace, and manage your listings.",
+  title: "Adorable Vault | Doorabes Collection Tracker",
+  description: "Track your Doorables collection, wishlist, extras, marketplace, and public collector profile with Adorable Vault",
 };
 
 export default function RootLayout({

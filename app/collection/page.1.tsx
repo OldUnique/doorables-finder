@@ -52,6 +52,38 @@ const FREE_LIMIT = 50;
 const MONTHLY_PRICE_LABEL = "$3/month";
 const YEARLY_PRICE_LABEL = "$15/year";
 
+function normalizeVisibility(value: unknown): "private" | "extras_only" | "full" {
+  const clean = String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/-/g, "_")
+    .replace(/\+/g, "_");
+
+  if (
+    clean === "full" ||
+    clean === "public" ||
+    clean === "full_collection" ||
+    clean === "full_public" ||
+    clean === "all"
+  ) {
+    return "full";
+  }
+
+  if (
+    clean === "extras_only" ||
+    clean === "wishlist_extras" ||
+    clean === "wishlist_and_extras" ||
+    clean === "wishlist_extras_" ||
+    clean === "wishlist" ||
+    clean === "extras"
+  ) {
+    return "extras_only";
+  }
+
+  return "private";
+}
+
 function rarityTheme(rarity: string): Theme {
   const value = String(rarity || "").toLowerCase().trim();
 
@@ -366,6 +398,7 @@ export default function Page() {
   const [rarityFilter, setRarityFilter] = useState("all");
   const [movieFilter, setMovieFilter] = useState("all");
   const [collectionFilter, setCollectionFilter] = useState("all");
+  const [collectionViewMode, setCollectionViewMode] = useState<"cards" | "list">("cards");
   const [page, setPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -386,7 +419,16 @@ export default function Page() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, seriesFilter, subcategoryFilter, rarityFilter, movieFilter, collectionFilter, isMobile]);
+  }, [
+    search,
+    seriesFilter,
+    subcategoryFilter,
+    rarityFilter,
+    movieFilter,
+    collectionFilter,
+    collectionViewMode,
+    isMobile,
+  ]);
 
   async function load() {
     try {
@@ -416,30 +458,27 @@ export default function Page() {
       setIsSubscribed(!!profile?.is_subscribed);
       setUsername(String(profile?.username ?? ""));
 
-      if (
-        profile?.collection_visibility === "private" ||
-        profile?.collection_visibility === "extras_only" ||
-        profile?.collection_visibility === "full"
-      ) {
-        setVisibility(profile.collection_visibility);
-      }
+      setVisibility(normalizeVisibility(profile?.collection_visibility));
 
       const { data: spotlightUsers } = await supabase
         .from("users")
         .select("id, username, collection_visibility")
-        .neq("collection_visibility", "private")
         .not("username", "is", null)
         .order("username", { ascending: true })
-        .limit(24);
+        .limit(50);
 
       setPublicCollectors(
         ((spotlightUsers || []) as any[])
-          .filter((row) => String(row.username ?? "").trim() !== "")
           .map((row) => ({
             id: String(row.id),
-            username: String(row.username),
-            collection_visibility: row.collection_visibility,
+            username: String(row.username ?? "").trim(),
+            collection_visibility: normalizeVisibility(row.collection_visibility),
           }))
+          .filter(
+            (row) =>
+              row.username !== "" && row.collection_visibility !== "private"
+          )
+          .slice(0, 24)
       );
 
       const { data: doorables, error: doorablesError } = await supabase
@@ -629,8 +668,11 @@ export default function Page() {
 
   async function saveVisibility(next: "private" | "extras_only" | "full") {
     try {
+      const normalizedNext = normalizeVisibility(next);
+
       setSavingVisibility(true);
       setError("");
+      setNotice("");
 
       const supabase = getSupabase();
 
@@ -643,18 +685,58 @@ export default function Page() {
         return;
       }
 
-      const { error } = await supabase
+      const { data: updatedById, error: updateError } = await supabase
         .from("users")
-        .update({ collection_visibility: next })
-        .eq("id", user.id);
+        .update({ collection_visibility: normalizedNext })
+        .eq("id", user.id)
+        .select("id, username, collection_visibility")
+        .maybeSingle();
 
-      if (error) {
-        setError("Could not save visibility: " + error.message);
+      if (updateError) {
+        setError("Could not save visibility: " + updateError.message);
         setSavingVisibility(false);
         return;
       }
 
-      setVisibility(next);
+      const currentUsername = String(updatedById?.username || username || "").trim();
+
+      // If the user row did not update, try to create/repair it.
+      // Supabase update() can return no error even when zero rows matched.
+      if (!updatedById?.id) {
+        const { error: upsertError } = await supabase.from("users").upsert(
+          {
+            id: user.id,
+            email: user.email,
+            username: currentUsername || username || null,
+            collection_visibility: normalizedNext,
+          },
+          { onConflict: "id" }
+        );
+
+        if (upsertError) {
+          setError("Could not save visibility: " + upsertError.message);
+          setSavingVisibility(false);
+          return;
+        }
+      }
+
+      // Repair duplicate/stale username rows if they exist.
+      // This helps the public /collector/[username] page stop finding an older private row.
+      if (currentUsername) {
+        await supabase
+          .from("users")
+          .update({ collection_visibility: normalizedNext })
+          .ilike("username", currentUsername);
+      }
+
+      setVisibility(normalizedNext);
+      setNotice(`Visibility saved as ${
+        normalizedNext === "full"
+          ? "Full Collection"
+          : normalizedNext === "extras_only"
+            ? "Wishlist + Extras"
+            : "Private"
+      } 💜`);
       setSavingVisibility(false);
     } catch (err) {
       setSavingVisibility(false);
@@ -845,7 +927,6 @@ export default function Page() {
     );
   }
 
-
   async function handleAutoSellExtras() {
     try {
       setError("");
@@ -1005,9 +1086,6 @@ export default function Page() {
         status: "pending",
       };
 
-      // Your project has used both submitted_by and user_id at different points.
-      // This tries the newer submitted_by column first, then falls back to user_id
-      // so the collection page can save even if the database/table is on the older setup.
       const { error: submittedByError } = await supabase
         .from("image_submissions")
         .insert([{ ...basePayload, submitted_by: user.id }]);
@@ -1200,7 +1278,15 @@ export default function Page() {
     (collectionFilter !== "all" ? 1 : 0) +
     (search.trim() ? 1 : 0);
 
-  const cardsPerPage = isMobile ? 8 : 24;
+  const cardsPerPage =
+    collectionViewMode === "list"
+      ? isMobile
+        ? 40
+        : 80
+      : isMobile
+        ? 8
+        : 24;
+
   const totalPages = Math.max(1, Math.ceil(filteredCards.length / cardsPerPage));
   const safePage = Math.min(page, totalPages);
   const pagedCards = filteredCards.slice(
@@ -1291,20 +1377,6 @@ export default function Page() {
           font-size: 30px;
         }
 
-        .cardsGrid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 14px;
-        }
-
-        .floatCard {
-          transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
-        }
-
-        .floatCard:hover {
-          transform: translateY(-4px);
-        }
-
         .galaxyStars {
           position: relative;
           max-width: 1500px;
@@ -1329,6 +1401,15 @@ export default function Page() {
           z-index: 0;
         }
 
+        .heroSection,
+        .panelCard,
+        .autoSellCard,
+        .eliteUpgradeWall,
+        .tierCard,
+        .statButton {
+          backdrop-filter: blur(6px);
+        }
+
         .heroSection {
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 30%),
@@ -1338,7 +1419,6 @@ export default function Page() {
           box-shadow: 0 20px 40px rgba(0,0,0,0.3);
           margin-bottom: 18px;
           border: 1px solid rgba(255,255,255,0.08);
-          backdrop-filter: blur(6px);
         }
 
         .heroTop {
@@ -1374,366 +1454,6 @@ export default function Page() {
           max-width: 320px;
         }
 
-        .tierGrid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 14px;
-          margin-bottom: 18px;
-        }
-
-        .tierCard {
-          background: rgba(255,255,255,0.94);
-          color: #111827;
-          border-radius: 22px;
-          padding: 16px;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-          border: 1px solid rgba(255,255,255,0.35);
-          overflow: hidden;
-          position: relative;
-        }
-
-        .tierAccent {
-          position: absolute;
-          inset: 0 auto 0 0;
-          width: 8px;
-          border-radius: 22px 0 0 22px;
-        }
-
-
-        .autoSellCard {
-          background:
-            radial-gradient(circle at top right, rgba(192,132,252,0.28), transparent 32%),
-            linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
-          color: #111827;
-          border-radius: 24px;
-          padding: 18px;
-          box-shadow: 0 12px 28px rgba(0,0,0,0.18);
-          margin-bottom: 18px;
-          border: 1px solid rgba(255,255,255,0.55);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-
-        .autoSellEyebrow {
-          color: #6d28d9;
-          font-size: 12px;
-          font-weight: 1000;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          margin-bottom: 6px;
-        }
-
-        .autoSellTitle {
-          font-size: clamp(1.25rem, 3vw, 1.8rem);
-          font-weight: 1000;
-          letter-spacing: -0.5px;
-          margin-bottom: 6px;
-        }
-
-        .autoSellText {
-          color: #4b5563;
-          line-height: 1.55;
-          font-size: 14px;
-          max-width: 760px;
-        }
-
-
-        .autoSellSummaryRow {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 8px;
-          margin-top: 14px;
-        }
-
-        .autoSellSummaryPill {
-          border-radius: 15px;
-          border: 1px solid #e5e7eb;
-          background: #f8fafc;
-          color: #111827;
-          padding: 10px;
-          text-align: left;
-          cursor: pointer;
-          font-family: inherit;
-        }
-
-        .autoSellSummaryPill.active {
-          background: #eef2ff;
-          border-color: #a78bfa;
-          box-shadow: 0 8px 18px rgba(124,58,237,0.12);
-        }
-
-        .autoSellSummaryPill span {
-          display: block;
-          color: #64748b;
-          font-size: 11px;
-          font-weight: 950;
-          margin-bottom: 4px;
-        }
-
-        .autoSellSummaryPill strong {
-          color: #111827;
-          font-size: 24px;
-          font-weight: 1000;
-          line-height: 1;
-        }
-
-        .autoSellManagerRow {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) auto;
-          gap: 10px;
-          align-items: center;
-          margin-top: 12px;
-        }
-
-        .autoSellSearchInput {
-          min-height: 42px;
-          width: 100%;
-          box-sizing: border-box;
-          border-radius: 13px;
-          border: 1px solid #d1d5db;
-          padding: 10px 12px;
-          background: #ffffff;
-          color: #111827;
-          font-size: 14px;
-          font-family: inherit;
-          outline: none;
-        }
-
-        .autoSellSearchInput:focus {
-          border-color: #8b5cf6;
-          box-shadow: 0 0 0 4px rgba(139,92,246,0.12);
-        }
-
-        .autoSellToolbar {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          align-items: center;
-          justify-content: space-between;
-          margin-top: 14px;
-          padding: 10px;
-          border-radius: 16px;
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
-        }
-
-        .autoSellToolbarButtons {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .autoSellSmallButton {
-          min-height: 40px;
-          border-radius: 12px;
-          border: 1px solid #d1d5db;
-          background: #ffffff;
-          color: #334155;
-          font-weight: 950;
-          padding: 9px 12px;
-          cursor: pointer;
-          white-space: nowrap;
-        }
-
-        .autoSellHint {
-          color: #64748b;
-          font-size: 12px;
-          font-weight: 850;
-          line-height: 1.35;
-        }
-
-
-        .autoSellButton {
-          min-height: 50px;
-          border: none;
-          border-radius: 16px;
-          padding: 13px 18px;
-          font-weight: 1000;
-          color: white;
-          background: linear-gradient(135deg, #16a34a, #4f46e5);
-          box-shadow: 0 14px 26px rgba(79,70,229,0.22);
-          cursor: pointer;
-          white-space: nowrap;
-        }
-
-        .autoSellButton:disabled {
-          opacity: 0.62;
-          cursor: wait;
-        }
-
-        .statsSection {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 14px;
-          margin-bottom: 18px;
-        }
-
-        .statButton {
-          background: rgba(255,255,255,0.94);
-          color: #111827;
-          border-radius: 20px;
-          padding: 18px;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-          border: 1px solid rgba(255,255,255,0.35);
-          cursor: pointer;
-          text-align: left;
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .statButton:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 14px 28px rgba(0,0,0,0.22);
-        }
-
-        .panelCard {
-          background: rgba(255,255,255,0.94);
-          color: #111827;
-          border-radius: 24px;
-          padding: 16px;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-          margin-bottom: 18px;
-          border: 1px solid rgba(255,255,255,0.35);
-        }
-
-        .filterPanel {
-          position: sticky;
-          top: 8px;
-          z-index: 55;
-        }
-
-        .filterHeader {
-          display: grid;
-          grid-template-columns: 1fr auto;
-          gap: 10px;
-          align-items: center;
-        }
-
-        .filterToggleButton {
-          display: none;
-          border: none;
-          border-radius: 14px;
-          padding: 13px 14px;
-          background: linear-gradient(135deg, #4f46e5, #7c3aed);
-          color: #ffffff;
-          font-weight: 950;
-          min-height: 50px;
-          cursor: pointer;
-        }
-
-        .filterBody {
-          margin-top: 12px;
-        }
-
-        .filterWrap {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-          align-items: center;
-        }
-
-        .collectionToggleWrap {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          padding: 6px;
-          border-radius: 14px;
-          background: #eef2ff;
-          border: 1px solid #c7d2fe;
-          flex-wrap: wrap;
-          width: auto;
-          justify-content: flex-start;
-        }
-
-        .quickMobileChips {
-          display: none;
-          gap: 8px;
-          overflow-x: auto;
-          padding-bottom: 2px;
-          scrollbar-width: none;
-        }
-
-        .quickMobileChips::-webkit-scrollbar {
-          display: none;
-        }
-
-        .quickChip {
-          min-height: 42px;
-          border-radius: 999px;
-          border: 1px solid #c7d2fe;
-          padding: 9px 13px;
-          font-weight: 900;
-          background: #eef2ff;
-          color: #3730a3;
-          white-space: nowrap;
-          cursor: pointer;
-        }
-
-        .quickChip.active {
-          background: #4f46e5;
-          color: #ffffff;
-        }
-
-        .clearFiltersButton {
-          border: none;
-          border-radius: 12px;
-          padding: 10px 12px;
-          background: #f1f5f9;
-          color: #334155;
-          font-weight: 900;
-          min-height: 42px;
-          cursor: pointer;
-        }
-
-        .cardImageWrap {
-          height: 180px;
-          background: rgba(255,255,255,0.92);
-          border-radius: 18px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 12px;
-          overflow: hidden;
-          padding: 14px;
-        }
-
-        .cardImage {
-          max-width: 100%;
-          max-height: 100%;
-          object-fit: contain;
-          transition: transform 0.2s ease;
-        }
-
-        .cardImageWrap:hover .cardImage {
-          transform: scale(1.05);
-        }
-
-        .pager {
-          display: flex;
-          gap: 10px;
-          align-items: center;
-          justify-content: center;
-          flex-wrap: wrap;
-          margin-top: 18px;
-        }
-
-        .pagerButton {
-          padding: 10px 14px;
-          border-radius: 12px;
-          border: 1px solid rgba(255,255,255,0.16);
-          background: rgba(255,255,255,0.08);
-          color: white;
-          font-weight: 800;
-          cursor: pointer;
-        }
-
-        .pagerButton:disabled {
-          opacity: 0.45;
-          cursor: not-allowed;
-        }
-
         .upgradeBox {
           margin-top: 12px;
           background: rgba(255,255,255,0.94);
@@ -1742,190 +1462,6 @@ export default function Page() {
           padding: 14px;
           border: 1px solid rgba(255,255,255,0.35);
           box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-        }
-
-        .publicProfileRow {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .publicProfileButton,
-        .publicProfileButton:visited {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 12px 16px;
-          border-radius: 14px;
-          text-decoration: none;
-          color: white;
-          font-weight: 800;
-          background: linear-gradient(135deg, #4f46e5, #7c3aed);
-          box-shadow: 0 10px 18px rgba(79,70,229,0.28);
-          min-height: 46px;
-          border: none;
-          cursor: pointer;
-          font-size: 15px;
-          font-family: inherit;
-        }
-
-        .publicProfileButton.secondary {
-          background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
-        }
-
-        .publicProfileActions {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          align-items: center;
-          justify-content: flex-end;
-        }
-
-        .publicProfileMeta {
-          font-size: 13px;
-          color: #4b5563;
-          line-height: 1.5;
-        }
-
-        .copyStatus {
-          margin-top: 8px;
-          display: inline-flex;
-          padding: 8px 10px;
-          border-radius: 999px;
-          background: #ecfdf5;
-          color: #065f46;
-          border: 1px solid #bbf7d0;
-          font-size: 12px;
-          font-weight: 900;
-        }
-
-        .spotlightGrid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 10px;
-        }
-
-        .spotlightCard {
-          display: block;
-          text-decoration: none;
-          background: #ffffff;
-          color: #111827;
-          border-radius: 18px;
-          padding: 14px;
-          border: 1px solid #e5e7eb;
-          box-shadow: 0 8px 18px rgba(0,0,0,0.10);
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .spotlightCard:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 12px 24px rgba(0,0,0,0.14);
-        }
-
-        .qtyControls {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          margin-top: 8px;
-        }
-
-        .qtyButton {
-          width: 46px;
-          height: 46px;
-          min-width: 46px;
-          border-radius: 14px;
-          font-size: 22px;
-          font-weight: 900;
-          line-height: 1;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          touch-action: manipulation;
-          user-select: none;
-          -webkit-tap-highlight-color: transparent;
-        }
-
-        .qtyValue {
-          min-width: 44px;
-          text-align: center;
-          font-weight: 900;
-          font-size: 22px;
-        }
-
-        .photoBox {
-          margin-top: 10px;
-          padding: 10px;
-          border-radius: 12px;
-          background: rgba(255,255,255,0.55);
-          border: 1px solid rgba(255,255,255,0.6);
-        }
-
-        .photoToggleButton {
-          width: 100%;
-          margin-top: 10px;
-          min-height: 42px;
-          border-radius: 12px;
-          border: 1px solid rgba(255,255,255,0.6);
-          background: rgba(255,255,255,0.68);
-          color: #111827;
-          font-weight: 900;
-          cursor: pointer;
-        }
-
-        .mobileSelect {
-          padding: 14px;
-          border-radius: 14px;
-          border: 1px solid #d1d5db;
-          font-size: 15px;
-          background: white;
-          width: auto;
-          min-width: 180px;
-        }
-
-        .searchBox {
-          flex: 1 1 280px;
-          padding: 14px 16px;
-          border-radius: 14px;
-          border: 1px solid #d1d5db;
-          font-size: 15px;
-          min-height: 52px;
-          height: 52px;
-          max-height: 52px;
-          background: white;
-          box-sizing: border-box;
-          width: auto;
-          min-width: 280px;
-        }
-
-        .seriesProgressGrid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 12px;
-        }
-
-        .seriesProgressButton {
-          border-radius: 18px;
-          border: 1px solid #e5e7eb;
-          padding: 14px;
-          background: #ffffff;
-          text-align: left;
-          cursor: pointer;
-        }
-
-        .showMoreButton {
-          margin-top: 12px;
-          width: 100%;
-          min-height: 44px;
-          border: none;
-          border-radius: 14px;
-          background: #eef2ff;
-          color: #3730a3;
-          font-weight: 950;
-          cursor: pointer;
         }
 
         .eliteStatusStack {
@@ -2043,282 +1579,488 @@ export default function Page() {
           background: linear-gradient(90deg, #4f46e5, #7c3aed);
           color: white;
           box-shadow: 0 14px 26px rgba(79,70,229,0.26);
+          border: none;
+          cursor: pointer;
         }
 
-
-        .autoSellSimpleHeader {
+        .tierGrid {
           display: grid;
-          grid-template-columns: auto 1fr;
+          grid-template-columns: 1fr;
           gap: 14px;
+          margin-bottom: 18px;
+        }
+
+        .tierCard,
+        .statButton,
+        .panelCard {
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          border: 1px solid rgba(255,255,255,0.35);
+        }
+
+        .tierCard {
+          border-radius: 22px;
+          padding: 16px;
+          overflow: hidden;
+          position: relative;
+        }
+
+        .tierAccent {
+          position: absolute;
+          inset: 0 auto 0 0;
+          width: 8px;
+          border-radius: 22px 0 0 22px;
+        }
+
+        .panelCard {
+          border-radius: 24px;
+          padding: 16px;
+          margin-bottom: 18px;
+        }
+
+        .statsSection {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 14px;
+          margin-bottom: 18px;
+        }
+
+        .statButton {
+          border-radius: 20px;
+          padding: 18px;
+          cursor: pointer;
+          text-align: left;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .statButton:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 14px 28px rgba(0,0,0,0.22);
+        }
+
+        .publicProfileRow {
+          display: flex;
+          justify-content: space-between;
           align-items: center;
-          padding-right: 44px;
+          gap: 12px;
+          flex-wrap: wrap;
         }
 
-        .autoSellSimpleIcon {
-          margin: 0;
+        .publicProfileMeta {
+          font-size: 13px;
+          color: #4b5563;
+          line-height: 1.5;
         }
 
-        .autoSellSimpleText {
-          margin-left: 0;
+        .publicProfileActions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: flex-end;
+        }
+
+        .publicProfileButton,
+        .publicProfileButton:visited {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 12px 16px;
+          border-radius: 14px;
+          text-decoration: none;
+          color: white;
+          font-weight: 800;
+          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          box-shadow: 0 10px 18px rgba(79,70,229,0.28);
+          min-height: 46px;
+          border: none;
+          cursor: pointer;
+          font-size: 15px;
+          font-family: inherit;
+        }
+
+        .publicProfileButton.secondary {
+          background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+        }
+
+        .copyStatus {
           margin-top: 8px;
+          display: inline-flex;
+          padding: 8px 10px;
+          border-radius: 999px;
+          background: #ecfdf5;
+          color: #065f46;
+          border: 1px solid #bbf7d0;
+          font-size: 12px;
+          font-weight: 900;
+        }
+
+        .spotlightGrid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .spotlightCard {
+          display: block;
+          text-decoration: none;
+          background: #ffffff;
+          color: #111827;
+          border-radius: 18px;
+          padding: 14px;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 8px 18px rgba(0,0,0,0.10);
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .spotlightCard:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 24px rgba(0,0,0,0.14);
+        }
+
+        .autoSellCard {
+          background:
+            radial-gradient(circle at top right, rgba(192,132,252,0.28), transparent 32%),
+            linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          color: #111827;
+          border-radius: 24px;
+          padding: 18px;
+          box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+          margin-bottom: 18px;
+          border: 1px solid rgba(255,255,255,0.55);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+
+        .autoSellEyebrow {
+          color: #6d28d9;
+          font-size: 12px;
+          font-weight: 1000;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin-bottom: 6px;
+        }
+
+        .autoSellTitle {
+          font-size: clamp(1.25rem, 3vw, 1.8rem);
+          font-weight: 1000;
+          letter-spacing: -0.5px;
+          margin-bottom: 6px;
+        }
+
+        .autoSellText {
+          color: #4b5563;
+          line-height: 1.55;
+          font-size: 14px;
           max-width: 760px;
         }
 
-        .autoSellTopControls {
+        .autoSellButton {
+          min-height: 50px;
+          border: none;
+          border-radius: 16px;
+          padding: 13px 18px;
+          font-weight: 1000;
+          color: white;
+          background: linear-gradient(135deg, #16a34a, #4f46e5);
+          box-shadow: 0 14px 26px rgba(79,70,229,0.22);
+          cursor: pointer;
+          white-space: nowrap;
+        }
+
+        .autoSellButton:disabled {
+          opacity: 0.62;
+          cursor: wait;
+        }
+
+        .filterPanel {
+          position: relative;
+          z-index: 1;
+        }
+
+        .filterHeader {
           display: grid;
-          grid-template-columns: 1fr auto;
+          grid-template-columns: minmax(0, 1fr) auto;
           gap: 10px;
           align-items: center;
-          margin-top: 14px;
-          padding: 10px;
-          border-radius: 16px;
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
         }
 
-        .autoSellTopStats {
+        .filterHeaderActions {
           display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 10px;
           flex-wrap: wrap;
-          gap: 7px;
         }
 
-        .autoSellTopStats span {
-          border-radius: 999px;
-          padding: 7px 10px;
-          background: #eef2ff;
-          color: #3730a3;
-          border: 1px solid #c7d2fe;
-          font-size: 12px;
-          font-weight: 950;
-        }
-
-        .autoSellTopSummary {
-          color: #475569;
-          font-size: 13px;
-          font-weight: 900;
-        }
-
-        .autoSellListTitle {
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-          align-items: end;
-          margin-top: 8px;
-          padding: 0 2px;
-        }
-
-        .autoSellListTitle strong {
-          color: #111827;
-          font-size: 14px;
-          font-weight: 1000;
-        }
-
-        .autoSellListTitle span {
-          color: #64748b;
-          font-size: 12px;
-          font-weight: 850;
-          text-align: right;
-        }
-
-        .autoSellBigList {
-          display: grid;
-          gap: 10px;
-          flex: 1 1 0;
-          min-height: 0;
-          overflow-y: auto;
-          overflow-x: hidden;
-          margin-top: 8px;
-          padding: 10px;
-          padding-bottom: 18px;
-          border-radius: 18px;
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
-          overscroll-behavior: contain;
-        }
-
-        .autoSellCompactItem {
-          display: grid;
-          grid-template-columns: 58px 74px minmax(0, 1fr);
-          gap: 10px;
-          align-items: stretch;
-          padding: 10px;
-          border-radius: 16px;
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
-          box-shadow: 0 8px 18px rgba(0,0,0,0.06);
-        }
-
-        .autoSellCompactItem.selected {
-          border-color: #a78bfa;
-          box-shadow: 0 8px 20px rgba(124,58,237,0.12);
-        }
-
-        .autoSellCompactCheck {
-          min-height: 74px;
+        .viewModeToggle {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px;
           border-radius: 14px;
           background: #eef2ff;
-          color: #3730a3;
           border: 1px solid #c7d2fe;
-          display: grid;
-          place-items: center;
-          align-content: center;
-          gap: 5px;
-          font-size: 12px;
-          font-weight: 1000;
+        }
+
+        .viewModeButton {
+          min-height: 38px;
+          border: none;
+          border-radius: 10px;
+          padding: 8px 12px;
+          background: transparent;
+          color: #3730a3;
+          font-weight: 950;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        .viewModeButton.active {
+          background: #4f46e5;
+          color: #ffffff;
+          box-shadow: 0 8px 16px rgba(79,70,229,0.18);
+        }
+
+        .filterToggleButton {
+          display: none;
+          border: none;
+          border-radius: 14px;
+          padding: 13px 14px;
+          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          color: #ffffff;
+          font-weight: 950;
+          min-height: 50px;
           cursor: pointer;
         }
 
-        .autoSellCompactCheck input {
-          width: 18px;
-          height: 18px;
-          accent-color: #7c3aed;
+        .filterBody {
+          margin-top: 12px;
         }
 
-        .autoSellCompactThumb {
-          width: 74px;
-          height: 74px;
+        .filterWrap {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .searchBox {
+          flex: 1 1 280px;
+          padding: 14px 16px;
           border-radius: 14px;
-          background: #f8fafc;
+          border: 1px solid #d1d5db;
+          font-size: 15px;
+          min-height: 52px;
+          height: 52px;
+          max-height: 52px;
+          background: white;
+          box-sizing: border-box;
+          width: auto;
+          min-width: 280px;
+        }
+
+        .mobileSelect {
+          padding: 14px;
+          border-radius: 14px;
+          border: 1px solid #d1d5db;
+          font-size: 15px;
+          background: white;
+          width: auto;
+          min-width: 180px;
+        }
+
+        .collectionToggleWrap {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          padding: 6px;
+          border-radius: 14px;
+          background: #eef2ff;
+          border: 1px solid #c7d2fe;
+          flex-wrap: wrap;
+          width: auto;
+          justify-content: flex-start;
+        }
+
+        .quickMobileChips {
+          display: none;
+          gap: 8px;
+          overflow-x: auto;
+          padding-bottom: 2px;
+          scrollbar-width: none;
+        }
+
+        .quickMobileChips::-webkit-scrollbar {
+          display: none;
+        }
+
+        .quickChip {
+          min-height: 42px;
+          border-radius: 999px;
+          border: 1px solid #c7d2fe;
+          padding: 9px 13px;
+          font-weight: 900;
+          background: #eef2ff;
+          color: #3730a3;
+          white-space: nowrap;
+          cursor: pointer;
+        }
+
+        .quickChip.active {
+          background: #4f46e5;
+          color: #ffffff;
+        }
+
+        .clearFiltersButton {
+          border: none;
+          border-radius: 12px;
+          padding: 10px 12px;
+          background: #f1f5f9;
+          color: #334155;
+          font-weight: 900;
+          min-height: 42px;
+          cursor: pointer;
+        }
+
+        .seriesProgressGrid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 12px;
+        }
+
+        .seriesProgressButton {
+          border-radius: 18px;
           border: 1px solid #e5e7eb;
+          padding: 14px;
+          background: #ffffff;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .showMoreButton {
+          margin-top: 12px;
+          width: 100%;
+          min-height: 44px;
+          border: none;
+          border-radius: 14px;
+          background: #eef2ff;
+          color: #3730a3;
+          font-weight: 950;
+          cursor: pointer;
+        }
+
+        .cardsGrid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 14px;
+        }
+
+        .cardsList {
+          display: grid;
+          gap: 10px;
+        }
+
+        .floatCard {
+          transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+        }
+
+        .floatCard:hover {
+          transform: translateY(-4px);
+        }
+
+        .cardImageWrap {
+          height: 180px;
+          background: rgba(255,255,255,0.92);
+          border-radius: 18px;
           display: flex;
           align-items: center;
           justify-content: center;
+          margin-bottom: 12px;
           overflow: hidden;
-          color: #64748b;
-          font-size: 11px;
-          font-weight: 900;
+          padding: 14px;
         }
 
-        .autoSellCompactThumb img {
-          width: 100%;
-          height: 100%;
+        .cardImage {
+          max-width: 100%;
+          max-height: 100%;
           object-fit: contain;
+          transition: transform 0.2s ease;
         }
 
-        .autoSellCompactBody {
-          display: grid;
-          gap: 7px;
-          min-width: 0;
+        .cardImageWrap:hover .cardImage {
+          transform: scale(1.05);
         }
 
-        .autoSellCompactRow {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) 120px;
-          gap: 8px;
-        }
-
-        .autoSellCompactTitle,
-        .autoSellCompactPrice {
-          min-height: 40px;
-        }
-
-        .autoSellCompactPrice {
-          font-weight: 950;
-        }
-
-        .autoSellCompactDescription {
-          min-height: 54px;
-          max-height: 74px;
-          resize: vertical;
-        }
-
-        .autoSellPriceReady {
-          border-color: #86efac;
-          background: #f0fdf4;
-        }
-
-        .autoSellCompactMeta {
+        .qtyControls {
           display: flex;
-          flex-wrap: wrap;
-          gap: 5px;
-          color: #475569;
-          font-size: 11px;
-          font-weight: 850;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: 8px;
         }
 
-        .autoSellCompactMeta span {
-          border-radius: 999px;
-          padding: 4px 7px;
-          background: #f1f5f9;
-          border: 1px solid #e2e8f0;
+        .qtyButton {
+          width: 46px;
+          height: 46px;
+          min-width: 46px;
+          border-radius: 14px;
+          font-size: 22px;
+          font-weight: 900;
+          line-height: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          touch-action: manipulation;
+          user-select: none;
+          -webkit-tap-highlight-color: transparent;
         }
 
-        .autoSellCompactMeta span.ready {
-          background: #ecfdf5;
-          border-color: #bbf7d0;
-          color: #065f46;
+        .qtyValue {
+          min-width: 44px;
+          text-align: center;
+          font-weight: 900;
+          font-size: 22px;
         }
 
-        .autoSellCompactMeta span.needs {
-          background: #fff7ed;
-          border-color: #fed7aa;
-          color: #9a3412;
-        }
-
-        .autoSellSimpleActions {
-          flex-shrink: 0;
-          position: sticky;
-          bottom: 0;
-          z-index: 10;
+        .photoBox {
           margin-top: 10px;
           padding: 10px;
-          border-radius: 18px;
-          background: rgba(255,255,255,0.98);
-          box-shadow: 0 -10px 24px rgba(15,23,42,0.08);
+          border-radius: 12px;
+          background: rgba(255,255,255,0.55);
+          border: 1px solid rgba(255,255,255,0.6);
         }
 
-        .autoSellModalList {
-          display: grid;
-          gap: 12px;
-          margin-top: 18px;
-          max-height: none;
-          overflow: auto;
-          padding-right: 4px;
-          flex: 1;
-          min-height: 0;
-        }
-
-        .autoSellItem {
-          display: grid;
-          grid-template-columns: auto 92px 1fr;
-          gap: 12px;
-          align-items: start;
-          text-align: left;
-          border-radius: 18px;
-          border: 1px solid #e5e7eb;
-          background: #ffffff;
-          padding: 12px;
-          box-shadow: 0 8px 18px rgba(0,0,0,0.06);
-        }
-
-        .autoSellItem.selected {
-          border-color: #a78bfa;
-          box-shadow: 0 8px 20px rgba(124,58,237,0.12);
-        }
-
-        .autoSellCheckLabel {
-          min-height: 76px;
-          border-radius: 14px;
-          background: #eef2ff;
-          color: #3730a3;
-          border: 1px solid #c7d2fe;
-          display: grid;
-          place-items: center;
-          align-content: center;
-          gap: 5px;
-          font-weight: 1000;
-          font-size: 12px;
+        .photoToggleButton {
+          width: 100%;
+          margin-top: 10px;
+          min-height: 42px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.6);
+          background: rgba(255,255,255,0.68);
+          color: #111827;
+          font-weight: 900;
           cursor: pointer;
-          padding: 6px;
         }
 
-        .autoSellCheckLabel input {
-          width: 18px;
-          height: 18px;
-          accent-color: #7c3aed;
+        .listCard {
+          display: grid;
+          grid-template-columns: 76px minmax(0, 1fr);
+          gap: 12px;
+          align-items: center;
+          border-radius: 18px;
+          padding: 10px;
+          background: rgba(255,255,255,0.96);
+          color: #111827;
+          border: 1px solid rgba(255,255,255,0.35);
+          box-shadow: 0 8px 18px rgba(0,0,0,0.14);
         }
 
-        .autoSellThumb {
+        .listThumb {
           width: 76px;
           height: 76px;
           border-radius: 14px;
@@ -2330,119 +2072,185 @@ export default function Page() {
           overflow: hidden;
         }
 
-        .autoSellThumb img {
+        .listThumb img {
           width: 100%;
           height: 100%;
           object-fit: contain;
         }
 
-        .autoSellFields {
+        .listMain {
+          min-width: 0;
+        }
+
+        .listTopRow {
           display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
           gap: 8px;
+          align-items: start;
         }
 
-        .autoSellTitlePriceRow {
-          display: grid;
-          grid-template-columns: 1fr 120px;
-          gap: 8px;
-        }
-
-        .autoSellInput,
-        .autoSellTextarea {
-          width: 100%;
-          box-sizing: border-box;
-          border: 1px solid #d1d5db;
-          border-radius: 12px;
-          padding: 11px 12px;
-          color: #111827;
-          background: white;
-          font-size: 14px;
-          font-family: inherit;
-        }
-
-        .autoSellTextarea {
-          min-height: 70px;
-          resize: vertical;
-        }
-
-        .autoSellPriceReady {
-          border-color: #86efac;
-          background: #f0fdf4;
-        }
-
-        .autoSellBadgeRow {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          color: #475569;
-          font-size: 12px;
-          font-weight: 850;
-        }
-
-        .autoSellBadgeRow span {
-          border-radius: 999px;
-          padding: 5px 8px;
-          background: #f1f5f9;
-          border: 1px solid #e2e8f0;
-        }
-
-        .autoSellBadgeRow span.ready {
-          background: #ecfdf5;
-          border-color: #bbf7d0;
-          color: #065f46;
-        }
-
-        .autoSellBadgeRow span.needs {
-          background: #fff7ed;
-          border-color: #fed7aa;
-          color: #9a3412;
-        }
-
-        .autoSellEmptyState {
-          min-height: 150px;
-          display: grid;
-          place-items: center;
-          text-align: center;
-          color: #64748b;
-          font-weight: 900;
-          border-radius: 16px;
-          background: #ffffff;
-          border: 1px dashed #cbd5e1;
-          padding: 18px;
-        }
-
-        .autoSellSelectedNote {
-          display: flex;
-          align-items: center;
-          color: #475569;
-          font-size: 13px;
-          font-weight: 900;
-        }
-
-        .autoSellModalActions {
-          display: grid;
-          grid-template-columns: 1fr auto auto;
-          gap: 10px;
-          margin-top: 10px;
-          padding-top: 10px;
-          border-top: 1px solid #e5e7eb;
-          background: linear-gradient(180deg, rgba(255,255,255,0.98), #ffffff);
-          position: relative;
-          bottom: auto;
-          z-index: 1;
-        }
-
-        .autoSellCancelButton {
-          min-height: 50px;
-          border-radius: 17px;
-          padding: 13px 18px;
+        .listName {
+          font-size: 16px;
           font-weight: 1000;
-          border: 1px solid #d1d5db;
-          background: #f8fafc;
-          color: #334155;
+          line-height: 1.15;
+          word-break: break-word;
+        }
+
+        .listMeta {
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 800;
+          margin-top: 3px;
+          line-height: 1.35;
+        }
+
+        .listRarityBadge {
+          padding: 5px 8px;
+          border-radius: 999px;
+          font-size: 11px;
+          font-weight: 950;
+          white-space: nowrap;
+        }
+
+        .listStatus {
+          margin-top: 6px;
+          font-size: 13px;
+          font-weight: 950;
+        }
+
+        .listControls {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          gap: 8px;
+          align-items: center;
+          margin-top: 8px;
+        }
+
+        .listQtyControls {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+        }
+
+        .listQtyButton {
+          width: 36px;
+          height: 36px;
+          border-radius: 11px;
+          border: 1px solid #cbd5e1;
+          background: #ffffff;
+          color: #111827;
+          font-size: 20px;
+          font-weight: 1000;
           cursor: pointer;
         }
 
+        .listQtyValue {
+          min-width: 28px;
+          text-align: center;
+          font-size: 18px;
+          font-weight: 1000;
+        }
+
+        .listNoteInput {
+          min-height: 38px;
+          width: 100%;
+          box-sizing: border-box;
+          border-radius: 11px;
+          border: 1px solid #d1d5db;
+          padding: 8px 10px;
+          color: #111827;
+          background: #ffffff;
+          font-family: inherit;
+          font-size: 13px;
+        }
+
+        .listSaveButton {
+          min-height: 38px;
+          border: none;
+          border-radius: 11px;
+          padding: 8px 11px;
+          background: #4f46e5;
+          color: #ffffff;
+          font-weight: 950;
+          cursor: pointer;
+          white-space: nowrap;
+          font-family: inherit;
+        }
+
+        .pager {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-top: 18px;
+        }
+
+        .pagerButton {
+          padding: 10px 14px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.16);
+          background: rgba(255,255,255,0.08);
+          color: white;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .pagerButton:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+
+        .eliteMobileSticky {
+          position: fixed;
+          left: 12px;
+          right: 12px;
+          bottom: 12px;
+          z-index: 80;
+          display: none;
+          grid-template-columns: 1fr auto;
+          gap: 11px;
+          align-items: center;
+          padding: 11px;
+          border-radius: 22px;
+          background: rgba(15,23,42,0.88);
+          border: 1px solid rgba(255,255,255,0.14);
+          backdrop-filter: blur(14px);
+          box-shadow: 0 18px 40px rgba(0,0,0,0.36);
+        }
+
+        .eliteMobileTop {
+          color: white;
+          font-size: 13px;
+          font-weight: 1000;
+          margin-bottom: 7px;
+        }
+
+        .eliteMobileTrack {
+          height: 8px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.16);
+          overflow: hidden;
+        }
+
+        .eliteMobileFill {
+          height: 100%;
+          border-radius: inherit;
+          background: linear-gradient(90deg, #60a5fa, #c084fc);
+        }
+
+        .eliteMobileButton {
+          min-height: 44px;
+          border-radius: 15px;
+          padding: 10px 14px;
+          text-decoration: none;
+          color: #312e81;
+          background: white;
+          font-weight: 1000;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
 
         .eliteModalOverlay {
           position: fixed;
@@ -2576,55 +2384,277 @@ export default function Page() {
           cursor: pointer;
         }
 
-        .eliteMobileSticky {
-          position: fixed;
-          left: 12px;
-          right: 12px;
-          bottom: 12px;
-          z-index: 80;
-          display: none;
-          grid-template-columns: 1fr auto;
-          gap: 11px;
+        .autoSellSimpleHeader {
+          display: grid;
+          grid-template-columns: auto 1fr;
+          gap: 14px;
           align-items: center;
-          padding: 11px;
-          border-radius: 22px;
-          background: rgba(15,23,42,0.88);
-          border: 1px solid rgba(255,255,255,0.14);
-          backdrop-filter: blur(14px);
-          box-shadow: 0 18px 40px rgba(0,0,0,0.36);
+          padding-right: 44px;
         }
 
-        .eliteMobileTop {
-          color: white;
+        .autoSellSimpleIcon {
+          margin: 0;
+        }
+
+        .autoSellSimpleText {
+          margin-left: 0;
+          margin-top: 8px;
+          max-width: 760px;
+        }
+
+        .autoSellTopControls {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 10px;
+          align-items: center;
+          margin-top: 14px;
+          padding: 10px;
+          border-radius: 16px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+        }
+
+        .autoSellTopSummary {
+          color: #475569;
           font-size: 13px;
+          font-weight: 900;
+        }
+
+        .autoSellToolbarButtons {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .autoSellSmallButton {
+          min-height: 40px;
+          border-radius: 12px;
+          border: 1px solid #d1d5db;
+          background: #ffffff;
+          color: #334155;
+          font-weight: 950;
+          padding: 9px 12px;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+
+        .autoSellListTitle {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          align-items: end;
+          margin-top: 8px;
+          padding: 0 2px;
+        }
+
+        .autoSellListTitle strong {
+          color: #111827;
+          font-size: 14px;
           font-weight: 1000;
-          margin-bottom: 7px;
         }
 
-        .eliteMobileTrack {
-          height: 8px;
-          border-radius: 999px;
-          background: rgba(255,255,255,0.16);
-          overflow: hidden;
+        .autoSellListTitle span {
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 850;
+          text-align: right;
         }
 
-        .eliteMobileFill {
-          height: 100%;
-          border-radius: inherit;
-          background: linear-gradient(90deg, #60a5fa, #c084fc);
+        .autoSellBigList {
+          display: grid;
+          gap: 10px;
+          flex: 1 1 0;
+          min-height: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
+          margin-top: 8px;
+          padding: 10px;
+          padding-bottom: 18px;
+          border-radius: 18px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          overscroll-behavior: contain;
         }
 
-        .eliteMobileButton {
-          min-height: 44px;
-          border-radius: 15px;
-          padding: 10px 14px;
-          text-decoration: none;
-          color: #312e81;
-          background: white;
+        .autoSellCompactItem {
+          display: grid;
+          grid-template-columns: 58px 74px minmax(0, 1fr);
+          gap: 10px;
+          align-items: stretch;
+          padding: 10px;
+          border-radius: 16px;
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+        }
+
+        .autoSellCompactItem.selected {
+          border-color: #a78bfa;
+          box-shadow: 0 8px 20px rgba(124,58,237,0.12);
+        }
+
+        .autoSellCompactCheck {
+          min-height: 74px;
+          border-radius: 14px;
+          background: #eef2ff;
+          color: #3730a3;
+          border: 1px solid #c7d2fe;
+          display: grid;
+          place-items: center;
+          align-content: center;
+          gap: 5px;
+          font-size: 12px;
           font-weight: 1000;
-          display: inline-flex;
+          cursor: pointer;
+        }
+
+        .autoSellCompactCheck input {
+          width: 18px;
+          height: 18px;
+          accent-color: #7c3aed;
+        }
+
+        .autoSellCompactThumb {
+          width: 74px;
+          height: 74px;
+          border-radius: 14px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          display: flex;
           align-items: center;
           justify-content: center;
+          overflow: hidden;
+          color: #64748b;
+          font-size: 11px;
+          font-weight: 900;
+        }
+
+        .autoSellCompactThumb img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+
+        .autoSellCompactBody {
+          display: grid;
+          gap: 7px;
+          min-width: 0;
+        }
+
+        .autoSellCompactRow {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 120px;
+          gap: 8px;
+        }
+
+        .autoSellInput,
+        .autoSellTextarea {
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid #d1d5db;
+          border-radius: 12px;
+          padding: 11px 12px;
+          color: #111827;
+          background: white;
+          font-size: 14px;
+          font-family: inherit;
+        }
+
+        .autoSellTextarea {
+          min-height: 70px;
+          resize: vertical;
+        }
+
+        .autoSellCompactTitle,
+        .autoSellCompactPrice {
+          min-height: 40px;
+        }
+
+        .autoSellCompactPrice {
+          font-weight: 950;
+        }
+
+        .autoSellCompactDescription {
+          min-height: 54px;
+          max-height: 74px;
+          resize: vertical;
+        }
+
+        .autoSellPriceReady {
+          border-color: #86efac;
+          background: #f0fdf4;
+        }
+
+        .autoSellCompactMeta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 5px;
+          color: #475569;
+          font-size: 11px;
+          font-weight: 850;
+        }
+
+        .autoSellCompactMeta span {
+          border-radius: 999px;
+          padding: 4px 7px;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+        }
+
+        .autoSellCompactMeta span.ready {
+          background: #ecfdf5;
+          border-color: #bbf7d0;
+          color: #065f46;
+        }
+
+        .autoSellCompactMeta span.needs {
+          background: #fff7ed;
+          border-color: #fed7aa;
+          color: #9a3412;
+        }
+
+        .autoSellModalActions {
+          display: grid;
+          grid-template-columns: 1fr auto auto;
+          gap: 10px;
+          margin-top: 10px;
+          padding-top: 10px;
+          border-top: 1px solid #e5e7eb;
+          background: linear-gradient(180deg, rgba(255,255,255,0.98), #ffffff);
+          position: relative;
+          bottom: auto;
+          z-index: 1;
+        }
+
+        .autoSellSimpleActions {
+          flex-shrink: 0;
+          position: sticky;
+          bottom: 0;
+          z-index: 10;
+          margin-top: 10px;
+          padding: 10px;
+          border-radius: 18px;
+          background: rgba(255,255,255,0.98);
+          box-shadow: 0 -10px 24px rgba(15,23,42,0.08);
+        }
+
+        .autoSellSelectedNote {
+          display: flex;
+          align-items: center;
+          color: #475569;
+          font-size: 13px;
+          font-weight: 900;
+        }
+
+        .autoSellCancelButton {
+          min-height: 50px;
+          border-radius: 17px;
+          padding: 13px 18px;
+          font-weight: 1000;
+          border: 1px solid #d1d5db;
+          background: #f8fafc;
+          color: #334155;
+          cursor: pointer;
         }
 
         @media (min-width: 641px) {
@@ -2742,14 +2772,29 @@ export default function Page() {
             margin-bottom: 14px;
           }
 
-          .filterPanel {
-            top: 6px;
+          .filterHeader {
+            grid-template-columns: 1fr;
+          }
+
+          .filterHeaderActions {
+            justify-content: stretch;
+            width: 100%;
+          }
+
+          .viewModeToggle {
+            width: 100%;
+            box-sizing: border-box;
+          }
+
+          .viewModeButton {
+            flex: 1;
           }
 
           .filterToggleButton {
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            width: 100%;
           }
 
           .quickMobileChips {
@@ -2786,31 +2831,6 @@ export default function Page() {
             box-sizing: border-box;
           }
 
-
-          .autoSellModal {
-            width: 100% !important;
-            max-height: 94vh !important;
-          }
-
-          .autoSellSummaryRow {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
-          .autoSellManagerRow {
-            grid-template-columns: 1fr;
-          }
-
-          .autoSellManagerRow .autoSellToolbarButtons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            width: 100%;
-          }
-
-          .autoSellManagerRow .autoSellSmallButton {
-            width: 100%;
-            white-space: normal;
-          }
-
           .autoSellCard {
             display: grid;
             border-radius: 20px;
@@ -2818,47 +2838,7 @@ export default function Page() {
             margin-bottom: 14px;
           }
 
-  
-        .autoSellToolbar {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          align-items: center;
-          justify-content: space-between;
-          margin-top: 14px;
-          padding: 10px;
-          border-radius: 16px;
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
-        }
-
-        .autoSellToolbarButtons {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .autoSellSmallButton {
-          min-height: 40px;
-          border-radius: 12px;
-          border: 1px solid #d1d5db;
-          background: #ffffff;
-          color: #334155;
-          font-weight: 950;
-          padding: 9px 12px;
-          cursor: pointer;
-          white-space: nowrap;
-        }
-
-        .autoSellHint {
-          color: #64748b;
-          font-size: 12px;
-          font-weight: 850;
-          line-height: 1.35;
-        }
-
-
-        .autoSellButton {
+          .autoSellButton {
             width: 100%;
           }
 
@@ -2914,85 +2894,31 @@ export default function Page() {
             font-size: 24px;
           }
 
+          .listCard {
+            grid-template-columns: 64px minmax(0, 1fr);
+            gap: 10px;
+            padding: 9px;
+            border-radius: 16px;
+          }
+
+          .listThumb {
+            width: 64px;
+            height: 64px;
+          }
+
+          .listControls {
+            grid-template-columns: auto minmax(0, 1fr);
+          }
+
+          .listSaveButton {
+            grid-column: 1 / -1;
+            width: 100%;
+          }
+
           .pager {
             margin-bottom: 14px;
           }
-        }
 
-
-
-          .autoSellToolbar {
-            align-items: stretch;
-          }
-
-          .autoSellToolbarButtons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            width: 100%;
-          }
-
-          .autoSellSmallButton {
-            width: 100%;
-          }
-
-          .autoSellTitlePriceRow {
-            grid-template-columns: 1fr;
-          }
-
-          .autoSellInput,
-          .autoSellTextarea {
-            min-height: 46px;
-            font-size: 15px;
-          }
-
-
-          .autoSellItem {
-            grid-template-columns: 1fr;
-          }
-
-          .autoSellCheckLabel {
-            min-height: 44px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-          }
-
-          .autoSellModalActions {
-            grid-template-columns: 1fr;
-          }
-
-          .autoSellSelectedNote {
-            justify-content: center;
-            text-align: center;
-          }
-
-
-          .autoSellThumb {
-            width: 100%;
-            height: 150px;
-          }
-
-          .autoSellModalActions {
-            grid-template-columns: 1fr;
-          }
-
-
-        @media (max-width: 420px) {
-          .statsSection {
-            grid-template-columns: 1fr;
-          }
-
-          .eliteMobileSticky {
-            grid-template-columns: 1fr;
-          }
-
-          .eliteMobileButton {
-            width: 100%;
-            box-sizing: border-box;
-          }
-        }
-
-        @media (max-width: 920px) {
           .autoSellModal {
             width: 100% !important;
             height: calc(100dvh - 28px) !important;
@@ -3029,12 +2955,6 @@ export default function Page() {
             padding: 8px 7px;
             white-space: normal;
             font-size: 12px;
-          }
-
-          .autoSellTopStats span {
-            flex: 1 1 auto;
-            text-align: center;
-            padding: 6px 8px;
           }
 
           .autoSellListTitle {
@@ -3092,6 +3012,7 @@ export default function Page() {
             padding: 4px 6px;
           }
 
+          .autoSellModalActions,
           .autoSellSimpleActions {
             grid-template-columns: 1fr;
             gap: 8px;
@@ -3131,6 +3052,20 @@ export default function Page() {
           }
         }
 
+        @media (max-width: 420px) {
+          .statsSection {
+            grid-template-columns: 1fr;
+          }
+
+          .eliteMobileSticky {
+            grid-template-columns: 1fr;
+          }
+
+          .eliteMobileButton {
+            width: 100%;
+            box-sizing: border-box;
+          }
+        }
       `}</style>
 
       <div className="galaxyStars">
@@ -3441,16 +3376,37 @@ export default function Page() {
               <div style={{ color: "#64748b", fontSize: 13, marginTop: 3 }}>
                 Showing {pagedCards.length} of {filteredCards.length}
                 {activeFilterCount > 0 ? ` • ${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} active` : ""}
+                {collectionViewMode === "list" ? " • List view" : " • Card view"}
               </div>
             </div>
 
-            <button
-              type="button"
-              className="filterToggleButton"
-              onClick={() => setShowMobileFilters((prev) => !prev)}
-            >
-              {showMobileFilters ? "Hide Filters" : "Filters"}
-            </button>
+            <div className="filterHeaderActions">
+              <div className="viewModeToggle" aria-label="Collection view mode">
+                <button
+                  type="button"
+                  className={`viewModeButton ${collectionViewMode === "cards" ? "active" : ""}`}
+                  onClick={() => setCollectionViewMode("cards")}
+                >
+                  Cards
+                </button>
+
+                <button
+                  type="button"
+                  className={`viewModeButton ${collectionViewMode === "list" ? "active" : ""}`}
+                  onClick={() => setCollectionViewMode("list")}
+                >
+                  List
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className="filterToggleButton"
+                onClick={() => setShowMobileFilters((prev) => !prev)}
+              >
+                {showMobileFilters ? "Hide Filters" : "Filters"}
+              </button>
+            </div>
           </div>
 
           <div className="quickMobileChips">
@@ -3643,7 +3599,7 @@ export default function Page() {
           )}
         </section>
 
-        <section id="cards-grid" className="cardsGrid">
+        <section id="cards-grid" className={collectionViewMode === "list" ? "cardsList" : "cardsGrid"}>
           {pagedCards.map((item, index) => {
             const rarity = rarityTheme(item.rarity);
             const subtleOverlay =
@@ -3653,6 +3609,136 @@ export default function Page() {
 
             const statusText = collectionStatus(item.qty);
             const photoOpen = expandedPhotoCardId === item.id;
+
+            if (collectionViewMode === "list") {
+              return (
+                <div
+                  key={item.id}
+                  className="listCard"
+                  style={{
+                    borderLeft: `6px solid ${rarity.border}`,
+                  }}
+                >
+                  <div className="listThumb">
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        loading={index < 6 ? "eager" : "lazy"}
+                        decoding="async"
+                      />
+                    ) : (
+                      <div style={{ fontSize: 11, color: "#64748b", fontWeight: 900 }}>
+                        No Image
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="listMain">
+                    <div className="listTopRow">
+                      <div>
+                        <div className="listName">{item.name}</div>
+                        <div className="listMeta">
+                          {item.series}
+                          {item.subcategory ? ` • ${item.subcategory}` : ""}
+                          {item.movie ? ` • ${item.movie}` : ""}
+                        </div>
+                      </div>
+
+                      <div
+                        className="listRarityBadge"
+                        style={{
+                          background: rarity.badgeBg,
+                          color: rarity.badgeText,
+                        }}
+                      >
+                        {item.rarity}
+                      </div>
+                    </div>
+
+                    {!isSubscribed && item.qty <= 0 && ownedCount >= FREE_LIMIT && (
+                      <div style={{ marginTop: 6, padding: 8, borderRadius: 10, background: "#fff1f2", color: "#9f1239", fontWeight: 850, fontSize: 12, lineHeight: 1.35 }}>
+                        Free limit reached. Upgrade to add more.
+                      </div>
+                    )}
+
+                    <div
+                      className="listStatus"
+                      style={{
+                        color:
+                          statusText === "Need"
+                            ? "#7c3aed"
+                            : statusText === "Extra"
+                              ? "#2563eb"
+                              : "#166534",
+                      }}
+                    >
+                      {savingId === item.id ? "Saving..." : statusText}
+                    </div>
+
+                    <div className="listControls">
+                      <div className="listQtyControls">
+                        <button
+                          type="button"
+                          onClick={() => void saveCard(item, item.qty - 1, item.note)}
+                          disabled={savingId === item.id}
+                          className="listQtyButton"
+                        >
+                          −
+                        </button>
+
+                        <div className="listQtyValue">{item.qty}</div>
+
+                        <button
+                          type="button"
+                          onClick={() => void saveCard(item, item.qty + 1, item.note)}
+                          disabled={
+                            savingId === item.id ||
+                            (!isSubscribed && item.qty <= 0 && ownedCount >= FREE_LIMIT)
+                          }
+                          className="listQtyButton"
+                          style={{
+                            opacity:
+                              !isSubscribed && item.qty <= 0 && ownedCount >= FREE_LIMIT
+                                ? 0.45
+                                : 1,
+                            cursor:
+                              !isSubscribed && item.qty <= 0 && ownedCount >= FREE_LIMIT
+                                ? "not-allowed"
+                                : "pointer",
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <input
+                        value={item.note}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setCards((prev) =>
+                            prev.map((c) =>
+                              c.id === item.id ? { ...c, note: value } : c
+                            )
+                          );
+                        }}
+                        placeholder="Note..."
+                        className="listNoteInput"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => void saveCard(item, item.qty, item.note)}
+                        disabled={savingId === item.id}
+                        className="listSaveButton"
+                      >
+                        {savingId === item.id ? "Saving..." : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
 
             return (
               <div

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
 
+type Visibility = "private" | "extras_only" | "full";
+
 type Card = {
   id: string;
   name: string;
@@ -21,23 +23,7 @@ type Card = {
 type PublicCollector = {
   id: string;
   username: string;
-  collection_visibility: "private" | "extras_only" | "full";
-};
-
-type Theme = {
-  bg: string;
-  border: string;
-  text: string;
-  badgeBg: string;
-  badgeText: string;
-  glow: string;
-};
-
-type TierCard = {
-  title: string;
-  label: string;
-  subtext: string;
-  accent: string;
+  collection_visibility: Visibility;
 };
 
 type AutoSellDraft = {
@@ -52,7 +38,7 @@ const FREE_LIMIT = 50;
 const MONTHLY_PRICE_LABEL = "$3/month";
 const YEARLY_PRICE_LABEL = "$15/year";
 
-function normalizeVisibility(value: unknown): "private" | "extras_only" | "full" {
+function normalizeVisibility(value: unknown): Visibility {
   const clean = String(value || "")
     .toLowerCase()
     .trim()
@@ -60,114 +46,43 @@ function normalizeVisibility(value: unknown): "private" | "extras_only" | "full"
     .replace(/-/g, "_")
     .replace(/\+/g, "_");
 
-  if (
-    clean === "full" ||
-    clean === "public" ||
-    clean === "full_collection" ||
-    clean === "full_public" ||
-    clean === "all"
-  ) {
-    return "full";
-  }
-
-  if (
-    clean === "extras_only" ||
-    clean === "wishlist_extras" ||
-    clean === "wishlist_and_extras" ||
-    clean === "wishlist_extras_" ||
-    clean === "wishlist" ||
-    clean === "extras"
-  ) {
-    return "extras_only";
-  }
-
+  if (["full", "public", "full_collection", "full_public", "all"].includes(clean)) return "full";
+  if (["extras_only", "wishlist_extras", "wishlist_and_extras", "wishlist", "extras"].includes(clean)) return "extras_only";
   return "private";
 }
 
-function rarityTheme(rarity: string): Theme {
-  const value = String(rarity || "").toLowerCase().trim();
-
-  if (value === "exclusive" || value.includes("exclusive")) {
-    return {
-      bg: "#f6e5a8",
-      border: "#c89211",
-      text: "#332400",
-      badgeBg: "#e7bc44",
-      badgeText: "#4c3500",
-      glow: "rgba(200,146,17,0.22)",
-    };
-  }
-
-  if (value.includes("special edition")) {
-    return {
-      bg: "#e6d2ff",
-      border: "#7c3aed",
-      text: "#2f1458",
-      badgeBg: "#c084fc",
-      badgeText: "#3b0764",
-      glow: "rgba(124,58,237,0.20)",
-    };
-  }
-
-  if (value.includes("limited edition")) {
-    return {
-      bg: "#f8ef9b",
-      border: "#d4a500",
-      text: "#403000",
-      badgeBg: "#f2d64c",
-      badgeText: "#5c4300",
-      glow: "rgba(212,165,0,0.20)",
-    };
-  }
-
-  if (value.includes("ultra rare")) {
-    return {
-      bg: "#cfe2ff",
-      border: "#2563eb",
-      text: "#102a56",
-      badgeBg: "#7db7ff",
-      badgeText: "#123d92",
-      glow: "rgba(37,99,235,0.20)",
-    };
-  }
-
-  if (value === "rare" || (value.includes("rare") && !value.includes("ultra"))) {
-    return {
-      bg: "#d5f5df",
-      border: "#16a34a",
-      text: "#13361d",
-      badgeBg: "#7ee29c",
-      badgeText: "#14532d",
-      glow: "rgba(22,163,74,0.18)",
-    };
-  }
-
-  return {
-    bg: "#f2f4f7",
-    border: "#cbd5e1",
-    text: "#111827",
-    badgeBg: "#e5e7eb",
-    badgeText: "#111827",
-    glow: "rgba(148,163,184,0.16)",
-  };
-}
-
 function seriesSort(a: string, b: string) {
-  const aStr = String(a || "");
-  const bStr = String(b || "");
-  const aMatch = aStr.match(/\d+/);
-  const bMatch = bStr.match(/\d+/);
-
+  const aMatch = String(a || "").match(/\d+/);
+  const bMatch = String(b || "").match(/\d+/);
   if (aMatch && bMatch) {
-    const aNum = Number(aMatch[0]);
-    const bNum = Number(bMatch[0]);
-    if (aNum !== bNum) return aNum - bNum;
+    const diff = Number(aMatch[0]) - Number(bMatch[0]);
+    if (diff !== 0) return diff;
   }
-
-  return aStr.localeCompare(bStr, undefined, {
+  return String(a || "").localeCompare(String(b || ""), undefined, {
     numeric: true,
     sensitivity: "base",
   });
+}
+
+function rarityTheme(rarity: string) {
+  const value = String(rarity || "").toLowerCase().trim();
+
+  if (value.includes("exclusive")) {
+    return { bg: "#f6e5a8", border: "#c89211", text: "#332400", badgeBg: "#e7bc44", badgeText: "#4c3500", glow: "rgba(200,146,17,0.22)" };
+  }
+  if (value.includes("special edition")) {
+    return { bg: "#e6d2ff", border: "#7c3aed", text: "#2f1458", badgeBg: "#c084fc", badgeText: "#3b0764", glow: "rgba(124,58,237,0.20)" };
+  }
+  if (value.includes("limited edition")) {
+    return { bg: "#f8ef9b", border: "#d4a500", text: "#403000", badgeBg: "#f2d64c", badgeText: "#5c4300", glow: "rgba(212,165,0,0.20)" };
+  }
+  if (value.includes("ultra rare")) {
+    return { bg: "#cfe2ff", border: "#2563eb", text: "#102a56", badgeBg: "#7db7ff", badgeText: "#123d92", glow: "rgba(37,99,235,0.20)" };
+  }
+  if (value === "rare" || (value.includes("rare") && !value.includes("ultra"))) {
+    return { bg: "#d5f5df", border: "#16a34a", text: "#13361d", badgeBg: "#7ee29c", badgeText: "#14532d", glow: "rgba(22,163,74,0.18)" };
+  }
+  return { bg: "#f2f4f7", border: "#cbd5e1", text: "#111827", badgeBg: "#e5e7eb", badgeText: "#111827", glow: "rgba(148,163,184,0.16)" };
 }
 
 function collectionStatus(qty: number) {
@@ -176,187 +91,40 @@ function collectionStatus(qty: number) {
   return "Need";
 }
 
-function average(nums: number[]) {
-  if (!nums.length) return 0;
-  return nums.reduce((sum, n) => sum + n, 0) / nums.length;
-}
-
-function getCollectionTier(completion: number, ownedCount: number): TierCard {
-  if (completion >= 90 || ownedCount >= 400) {
-    return {
-      title: "Collection Tier",
-      label: "Crown Collector",
-      subtext: `${completion}% complete`,
-      accent: "linear-gradient(135deg,#f59e0b,#facc15)",
-    };
-  }
-
-  if (completion >= 70 || ownedCount >= 250) {
-    return {
-      title: "Collection Tier",
-      label: "Elite Collector",
-      subtext: `${completion}% complete`,
-      accent: "linear-gradient(135deg,#7c3aed,#c084fc)",
-    };
-  }
-
-  if (completion >= 45 || ownedCount >= 125) {
-    return {
-      title: "Collection Tier",
-      label: "Vault Builder",
-      subtext: `${completion}% complete`,
-      accent: "linear-gradient(135deg,#2563eb,#60a5fa)",
-    };
-  }
-
-  if (completion >= 20 || ownedCount >= 50) {
-    return {
-      title: "Collection Tier",
-      label: "Treasure Tracker",
-      subtext: `${completion}% complete`,
-      accent: "linear-gradient(135deg,#16a34a,#4ade80)",
-    };
-  }
-
-  return {
-    title: "Collection Tier",
-    label: "Starter Shelf",
-    subtext: `${completion}% complete`,
-    accent: "linear-gradient(135deg,#64748b,#94a3b8)",
-  };
-}
-
-function getMarketplaceTier(params: {
-  averageRating: number;
-  reviewCount: number;
-  activeListings: number;
-  soldListings: number;
-}) {
-  const { averageRating, reviewCount, activeListings, soldListings } = params;
-
-  let stars = 0;
-  if (reviewCount > 0) stars = Number(averageRating.toFixed(1));
-  else if (soldListings >= 10) stars = 5.0;
-  else if (soldListings >= 5) stars = 4.7;
-  else if (soldListings >= 2) stars = 4.3;
-  else if (activeListings >= 3) stars = 4.0;
-
-  if ((reviewCount >= 10 && averageRating >= 4.8) || soldListings >= 15) {
-    return {
-      title: "Marketplace Tier",
-      label: "Vault Legend",
-      subtext: stars > 0 ? `${stars.toFixed(1)} ★ marketplace rating` : "Top marketplace energy",
-      accent: "linear-gradient(135deg,#f59e0b,#fb7185)",
-      stars,
-    };
-  }
-
-  if ((reviewCount >= 5 && averageRating >= 4.5) || soldListings >= 7) {
-    return {
-      title: "Marketplace Tier",
-      label: "Marketplace MVP",
-      subtext: stars > 0 ? `${stars.toFixed(1)} ★ marketplace rating` : "Strong seller momentum",
-      accent: "linear-gradient(135deg,#7c3aed,#ec4899)",
-      stars,
-    };
-  }
-
-  if ((reviewCount >= 3 && averageRating >= 4.2) || soldListings >= 3) {
-    return {
-      title: "Marketplace Tier",
-      label: "Trusted Trader",
-      subtext: stars > 0 ? `${stars.toFixed(1)} ★ marketplace rating` : "Growing trade trust",
-      accent: "linear-gradient(135deg,#2563eb,#7c3aed)",
-      stars,
-    };
-  }
-
-  if (activeListings > 0 || soldListings > 0) {
-    return {
-      title: "Marketplace Tier",
-      label: "Smooth Seller",
-      subtext: stars > 0 ? `${stars.toFixed(1)} ★ marketplace rating` : "Getting active in marketplace",
-      accent: "linear-gradient(135deg,#0ea5e9,#38bdf8)",
-      stars,
-    };
-  }
-
-  return {
-    title: "Marketplace Tier",
-    label: "New Seller",
-    subtext: "No marketplace rating yet",
-    accent: "linear-gradient(135deg,#64748b,#94a3b8)",
-    stars,
-  };
-}
-
-function getCommunityTier(params: {
-  monthlyMessages: number;
-  monthlyListings: number;
-  monthlyPhotos: number;
-  monthlyFeedback: number;
-  isPublic: boolean;
-}) {
-  const score =
-    params.monthlyMessages * 2 +
-    params.monthlyListings * 2 +
-    params.monthlyPhotos * 2 +
-    params.monthlyFeedback +
-    (params.isPublic ? 2 : 0);
-
-  if (score >= 20) {
-    return {
-      title: "Community Tier",
-      label: "Heart of the Vault",
-      subtext: "Very active this month",
-      accent: "linear-gradient(135deg,#ec4899,#f472b6)",
-      score,
-    };
-  }
-
-  if (score >= 12) {
-    return {
-      title: "Community Tier",
-      label: "Vault Favorite",
-      subtext: "Strong community energy",
-      accent: "linear-gradient(135deg,#8b5cf6,#c084fc)",
-      score,
-    };
-  }
-
-  if (score >= 7) {
-    return {
-      title: "Community Tier",
-      label: "Chat Champ",
-      subtext: "Nicely active this month",
-      accent: "linear-gradient(135deg,#2563eb,#60a5fa)",
-      score,
-    };
-  }
-
-  if (score >= 3) {
-    return {
-      title: "Community Tier",
-      label: "Community Spark",
-      subtext: "Building momentum this month",
-      accent: "linear-gradient(135deg,#14b8a6,#34d399)",
-      score,
-    };
-  }
-
-  return {
-    title: "Community Tier",
-    label: "Quiet Gem",
-    subtext: "Low-key month so far",
-    accent: "linear-gradient(135deg,#64748b,#94a3b8)",
-    score,
-  };
-}
-
 function renderStars(value: number) {
   if (value <= 0) return "☆☆☆☆☆";
   const rounded = Math.max(0, Math.min(5, Math.round(value)));
   return "★".repeat(rounded) + "☆".repeat(5 - rounded);
+}
+
+function average(nums: number[]) {
+  return nums.length ? nums.reduce((sum, n) => sum + n, 0) / nums.length : 0;
+}
+
+function getCollectionTier(completion: number, ownedCount: number) {
+  if (completion >= 90 || ownedCount >= 400) return { label: "Crown Collector", subtext: `${completion}% complete`, accent: "linear-gradient(135deg,#f59e0b,#facc15)" };
+  if (completion >= 70 || ownedCount >= 250) return { label: "Elite Collector", subtext: `${completion}% complete`, accent: "linear-gradient(135deg,#7c3aed,#c084fc)" };
+  if (completion >= 45 || ownedCount >= 125) return { label: "Vault Builder", subtext: `${completion}% complete`, accent: "linear-gradient(135deg,#2563eb,#60a5fa)" };
+  if (completion >= 20 || ownedCount >= 50) return { label: "Treasure Tracker", subtext: `${completion}% complete`, accent: "linear-gradient(135deg,#16a34a,#4ade80)" };
+  return { label: "Starter Shelf", subtext: `${completion}% complete`, accent: "linear-gradient(135deg,#64748b,#94a3b8)" };
+}
+
+function getMarketplaceTier(stars: number, reviewCount: number, activeListings: number, soldListings: number) {
+  const fallbackStars = reviewCount > 0 ? stars : soldListings >= 10 ? 5 : soldListings >= 5 ? 4.7 : soldListings >= 2 ? 4.3 : activeListings >= 3 ? 4 : 0;
+  if ((reviewCount >= 10 && stars >= 4.8) || soldListings >= 15) return { label: "Vault Legend", subtext: fallbackStars ? `${fallbackStars.toFixed(1)} ★ marketplace rating` : "Top marketplace energy", accent: "linear-gradient(135deg,#f59e0b,#fb7185)", stars: fallbackStars };
+  if ((reviewCount >= 5 && stars >= 4.5) || soldListings >= 7) return { label: "Marketplace MVP", subtext: fallbackStars ? `${fallbackStars.toFixed(1)} ★ marketplace rating` : "Strong seller momentum", accent: "linear-gradient(135deg,#7c3aed,#ec4899)", stars: fallbackStars };
+  if ((reviewCount >= 3 && stars >= 4.2) || soldListings >= 3) return { label: "Trusted Trader", subtext: fallbackStars ? `${fallbackStars.toFixed(1)} ★ marketplace rating` : "Growing trade trust", accent: "linear-gradient(135deg,#2563eb,#7c3aed)", stars: fallbackStars };
+  if (activeListings > 0 || soldListings > 0) return { label: "Smooth Seller", subtext: fallbackStars ? `${fallbackStars.toFixed(1)} ★ marketplace rating` : "Getting active in marketplace", accent: "linear-gradient(135deg,#0ea5e9,#38bdf8)", stars: fallbackStars };
+  return { label: "New Seller", subtext: "No marketplace rating yet", accent: "linear-gradient(135deg,#64748b,#94a3b8)", stars: fallbackStars };
+}
+
+function getCommunityTier(monthlyMessages: number, monthlyListings: number, monthlyPhotos: number, monthlyFeedback: number, isPublic: boolean) {
+  const score = monthlyMessages * 2 + monthlyListings * 2 + monthlyPhotos * 2 + monthlyFeedback + (isPublic ? 2 : 0);
+  if (score >= 20) return { label: "Heart of the Vault", subtext: "Very active this month", accent: "linear-gradient(135deg,#ec4899,#f472b6)", score };
+  if (score >= 12) return { label: "Vault Favorite", subtext: "Strong community energy", accent: "linear-gradient(135deg,#8b5cf6,#c084fc)", score };
+  if (score >= 7) return { label: "Chat Champ", subtext: "Nicely active this month", accent: "linear-gradient(135deg,#2563eb,#60a5fa)", score };
+  if (score >= 3) return { label: "Community Spark", subtext: "Building momentum this month", accent: "linear-gradient(135deg,#14b8a6,#34d399)", score };
+  return { label: "Quiet Gem", subtext: "Low-key month so far", accent: "linear-gradient(135deg,#64748b,#94a3b8)", score };
 }
 
 export default function Page() {
@@ -366,22 +134,9 @@ export default function Page() {
   const [userId, setUserId] = useState("");
   const [username, setUsername] = useState("");
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [savingId, setSavingId] = useState("");
-  const [autoSellLoading, setAutoSellLoading] = useState(false);
-  const [showAutoSellModal, setShowAutoSellModal] = useState(false);
-  const [autoSellDrafts, setAutoSellDrafts] = useState<AutoSellDraft[]>([]);
-
-  const [visibility, setVisibility] = useState<"private" | "extras_only" | "full">("private");
+  const [visibility, setVisibility] = useState<Visibility>("private");
   const [savingVisibility, setSavingVisibility] = useState(false);
   const [publicCollectors, setPublicCollectors] = useState<PublicCollector[]>([]);
-
-  const [uploadingPhotoId, setUploadingPhotoId] = useState("");
-  const [photoNote, setPhotoNote] = useState<Record<string, string>>({});
-  const [expandedPhotoCardId, setExpandedPhotoCardId] = useState("");
 
   const [marketplaceStars, setMarketplaceStars] = useState(0);
   const [marketplaceReviewCount, setMarketplaceReviewCount] = useState(0);
@@ -400,11 +155,25 @@ export default function Page() {
   const [collectionFilter, setCollectionFilter] = useState("all");
   const [collectionViewMode, setCollectionViewMode] = useState<"cards" | "list">("cards");
   const [page, setPage] = useState(1);
+
+  const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [expandedSeries, setExpandedSeries] = useState(false);
   const [showSeriesProgress, setShowSeriesProgress] = useState(false);
+  const [expandedSeries, setExpandedSeries] = useState(false);
   const [shareStatus, setShareStatus] = useState("");
+
+  const [uploadingPhotoId, setUploadingPhotoId] = useState("");
+  const [expandedPhotoCardId, setExpandedPhotoCardId] = useState("");
+  const [photoNote, setPhotoNote] = useState<Record<string, string>>({});
+
+  const [autoSellLoading, setAutoSellLoading] = useState(false);
+  const [showAutoSellModal, setShowAutoSellModal] = useState(false);
+  const [autoSellDrafts, setAutoSellDrafts] = useState<AutoSellDraft[]>([]);
 
   useEffect(() => {
     void load();
@@ -419,29 +188,16 @@ export default function Page() {
 
   useEffect(() => {
     setPage(1);
-  }, [
-    search,
-    seriesFilter,
-    subcategoryFilter,
-    rarityFilter,
-    movieFilter,
-    collectionFilter,
-    collectionViewMode,
-    isMobile,
-  ]);
+  }, [search, seriesFilter, subcategoryFilter, rarityFilter, movieFilter, collectionFilter, collectionViewMode, isMobile]);
 
   async function load() {
     try {
       setLoading(true);
       setError("");
-
       const supabase = getSupabase();
 
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      const user = authData.user;
       if (authError || !user) {
         router.replace("/login");
         return;
@@ -457,7 +213,6 @@ export default function Page() {
 
       setIsSubscribed(!!profile?.is_subscribed);
       setUsername(String(profile?.username ?? ""));
-
       setVisibility(normalizeVisibility(profile?.collection_visibility));
 
       const { data: spotlightUsers } = await supabase
@@ -474,44 +229,33 @@ export default function Page() {
             username: String(row.username ?? "").trim(),
             collection_visibility: normalizeVisibility(row.collection_visibility),
           }))
-          .filter(
-            (row) =>
-              row.username !== "" && row.collection_visibility !== "private"
-          )
+          .filter((row) => row.username && row.collection_visibility !== "private")
           .slice(0, 24)
       );
 
-      const { data: doorables, error: doorablesError } = await supabase
-        .from("doorables")
-        .select("id, name, series, rarity, subcategory, movie, image_url")
-        .range(0, 1999);
+      const [doorablesResult, userDoorablesResult] = await Promise.all([
+        supabase.from("doorables").select("id, name, series, rarity, subcategory, movie, image_url").range(0, 1999),
+        supabase.from("user_doorables").select("id, doorable_id, qty_owned, custom_tag").eq("user_id", user.id),
+      ]);
 
-      if (doorablesError) {
-        setError(doorablesError.message);
+      if (doorablesResult.error) {
+        setError(doorablesResult.error.message);
         setLoading(false);
         return;
       }
 
-      const { data: userDoorables, error: userDoorablesError } = await supabase
-        .from("user_doorables")
-        .select("id, doorable_id, qty_owned, custom_tag")
-        .eq("user_id", user.id);
-
-      if (userDoorablesError) {
-        setError(userDoorablesError.message);
+      if (userDoorablesResult.error) {
+        setError(userDoorablesResult.error.message);
         setLoading(false);
         return;
       }
 
       const userMap = new Map<string, any>();
-      (userDoorables || []).forEach((row: any) => {
-        userMap.set(String(row.doorable_id), row);
-      });
+      (userDoorablesResult.data || []).forEach((row: any) => userMap.set(String(row.doorable_id), row));
 
-      const merged: Card[] = (doorables || [])
+      const merged: Card[] = (doorablesResult.data || [])
         .map((d: any) => {
           const row = userMap.get(String(d.id));
-
           return {
             id: String(d.id ?? ""),
             name: String(d.name ?? "Unknown"),
@@ -525,161 +269,60 @@ export default function Page() {
             rowId: row?.id ? String(row.id) : null,
           };
         })
-        .sort((a, b) => {
-          const bySeries = seriesSort(a.series, b.series);
-          if (bySeries !== 0) return bySeries;
-
-          return a.name.localeCompare(b.name, undefined, {
-            sensitivity: "base",
-          });
-        });
+        .sort((a, b) => seriesSort(a.series, b.series) || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 
       setCards(merged);
-
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-      const startOfMonthIso = startOfMonth.toISOString();
-
-      const [
-        listingsResult,
-        reviewsResult,
-        messagesResult,
-        submissionsResult,
-        feedbackResult,
-      ] = await Promise.allSettled([
-        supabase
-          .from("marketplace_listings")
-          .select("id, status, created_at, sold_at")
-          .eq("user_id", user.id),
-
-        supabase
-          .from("collector_reviews")
-          .select("rating")
-          .eq("reviewed_user_id", user.id),
-
-        supabase
-          .from("marketplace_messages")
-          .select("id, created_at, sender_id")
-          .eq("sender_id", user.id)
-          .gte("created_at", startOfMonthIso),
-
-        supabase
-          .from("image_submissions")
-          .select("id, created_at, status")
-          .eq("submitted_by", user.id)
-          .gte("created_at", startOfMonthIso),
-
-        supabase
-          .from("feedback_posts")
-          .select("id, created_at")
-          .eq("user_id", user.id)
-          .gte("created_at", startOfMonthIso),
-      ]);
-
-      if (listingsResult.status === "fulfilled" && !listingsResult.value.error) {
-        const listings = listingsResult.value.data || [];
-
-        const activeListings = listings.filter(
-          (row: any) => String(row.status || "") === "active"
-        );
-
-        const soldListings = listings.filter(
-          (row: any) => String(row.status || "") === "sold" || !!row.sold_at
-        );
-
-        const monthListings = listings.filter((row: any) => {
-          const created = row.created_at ? new Date(row.created_at).getTime() : 0;
-          return created >= new Date(startOfMonthIso).getTime();
-        });
-
-        setActiveListingsCount(activeListings.length);
-        setSoldListingsCount(soldListings.length);
-        setMonthlyListings(monthListings.length);
-      }
-
-      if (reviewsResult.status === "fulfilled" && !reviewsResult.value.error) {
-        const ratings = (reviewsResult.value.data || [])
-          .map((row: any) => Number(row.rating || 0))
-          .filter((n: number) => n > 0);
-
-        const avg = average(ratings);
-        setMarketplaceStars(avg);
-        setMarketplaceReviewCount(ratings.length);
-      }
-
-      if (messagesResult.status === "fulfilled" && !messagesResult.value.error) {
-        setMonthlyMessages((messagesResult.value.data || []).length);
-      }
-
-      if (submissionsResult.status === "fulfilled" && !submissionsResult.value.error) {
-        setMonthlyPhotos((submissionsResult.value.data || []).length);
-      }
-
-      if (feedbackResult.status === "fulfilled" && !feedbackResult.value.error) {
-        setMonthlyFeedback((feedbackResult.value.data || []).length);
-      }
-
+      await loadActivityStats(user.id);
       setLoading(false);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Collection page crashed while loading."
-      );
+      setError(err instanceof Error ? err.message : "Collection page crashed while loading.");
       setLoading(false);
     }
   }
 
-  async function sharePublicProfile() {
-    if (!username) {
-      setShareStatus("Add a username before sharing your public profile.");
-      return;
+  async function loadActivityStats(currentUserId: string) {
+    const supabase = getSupabase();
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const startOfMonthIso = startOfMonth.toISOString();
+
+    const [listingsResult, reviewsResult, messagesResult, submissionsResult, feedbackResult] = await Promise.allSettled([
+      supabase.from("marketplace_listings").select("id, status, created_at, sold_at").eq("user_id", currentUserId),
+      supabase.from("collector_reviews").select("rating").eq("reviewed_user_id", currentUserId),
+      supabase.from("marketplace_messages").select("id").eq("sender_id", currentUserId).gte("created_at", startOfMonthIso),
+      supabase.from("image_submissions").select("id").eq("submitted_by", currentUserId).gte("created_at", startOfMonthIso),
+      supabase.from("feedback_posts").select("id").eq("user_id", currentUserId).gte("created_at", startOfMonthIso),
+    ]);
+
+    if (listingsResult.status === "fulfilled" && !listingsResult.value.error) {
+      const listings = listingsResult.value.data || [];
+      setActiveListingsCount(listings.filter((row: any) => String(row.status || "") === "active").length);
+      setSoldListingsCount(listings.filter((row: any) => String(row.status || "") === "sold" || !!row.sold_at).length);
+      setMonthlyListings(listings.filter((row: any) => row.created_at && new Date(row.created_at).getTime() >= new Date(startOfMonthIso).getTime()).length);
     }
 
-    const profileUrl =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/collector/${username}`
-        : `https://www.mydoorables.com/collector/${username}`;
-
-    try {
-      if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({
-          title: "My Adorable Vault collection",
-          text: "Check out my Adorable Vault collection 💜",
-          url: profileUrl,
-        });
-        setShareStatus("Profile shared! 💜");
-      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(profileUrl);
-        setShareStatus("Public profile link copied! 💜");
-      } else {
-        setShareStatus(`Copy this link: ${profileUrl}`);
-      }
-
-      window.setTimeout(() => {
-        setShareStatus("");
-      }, 3000);
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") return;
-      setShareStatus("Could not share automatically. Try copying the public link.");
+    if (reviewsResult.status === "fulfilled" && !reviewsResult.value.error) {
+      const ratings = (reviewsResult.value.data || []).map((row: any) => Number(row.rating || 0)).filter((n: number) => n > 0);
+      setMarketplaceStars(average(ratings));
+      setMarketplaceReviewCount(ratings.length);
     }
+
+    if (messagesResult.status === "fulfilled" && !messagesResult.value.error) setMonthlyMessages((messagesResult.value.data || []).length);
+    if (submissionsResult.status === "fulfilled" && !submissionsResult.value.error) setMonthlyPhotos((submissionsResult.value.data || []).length);
+    if (feedbackResult.status === "fulfilled" && !feedbackResult.value.error) setMonthlyFeedback((feedbackResult.value.data || []).length);
   }
 
-  async function saveVisibility(next: "private" | "extras_only" | "full") {
+  async function saveVisibility(next: Visibility) {
     try {
       const normalizedNext = normalizeVisibility(next);
-
       setSavingVisibility(true);
       setError("");
       setNotice("");
 
       const supabase = getSupabase();
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData.user;
       if (!user) {
         router.replace("/login");
         return;
@@ -689,7 +332,7 @@ export default function Page() {
         .from("users")
         .update({ collection_visibility: normalizedNext })
         .eq("id", user.id)
-        .select("id, username, collection_visibility")
+        .select("id, username")
         .maybeSingle();
 
       if (updateError) {
@@ -700,8 +343,6 @@ export default function Page() {
 
       const currentUsername = String(updatedById?.username || username || "").trim();
 
-      // If the user row did not update, try to create/repair it.
-      // Supabase update() can return no error even when zero rows matched.
       if (!updatedById?.id) {
         const { error: upsertError } = await supabase.from("users").upsert(
           {
@@ -720,27 +361,16 @@ export default function Page() {
         }
       }
 
-      // Repair duplicate/stale username rows if they exist.
-      // This helps the public /collector/[username] page stop finding an older private row.
       if (currentUsername) {
-        await supabase
-          .from("users")
-          .update({ collection_visibility: normalizedNext })
-          .ilike("username", currentUsername);
+        await supabase.from("users").update({ collection_visibility: normalizedNext }).ilike("username", currentUsername);
       }
 
       setVisibility(normalizedNext);
-      setNotice(`Visibility saved as ${
-        normalizedNext === "full"
-          ? "Full Collection"
-          : normalizedNext === "extras_only"
-            ? "Wishlist + Extras"
-            : "Private"
-      } 💜`);
-      setSavingVisibility(false);
+      setNotice(`Visibility saved as ${normalizedNext === "full" ? "Full Collection" : normalizedNext === "extras_only" ? "Wishlist + Extras" : "Private"} 💜`);
     } catch (err) {
-      setSavingVisibility(false);
       setError(err instanceof Error ? err.message : "Could not save visibility.");
+    } finally {
+      setSavingVisibility(false);
     }
   }
 
@@ -772,159 +402,147 @@ export default function Page() {
       };
 
       if (card.rowId) {
-        const { error } = await supabase
-          .from("user_doorables")
-          .update(payload)
-          .eq("id", card.rowId);
-
-        if (error) {
-          alert("Save failed: " + error.message);
-          setSavingId("");
-          return;
-        }
-
-        setCards((prev) =>
-          prev.map((c) =>
-            c.id === card.id
-              ? {
-                  ...c,
-                  qty,
-                  note,
-                }
-              : c
-          )
-        );
+        const { error: updateError } = await supabase.from("user_doorables").update(payload).eq("id", card.rowId);
+        if (updateError) throw updateError;
+        setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, qty, note } : c)));
       } else {
-        const { data, error } = await supabase
-          .from("user_doorables")
-          .insert([payload])
-          .select()
-          .single();
-
-        if (error) {
-          alert("Save failed: " + error.message);
-          setSavingId("");
-          return;
-        }
-
+        const { data, error: insertError } = await supabase.from("user_doorables").insert([payload]).select().single();
+        if (insertError) throw insertError;
         const newRowId = data?.id ? String(data.id) : null;
-
-        setCards((prev) =>
-          prev.map((c) =>
-            c.id === card.id
-              ? {
-                  ...c,
-                  qty,
-                  note,
-                  rowId: newRowId,
-                }
-              : c
-          )
-        );
+        setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, qty, note, rowId: newRowId } : c)));
       }
 
       setNotice(qty > 0 ? "Saved to your collection 💜" : "Removed from owned collection.");
-      setSavingId("");
     } catch (err) {
-      setSavingId("");
       alert("Save failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setSavingId("");
     }
   }
 
-  async function openAutoSellModal() {
+  async function handlePhotoSubmission(card: Card, file: File | null) {
+    if (!file) return;
+
+    try {
+      setError("");
+      setNotice("");
+      setUploadingPhotoId(card.id);
+
+      const supabase = getSupabase();
+      const { data: authData, error: userError } = await supabase.auth.getUser();
+      const user = authData.user;
+      if (userError || !user) {
+        router.replace("/login");
+        return;
+      }
+
+      const rawExt = file.name.split(".").pop() || "jpg";
+      const fileExt = rawExt.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+      const filePath = `doorables/${card.id}/${user.id}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage.from("submissions").upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+      if (uploadError) {
+        setError("Photo upload failed: " + uploadError.message);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage.from("submissions").getPublicUrl(filePath);
+      const basePayload = { doorable_id: card.id, image_url: publicUrlData.publicUrl, status: "pending" };
+
+      const { error: submittedByError } = await supabase.from("image_submissions").insert([{ ...basePayload, submitted_by: user.id }]);
+      if (submittedByError) {
+        const { error: userIdError } = await supabase.from("image_submissions").insert([{ ...basePayload, user_id: user.id }]);
+        if (userIdError) {
+          setError("Photo uploaded, but it could not be added to the review queue. submitted_by error: " + submittedByError.message + " | user_id error: " + userIdError.message);
+          return;
+        }
+      }
+
+      setNotice("Photo submitted for review 💜");
+      setPhotoNote((prev) => ({ ...prev, [card.id]: "" }));
+      setExpandedPhotoCardId("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setUploadingPhotoId("");
+    }
+  }
+
+  async function sharePublicProfile() {
+    if (!username) {
+      setShareStatus("Add a username before sharing your public profile.");
+      return;
+    }
+
+    const profileUrl = typeof window !== "undefined" ? `${window.location.origin}/collector/${username}` : `https://www.mydoorables.com/collector/${username}`;
+
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({ title: "My Adorable Vault collection", text: "Check out my Adorable Vault collection 💜", url: profileUrl });
+        setShareStatus("Profile shared! 💜");
+      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(profileUrl);
+        setShareStatus("Public profile link copied! 💜");
+      } else {
+        setShareStatus(`Copy this link: ${profileUrl}`);
+      }
+      window.setTimeout(() => setShareStatus(""), 3000);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      setShareStatus("Could not share automatically. Try copying the public link.");
+    }
+  }
+
+  function openAutoSellModal() {
     setError("");
     setNotice("");
 
     if (!isSubscribed) {
       setShowUpgradeModal(true);
-      document.getElementById("upgrade-wall")?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
+      document.getElementById("upgrade-wall")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
     const extras = cards.filter((card) => Number(card.qty || 0) > 1);
-
     if (!extras.length) {
       setNotice("No extras to auto-list yet 💜");
       return;
     }
 
-    const supabase = getSupabase();
+    setAutoSellDrafts(
+      extras.map((item) => {
+        const extraQty = Math.max(1, Number(item.qty || 0) - 1);
+        const details = [
+          item.series ? `Series: ${item.series}` : "",
+          item.rarity ? `Rarity: ${item.rarity}` : "",
+          item.movie ? `Movie: ${item.movie}` : "",
+          item.subcategory ? `Category: ${item.subcategory}` : "",
+          `Extra quantity available: ${extraQty}`,
+          item.note ? `Collector note: ${item.note}` : "",
+        ].filter(Boolean);
 
-    const extraNames = extras.map((item) => item.name).filter(Boolean);
-
-    const { data: soldListings } = await supabase
-      .from("marketplace_listings")
-      .select("title, price, status, sold_at")
-      .in("title", extraNames)
-      .or("status.eq.sold,sold_at.not.is.null")
-      .not("price", "is", null);
-
-    const soldPriceMap = new Map<string, number[]>();
-
-    (soldListings || []).forEach((row: any) => {
-      const key = String(row.title || "").trim().toLowerCase();
-      const price = Number(row.price);
-
-      if (!key || Number.isNaN(price) || price <= 0) return;
-
-      const current = soldPriceMap.get(key) || [];
-      current.push(price);
-      soldPriceMap.set(key, current);
-    });
-
-    const drafts = extras.map((item) => {
-      const extraQty = Math.max(1, Number(item.qty || 0) - 1);
-      const soldPrices = soldPriceMap.get(String(item.name || "").trim().toLowerCase()) || [];
-      const averageSoldPrice = soldPrices.length
-        ? soldPrices.reduce((sum, price) => sum + price, 0) / soldPrices.length
-        : 0;
-
-      const details = [
-        item.series ? `Series: ${item.series}` : "",
-        item.rarity ? `Rarity: ${item.rarity}` : "",
-        item.movie ? `Movie: ${item.movie}` : "",
-        item.subcategory ? `Category: ${item.subcategory}` : "",
-        `Extra quantity available: ${extraQty}`,
-        averageSoldPrice > 0 ? `Suggested from sold average: $${averageSoldPrice.toFixed(2)}` : "No sold average yet — example: $3.00",
-        item.note ? `Collector note: ${item.note}` : "",
-      ].filter(Boolean);
-
-      return {
-        cardId: item.id,
-        title: item.name,
-        price: averageSoldPrice > 0 ? averageSoldPrice.toFixed(2) : "",
-        description: `Auto-listed from collection extras. ${details.join(" • ")}`,
-        selected: true,
-      };
-    });
-
-    setAutoSellDrafts(drafts);
+        return {
+          cardId: item.id,
+          title: item.name,
+          price: "",
+          description: `Auto-listed from collection extras. ${details.join(" • ")}`,
+          selected: true,
+        };
+      })
+    );
     setShowAutoSellModal(true);
   }
 
   function updateAutoSellDraft(cardId: string, patch: Partial<AutoSellDraft>) {
-    setAutoSellDrafts((prev) =>
-      prev.map((draft) =>
-        draft.cardId === cardId
-          ? {
-              ...draft,
-              ...patch,
-            }
-          : draft
-      )
-    );
+    setAutoSellDrafts((prev) => prev.map((draft) => (draft.cardId === cardId ? { ...draft, ...patch } : draft)));
   }
 
   function setAllAutoSellDraftsSelected(selected: boolean) {
-    setAutoSellDrafts((prev) =>
-      prev.map((draft) => ({
-        ...draft,
-        selected,
-      }))
-    );
+    setAutoSellDrafts((prev) => prev.map((draft) => ({ ...draft, selected })));
   }
 
   async function handleAutoSellExtras() {
@@ -934,11 +552,8 @@ export default function Page() {
       setAutoSellLoading(true);
 
       const supabase = getSupabase();
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData.user;
       if (!user) {
         router.replace("/login");
         return;
@@ -946,25 +561,16 @@ export default function Page() {
 
       if (!isSubscribed) {
         setShowUpgradeModal(true);
-        document.getElementById("upgrade-wall")?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
         return;
       }
 
       const selectedDrafts = autoSellDrafts.filter((draft) => draft.selected);
-
       if (!selectedDrafts.length) {
         setError("Choose at least one extra to list.");
         return;
       }
 
-      const invalidPrice = selectedDrafts.find((draft) => {
-        const cleanPrice = draft.price.trim();
-        return cleanPrice !== "" && Number.isNaN(Number(cleanPrice));
-      });
-
+      const invalidPrice = selectedDrafts.find((draft) => draft.price.trim() !== "" && Number.isNaN(Number(draft.price.trim())));
       if (invalidPrice) {
         setError(`Price for "${invalidPrice.title}" needs to be a valid number or blank.`);
         return;
@@ -981,24 +587,17 @@ export default function Page() {
         return;
       }
 
-      const existingKeys = new Set(
-        (existingListings || []).map((row: any) =>
-          String(row.title || "").trim().toLowerCase()
-        )
-      );
-
+      const existingKeys = new Set((existingListings || []).map((row: any) => String(row.title || "").trim().toLowerCase()));
       const cardMap = new Map(cards.map((card) => [card.id, card]));
 
       const listingsToCreate = selectedDrafts
         .filter((draft) => !existingKeys.has(String(draft.title || "").trim().toLowerCase()))
         .map((draft) => {
           const item = cardMap.get(draft.cardId);
-          const numericPrice = draft.price.trim() === "" ? null : Number(draft.price.trim());
-
           return {
             title: draft.title.trim() || item?.name || "Doorable Extra",
             description: draft.description.trim() || null,
-            price: numericPrice,
+            price: draft.price.trim() === "" ? null : Number(draft.price.trim()),
             image_url: item?.image || null,
             seller_name: username || user.email || "Collector",
             user_id: user.id,
@@ -1017,10 +616,7 @@ export default function Page() {
         return;
       }
 
-      const { error: insertError } = await supabase
-        .from("marketplace_listings")
-        .insert(listingsToCreate);
-
+      const { error: insertError } = await supabase.from("marketplace_listings").insert(listingsToCreate);
       if (insertError) {
         setError("Could not auto-list extras: " + insertError.message);
         return;
@@ -1038,139 +634,24 @@ export default function Page() {
     }
   }
 
-  async function handlePhotoSubmission(card: Card, file: File | null) {
-    if (!file) return;
-
-    try {
-      setError("");
-      setNotice("");
-      setUploadingPhotoId(card.id);
-
-      const supabase = getSupabase();
-
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        router.replace("/login");
-        return;
-      }
-
-      const rawExt = file.name.split(".").pop() || "jpg";
-      const fileExt = rawExt.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-      const filePath = `doorables/${card.id}/${user.id}-${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("submissions")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: true,
-        });
-
-      if (uploadError) {
-        setError("Photo upload failed: " + uploadError.message);
-        return;
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from("submissions")
-        .getPublicUrl(filePath);
-
-      const publicUrl = publicUrlData.publicUrl;
-
-      const basePayload = {
-        doorable_id: card.id,
-        image_url: publicUrl,
-        status: "pending",
-      };
-
-      const { error: submittedByError } = await supabase
-        .from("image_submissions")
-        .insert([{ ...basePayload, submitted_by: user.id }]);
-
-      if (submittedByError) {
-        const { error: userIdError } = await supabase
-          .from("image_submissions")
-          .insert([{ ...basePayload, user_id: user.id }]);
-
-        if (userIdError) {
-          setError(
-            "Photo uploaded, but it could not be added to the review queue. submitted_by error: " +
-              submittedByError.message +
-              " | user_id error: " +
-              userIdError.message
-          );
-          return;
-        }
-      }
-
-      setError("");
-      setNotice("Photo submitted for review 💜");
-      setPhotoNote((prev) => ({ ...prev, [card.id]: "" }));
-      setExpandedPhotoCardId("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed.");
-    } finally {
-      setUploadingPhotoId("");
-    }
-  }
-
-  const seriesOptions = useMemo(
-    () => ["all", ...Array.from(new Set(cards.map((c) => c.series).filter(Boolean))).sort(seriesSort)],
-    [cards]
-  );
-
-  const subcategoryOptions = useMemo(
-    () => ["all", ...Array.from(new Set(cards.map((c) => c.subcategory).filter(Boolean))).sort()],
-    [cards]
-  );
-
-  const rarityOptions = useMemo(
-    () => ["all", ...Array.from(new Set(cards.map((c) => c.rarity).filter(Boolean))).sort()],
-    [cards]
-  );
-
-  const movieOptions = useMemo(
-    () => ["all", ...Array.from(new Set(cards.map((c) => c.movie).filter(Boolean))).sort()],
-    [cards]
-  );
+  const seriesOptions = useMemo(() => ["all", ...Array.from(new Set(cards.map((c) => c.series).filter(Boolean))).sort(seriesSort)], [cards]);
+  const subcategoryOptions = useMemo(() => ["all", ...Array.from(new Set(cards.map((c) => c.subcategory).filter(Boolean))).sort()], [cards]);
+  const rarityOptions = useMemo(() => ["all", ...Array.from(new Set(cards.map((c) => c.rarity).filter(Boolean))).sort()], [cards]);
+  const movieOptions = useMemo(() => ["all", ...Array.from(new Set(cards.map((c) => c.movie).filter(Boolean))).sort()], [cards]);
 
   const filteredCards = useMemo(() => {
     const q = search.trim().toLowerCase();
 
     return cards.filter((card) => {
       const detailText = [card.subcategory, card.movie].filter(Boolean).join(" ");
-
-      const matchesSearch =
-        !q ||
-        [card.name, card.series, card.rarity, detailText, card.note]
-          .join(" ")
-          .toLowerCase()
-          .includes(q);
-
+      const matchesSearch = !q || [card.name, card.series, card.rarity, detailText, card.note].join(" ").toLowerCase().includes(q);
       const matchesSeries = seriesFilter === "all" || card.series === seriesFilter;
       const matchesSubcategory = subcategoryFilter === "all" || card.subcategory === subcategoryFilter;
       const matchesRarity = rarityFilter === "all" || card.rarity === rarityFilter;
       const matchesMovie = movieFilter === "all" || card.movie === movieFilter;
-      const matchesCollection =
-        collectionFilter === "all"
-          ? true
-          : collectionFilter === "have"
-            ? card.qty > 0
-            : collectionFilter === "need"
-              ? card.qty <= 0
-              : card.qty > 1;
+      const matchesCollection = collectionFilter === "all" ? true : collectionFilter === "have" ? card.qty > 0 : collectionFilter === "need" ? card.qty <= 0 : card.qty > 1;
 
-      return (
-        matchesSearch &&
-        matchesSeries &&
-        matchesSubcategory &&
-        matchesRarity &&
-        matchesMovie &&
-        matchesCollection
-      );
+      return matchesSearch && matchesSeries && matchesSubcategory && matchesRarity && matchesMovie && matchesCollection;
     });
   }, [cards, search, seriesFilter, subcategoryFilter, rarityFilter, movieFilter, collectionFilter]);
 
@@ -1181,52 +662,18 @@ export default function Page() {
   const extrasCount = cards.reduce((sum, card) => sum + Math.max(0, Number(card.qty || 0) - 1), 0);
   const freeSlotsLeft = Math.max(0, FREE_LIMIT - ownedCount);
   const freeLimitReached = !isSubscribed && ownedCount >= FREE_LIMIT;
-
-  const collectionTier = useMemo(
-    () => getCollectionTier(completion, ownedCount),
-    [completion, ownedCount]
-  );
-
-  const marketplaceTier = useMemo(
-    () =>
-      getMarketplaceTier({
-        averageRating: marketplaceStars,
-        reviewCount: marketplaceReviewCount,
-        activeListings: activeListingsCount,
-        soldListings: soldListingsCount,
-      }),
-    [marketplaceStars, marketplaceReviewCount, activeListingsCount, soldListingsCount]
-  );
-
-  const communityTier = useMemo(
-    () =>
-      getCommunityTier({
-        monthlyMessages,
-        monthlyListings,
-        monthlyPhotos,
-        monthlyFeedback,
-        isPublic: visibility !== "private",
-      }),
-    [monthlyMessages, monthlyListings, monthlyPhotos, monthlyFeedback, visibility]
-  );
+  const collectionTier = useMemo(() => getCollectionTier(completion, ownedCount), [completion, ownedCount]);
+  const marketplaceTier = useMemo(() => getMarketplaceTier(marketplaceStars, marketplaceReviewCount, activeListingsCount, soldListingsCount), [marketplaceStars, marketplaceReviewCount, activeListingsCount, soldListingsCount]);
+  const communityTier = useMemo(() => getCommunityTier(monthlyMessages, monthlyListings, monthlyPhotos, monthlyFeedback, visibility !== "private"), [monthlyMessages, monthlyListings, monthlyPhotos, monthlyFeedback, visibility]);
 
   const seriesProgress = useMemo(() => {
-    const grouped = new Map<
-      string,
-      { total: number; owned: number; subcategories: string[] }
-    >();
-
+    const grouped = new Map<string, { total: number; owned: number; subcategories: string[] }>();
     cards.forEach((card) => {
       const key = card.series || "Unknown Series";
       const current = grouped.get(key) || { total: 0, owned: 0, subcategories: [] };
-
       current.total += 1;
       if (card.qty > 0) current.owned += 1;
-
-      if (card.subcategory && !current.subcategories.includes(card.subcategory)) {
-        current.subcategories.push(card.subcategory);
-      }
-
+      if (card.subcategory && !current.subcategories.includes(card.subcategory)) current.subcategories.push(card.subcategory);
       grouped.set(key, current);
     });
 
@@ -1241,19 +688,7 @@ export default function Page() {
       .sort((a, b) => seriesSort(a.series, b.series));
   }, [cards]);
 
-  const visibleSeriesProgress =
-    isMobile && !expandedSeries ? seriesProgress.slice(0, 6) : seriesProgress;
-
-  function jumpToSeries(seriesName: string) {
-    setSeriesFilter(seriesName);
-    setShowMobileFilters(false);
-    requestAnimationFrame(() => {
-      document.getElementById("cards-grid")?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-  }
+  const visibleSeriesProgress = isMobile && !expandedSeries ? seriesProgress.slice(0, 6) : seriesProgress;
 
   function getVisibilityLabel() {
     if (visibility === "private") return "Private";
@@ -1270,6 +705,14 @@ export default function Page() {
     setCollectionFilter("all");
   }
 
+  function jumpToSeries(seriesName: string) {
+    setSeriesFilter(seriesName);
+    setShowMobileFilters(false);
+    requestAnimationFrame(() => {
+      document.getElementById("cards-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   const activeFilterCount =
     (seriesFilter !== "all" ? 1 : 0) +
     (subcategoryFilter !== "all" ? 1 : 0) +
@@ -1278,33 +721,14 @@ export default function Page() {
     (collectionFilter !== "all" ? 1 : 0) +
     (search.trim() ? 1 : 0);
 
-  const cardsPerPage =
-    collectionViewMode === "list"
-      ? isMobile
-        ? 40
-        : 80
-      : isMobile
-        ? 8
-        : 24;
-
+  const cardsPerPage = collectionViewMode === "list" ? (isMobile ? 35 : 80) : isMobile ? 12 : 24;
   const totalPages = Math.max(1, Math.ceil(filteredCards.length / cardsPerPage));
   const safePage = Math.min(page, totalPages);
-  const pagedCards = filteredCards.slice(
-    (safePage - 1) * cardsPerPage,
-    safePage * cardsPerPage
-  );
+  const pagedCards = filteredCards.slice((safePage - 1) * cardsPerPage, safePage * cardsPerPage);
 
   const autoSellStats = useMemo(() => {
     const selected = autoSellDrafts.filter((draft) => draft.selected).length;
-    const priced = autoSellDrafts.filter((draft) => draft.price.trim() !== "").length;
-    const needsPrice = autoSellDrafts.filter((draft) => draft.price.trim() === "").length;
-
-    return {
-      total: autoSellDrafts.length,
-      selected,
-      priced,
-      needsPrice,
-    };
+    return { total: autoSellDrafts.length, selected };
   }, [autoSellDrafts]);
 
   if (loading) {
@@ -1325,9 +749,7 @@ export default function Page() {
         <div className="loadingCard">
           <h1>Collection Error</h1>
           <p>{error}</p>
-          <Link href="/login" className="eliteUpgradeButton">
-            Go to Login
-          </Link>
+          <Link href="/login" className="primaryButton">Go to Login</Link>
         </div>
       </div>
     );
@@ -1339,7 +761,7 @@ export default function Page() {
         .collectionPage {
           min-height: 100vh;
           padding: 24px;
-          color: white;
+          color: #ffffff;
           background:
             radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%),
             radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%),
@@ -1347,12 +769,19 @@ export default function Page() {
             linear-gradient(180deg, #09090f 0%, #111827 38%, #0f172a 65%, #020617 100%);
         }
 
+        .shell {
+          max-width: 1500px;
+          margin: 0 auto;
+          position: relative;
+          z-index: 1;
+        }
+
         .loadingPage {
           min-height: 100vh;
           display: grid;
           place-items: center;
           padding: 20px;
-          color: white;
+          color: #ffffff;
           background: radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%);
         }
 
@@ -1377,40 +806,36 @@ export default function Page() {
           font-size: 30px;
         }
 
-        .galaxyStars {
-          position: relative;
-          max-width: 1500px;
-          margin: 0 auto;
-          z-index: 1;
+        .statusStack {
+          position: sticky;
+          top: 8px;
+          z-index: 60;
+          display: grid;
+          gap: 8px;
+          margin-bottom: 12px;
         }
 
-        .galaxyStars::before {
-          content: "";
-          position: fixed;
-          inset: 0;
-          pointer-events: none;
-          background-image:
-            radial-gradient(2px 2px at 10% 20%, rgba(255,255,255,0.95) 40%, transparent 41%),
-            radial-gradient(1.5px 1.5px at 25% 80%, rgba(255,255,255,0.9) 40%, transparent 41%),
-            radial-gradient(1.8px 1.8px at 40% 15%, rgba(255,255,255,0.9) 40%, transparent 41%),
-            radial-gradient(2px 2px at 55% 70%, rgba(255,255,255,0.9) 40%, transparent 41%),
-            radial-gradient(1.6px 1.6px at 72% 35%, rgba(255,255,255,0.95) 40%, transparent 41%),
-            radial-gradient(2px 2px at 85% 60%, rgba(255,255,255,0.9) 40%, transparent 41%),
-            radial-gradient(1.5px 1.5px at 92% 25%, rgba(255,255,255,0.85) 40%, transparent 41%);
-          opacity: 0.6;
-          z-index: 0;
+        .notice,
+        .error {
+          border-radius: 18px;
+          padding: 12px 14px;
+          font-weight: 900;
+          box-shadow: 0 12px 26px rgba(0,0,0,0.20);
         }
 
-        .heroSection,
-        .panelCard,
-        .autoSellCard,
-        .eliteUpgradeWall,
+        .notice { background: #ecfdf5; color: #065f46; border: 1px solid #bbf7d0; }
+        .error { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; }
+
+        .hero,
+        .panel,
         .tierCard,
-        .statButton {
+        .statCard,
+        .upgradeWall,
+        .autoSellCard {
           backdrop-filter: blur(6px);
         }
 
-        .heroSection {
+        .hero {
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 30%),
             linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
@@ -1454,6 +879,18 @@ export default function Page() {
           max-width: 320px;
         }
 
+        .progressTrack {
+          height: 10px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.15);
+          overflow: hidden;
+        }
+
+        .progressFill {
+          height: 100%;
+          background: linear-gradient(90deg,#60a5fa,#c084fc);
+        }
+
         .upgradeBox {
           margin-top: 12px;
           background: rgba(255,255,255,0.94);
@@ -1464,50 +901,56 @@ export default function Page() {
           box-shadow: 0 10px 24px rgba(0,0,0,0.18);
         }
 
-        .eliteStatusStack {
-          position: sticky;
-          top: 8px;
-          z-index: 60;
-          display: grid;
-          gap: 8px;
-          margin-bottom: 12px;
+        .primaryButton,
+        .secondaryButton {
+          min-height: 46px;
+          border-radius: 14px;
+          padding: 12px 16px;
+          font-weight: 1000;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border: none;
+          cursor: pointer;
+          font-family: inherit;
         }
 
-        .eliteNotice,
-        .eliteError {
-          border-radius: 18px;
-          padding: 12px 14px;
-          font-weight: 900;
-          box-shadow: 0 12px 26px rgba(0,0,0,0.20);
+        .primaryButton {
+          background: linear-gradient(90deg, #4f46e5, #7c3aed);
+          color: #ffffff;
+          box-shadow: 0 14px 26px rgba(79,70,229,0.26);
         }
 
-        .eliteNotice {
-          background: #ecfdf5;
-          color: #065f46;
-          border: 1px solid #bbf7d0;
+        .secondaryButton {
+          background: #eef2ff;
+          color: #3730a3;
+          border: 1px solid #c7d2fe;
         }
 
-        .eliteError {
-          background: #fff1f2;
-          color: #9f1239;
-          border: 1px solid #fecdd3;
+        .upgradeWall,
+        .panel,
+        .tierCard,
+        .statCard,
+        .autoSellCard {
+          background: rgba(255,255,255,0.94);
+          color: #111827;
+          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          border: 1px solid rgba(255,255,255,0.35);
         }
 
-        .eliteUpgradeWall {
+        .upgradeWall {
           margin-bottom: 18px;
           border-radius: 26px;
           padding: 20px;
-          color: #111827;
           background: radial-gradient(circle at top right, rgba(196,181,253,0.42), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
-          border: 1px solid rgba(255,255,255,0.55);
-          box-shadow: 0 18px 38px rgba(0,0,0,0.20);
           display: flex;
           justify-content: space-between;
           gap: 18px;
           align-items: center;
         }
 
-        .eliteUpgradeEyebrow {
+        .eyebrow {
           color: #6d28d9;
           font-size: 13px;
           font-weight: 1000;
@@ -1516,7 +959,7 @@ export default function Page() {
           margin-bottom: 7px;
         }
 
-        .eliteUpgradeTitle {
+        .upgradeTitle {
           font-size: clamp(1.35rem, 3vw, 2rem);
           font-weight: 1000;
           letter-spacing: -0.6px;
@@ -1524,21 +967,20 @@ export default function Page() {
           margin-bottom: 8px;
         }
 
-        .eliteUpgradeText {
+        .mutedText {
           color: #4b5563;
           line-height: 1.6;
           font-size: 15px;
-          max-width: 760px;
         }
 
-        .elitePlanRow {
+        .planRow {
           display: flex;
           gap: 10px;
           flex-wrap: wrap;
           margin-top: 14px;
         }
 
-        .eliteMiniPlan {
+        .miniPlan {
           border-radius: 17px;
           padding: 11px 13px;
           background: #f8fafc;
@@ -1546,13 +988,12 @@ export default function Page() {
           min-width: 130px;
         }
 
-        .eliteMiniPlan.best {
+        .miniPlan.best {
           background: linear-gradient(135deg, #f5f3ff, #eff6ff);
           border-color: #a78bfa;
-          box-shadow: 0 10px 20px rgba(124,58,237,0.10);
         }
 
-        .eliteMiniPlan span {
+        .miniPlan span {
           display: block;
           color: #64748b;
           font-size: 12px;
@@ -1560,43 +1001,17 @@ export default function Page() {
           margin-bottom: 4px;
         }
 
-        .eliteMiniPlan strong {
+        .miniPlan strong {
           color: #312e81;
           font-size: 20px;
           font-weight: 1000;
         }
 
-        .eliteUpgradeButton,
-        .eliteModalButton {
-          min-height: 50px;
-          border-radius: 17px;
-          padding: 13px 18px;
-          font-weight: 1000;
-          text-decoration: none;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(90deg, #4f46e5, #7c3aed);
-          color: white;
-          box-shadow: 0 14px 26px rgba(79,70,229,0.26);
-          border: none;
-          cursor: pointer;
-        }
-
         .tierGrid {
           display: grid;
-          grid-template-columns: 1fr;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 14px;
           margin-bottom: 18px;
-        }
-
-        .tierCard,
-        .statButton,
-        .panelCard {
-          background: rgba(255,255,255,0.94);
-          color: #111827;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-          border: 1px solid rgba(255,255,255,0.35);
         }
 
         .tierCard {
@@ -1613,30 +1028,35 @@ export default function Page() {
           border-radius: 22px 0 0 22px;
         }
 
-        .panelCard {
+        .panel {
           border-radius: 24px;
           padding: 16px;
           margin-bottom: 18px;
         }
 
-        .statsSection {
+        .statsGrid {
           display: grid;
-          grid-template-columns: 1fr;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 14px;
           margin-bottom: 18px;
         }
 
-        .statButton {
+        .statCard {
           border-radius: 20px;
           padding: 18px;
           cursor: pointer;
           text-align: left;
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
 
-        .statButton:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 14px 28px rgba(0,0,0,0.22);
+        .statLabel {
+          font-size: 14px;
+          color: #6b7280;
+          margin-bottom: 6px;
+        }
+
+        .statValue {
+          font-size: 30px;
+          font-weight: 1000;
         }
 
         .publicProfileRow {
@@ -1647,41 +1067,11 @@ export default function Page() {
           flex-wrap: wrap;
         }
 
-        .publicProfileMeta {
-          font-size: 13px;
-          color: #4b5563;
-          line-height: 1.5;
-        }
-
         .publicProfileActions {
           display: flex;
           gap: 10px;
           flex-wrap: wrap;
-          align-items: center;
           justify-content: flex-end;
-        }
-
-        .publicProfileButton,
-        .publicProfileButton:visited {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 12px 16px;
-          border-radius: 14px;
-          text-decoration: none;
-          color: white;
-          font-weight: 800;
-          background: linear-gradient(135deg, #4f46e5, #7c3aed);
-          box-shadow: 0 10px 18px rgba(79,70,229,0.28);
-          min-height: 46px;
-          border: none;
-          cursor: pointer;
-          font-size: 15px;
-          font-family: inherit;
-        }
-
-        .publicProfileButton.secondary {
-          background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
         }
 
         .copyStatus {
@@ -1696,9 +1086,33 @@ export default function Page() {
           font-weight: 900;
         }
 
+        .visibilityButtons,
+        .chipWrap {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .chipButton {
+          min-height: 42px;
+          border: none;
+          border-radius: 999px;
+          padding: 10px 14px;
+          font-weight: 900;
+          background: #eef2ff;
+          color: #3730a3;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        .chipButton.active {
+          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          color: #ffffff;
+        }
+
         .spotlightGrid {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 10px;
         }
 
@@ -1711,24 +1125,13 @@ export default function Page() {
           padding: 14px;
           border: 1px solid #e5e7eb;
           box-shadow: 0 8px 18px rgba(0,0,0,0.10);
-          transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .spotlightCard:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 12px 24px rgba(0,0,0,0.14);
         }
 
         .autoSellCard {
-          background:
-            radial-gradient(circle at top right, rgba(192,132,252,0.28), transparent 32%),
-            linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
-          color: #111827;
+          background: radial-gradient(circle at top right, rgba(192,132,252,0.28), transparent 32%), linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
           border-radius: 24px;
           padding: 18px;
-          box-shadow: 0 12px 28px rgba(0,0,0,0.18);
           margin-bottom: 18px;
-          border: 1px solid rgba(255,255,255,0.55);
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -1736,50 +1139,11 @@ export default function Page() {
           flex-wrap: wrap;
         }
 
-        .autoSellEyebrow {
-          color: #6d28d9;
-          font-size: 12px;
-          font-weight: 1000;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          margin-bottom: 6px;
-        }
-
         .autoSellTitle {
           font-size: clamp(1.25rem, 3vw, 1.8rem);
           font-weight: 1000;
           letter-spacing: -0.5px;
           margin-bottom: 6px;
-        }
-
-        .autoSellText {
-          color: #4b5563;
-          line-height: 1.55;
-          font-size: 14px;
-          max-width: 760px;
-        }
-
-        .autoSellButton {
-          min-height: 50px;
-          border: none;
-          border-radius: 16px;
-          padding: 13px 18px;
-          font-weight: 1000;
-          color: white;
-          background: linear-gradient(135deg, #16a34a, #4f46e5);
-          box-shadow: 0 14px 26px rgba(79,70,229,0.22);
-          cursor: pointer;
-          white-space: nowrap;
-        }
-
-        .autoSellButton:disabled {
-          opacity: 0.62;
-          cursor: wait;
-        }
-
-        .filterPanel {
-          position: relative;
-          z-index: 1;
         }
 
         .filterHeader {
@@ -1822,19 +1186,21 @@ export default function Page() {
         .viewModeButton.active {
           background: #4f46e5;
           color: #ffffff;
-          box-shadow: 0 8px 16px rgba(79,70,229,0.18);
         }
 
         .filterToggleButton {
           display: none;
-          border: none;
-          border-radius: 14px;
-          padding: 13px 14px;
-          background: linear-gradient(135deg, #4f46e5, #7c3aed);
-          color: #ffffff;
-          font-weight: 950;
-          min-height: 50px;
-          cursor: pointer;
+        }
+
+        .quickMobileChips {
+          display: none;
+          gap: 8px;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+
+        .quickMobileChips::-webkit-scrollbar {
+          display: none;
         }
 
         .filterBody {
@@ -1848,82 +1214,23 @@ export default function Page() {
           align-items: center;
         }
 
-        .searchBox {
-          flex: 1 1 280px;
-          padding: 14px 16px;
-          border-radius: 14px;
-          border: 1px solid #d1d5db;
-          font-size: 15px;
-          min-height: 52px;
-          height: 52px;
-          max-height: 52px;
-          background: white;
-          box-sizing: border-box;
-          width: auto;
-          min-width: 280px;
-        }
-
+        .searchBox,
         .mobileSelect {
           padding: 14px;
           border-radius: 14px;
           border: 1px solid #d1d5db;
           font-size: 15px;
-          background: white;
-          width: auto;
+          background: #ffffff;
+          box-sizing: border-box;
+        }
+
+        .searchBox {
+          flex: 1 1 280px;
+          min-width: 280px;
+        }
+
+        .mobileSelect {
           min-width: 180px;
-        }
-
-        .collectionToggleWrap {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          padding: 6px;
-          border-radius: 14px;
-          background: #eef2ff;
-          border: 1px solid #c7d2fe;
-          flex-wrap: wrap;
-          width: auto;
-          justify-content: flex-start;
-        }
-
-        .quickMobileChips {
-          display: none;
-          gap: 8px;
-          overflow-x: auto;
-          padding-bottom: 2px;
-          scrollbar-width: none;
-        }
-
-        .quickMobileChips::-webkit-scrollbar {
-          display: none;
-        }
-
-        .quickChip {
-          min-height: 42px;
-          border-radius: 999px;
-          border: 1px solid #c7d2fe;
-          padding: 9px 13px;
-          font-weight: 900;
-          background: #eef2ff;
-          color: #3730a3;
-          white-space: nowrap;
-          cursor: pointer;
-        }
-
-        .quickChip.active {
-          background: #4f46e5;
-          color: #ffffff;
-        }
-
-        .clearFiltersButton {
-          border: none;
-          border-radius: 12px;
-          padding: 10px 12px;
-          background: #f1f5f9;
-          color: #334155;
-          font-weight: 900;
-          min-height: 42px;
-          cursor: pointer;
         }
 
         .seriesProgressGrid {
@@ -1941,22 +1248,10 @@ export default function Page() {
           cursor: pointer;
         }
 
-        .showMoreButton {
-          margin-top: 12px;
-          width: 100%;
-          min-height: 44px;
-          border: none;
-          border-radius: 14px;
-          background: #eef2ff;
-          color: #3730a3;
-          font-weight: 950;
-          cursor: pointer;
-        }
-
         .cardsGrid {
           display: grid;
-          grid-template-columns: 1fr;
-          gap: 14px;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 16px;
         }
 
         .cardsList {
@@ -1964,87 +1259,142 @@ export default function Page() {
           gap: 10px;
         }
 
-        .floatCard {
-          transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+        .card {
+          display: grid;
+          gap: 10px;
+          border-radius: 22px;
+          padding: 12px;
+          border: 4px solid #cbd5e1;
+          box-shadow: 0 12px 28px rgba(0,0,0,0.14);
+          min-width: 0;
         }
 
-        .floatCard:hover {
-          transform: translateY(-4px);
-        }
-
-        .cardImageWrap {
+        .cardImageBox {
           height: 180px;
           background: rgba(255,255,255,0.92);
           border-radius: 18px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 12px;
+          display: grid;
+          place-items: center;
           overflow: hidden;
           padding: 14px;
         }
 
-        .cardImage {
-          max-width: 100%;
-          max-height: 100%;
+        .cardImageBox img {
+          width: 100%;
+          height: 100%;
           object-fit: contain;
-          transition: transform 0.2s ease;
         }
 
-        .cardImageWrap:hover .cardImage {
-          transform: scale(1.05);
+        .cardName {
+          font-size: 19px;
+          font-weight: 1000;
+          line-height: 1.1;
+          word-break: break-word;
         }
 
-        .qtyControls {
-          display: flex;
+        .cardMeta {
+          opacity: 0.82;
+          font-size: 13px;
+          line-height: 1.35;
+        }
+
+        .rarityBadge {
+          width: fit-content;
+          max-width: 100%;
+          padding: 6px 10px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-weight: 1000;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .qtyRow {
+          display: grid;
+          grid-template-columns: 46px 1fr 46px;
+          gap: 8px;
           align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          margin-top: 8px;
         }
 
         .qtyButton {
           width: 46px;
           height: 46px;
-          min-width: 46px;
           border-radius: 14px;
           font-size: 22px;
-          font-weight: 900;
-          line-height: 1;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
+          font-weight: 1000;
+          border: 1px solid rgba(15,23,42,0.16);
+          background: rgba(255,255,255,0.92);
           cursor: pointer;
-          touch-action: manipulation;
-          user-select: none;
-          -webkit-tap-highlight-color: transparent;
         }
 
         .qtyValue {
-          min-width: 44px;
           text-align: center;
-          font-weight: 900;
+          font-weight: 1000;
           font-size: 22px;
         }
 
+        .statusText {
+          font-size: 13px;
+          font-weight: 1000;
+        }
+
+        .noteInput {
+          width: 100%;
+          min-height: 42px;
+          border-radius: 12px;
+          border: 1px solid rgba(15,23,42,0.20);
+          background: rgba(255,255,255,0.88);
+          padding: 9px 10px;
+          color: #111827;
+          box-sizing: border-box;
+          font-size: 13px;
+          font-family: inherit;
+        }
+
+        .cardButtonRow {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+
+        .smallButton {
+          min-height: 40px;
+          border: none;
+          border-radius: 12px;
+          padding: 8px 9px;
+          font-size: 12px;
+          font-weight: 1000;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        .saveButton {
+          background: #4f46e5;
+          color: #ffffff;
+        }
+
+        .photoButton {
+          background: rgba(255,255,255,0.75);
+          color: #111827;
+          border: 1px solid rgba(15,23,42,0.14);
+        }
+
         .photoBox {
-          margin-top: 10px;
           padding: 10px;
           border-radius: 12px;
           background: rgba(255,255,255,0.55);
           border: 1px solid rgba(255,255,255,0.6);
         }
 
-        .photoToggleButton {
-          width: 100%;
-          margin-top: 10px;
-          min-height: 42px;
+        .limitBox {
+          padding: 9px;
           border-radius: 12px;
-          border: 1px solid rgba(255,255,255,0.6);
-          background: rgba(255,255,255,0.68);
-          color: #111827;
+          background: #fff1f2;
+          color: #9f1239;
           font-weight: 900;
-          cursor: pointer;
+          font-size: 12px;
+          line-height: 1.35;
         }
 
         .listCard {
@@ -2066,9 +1416,8 @@ export default function Page() {
           border-radius: 14px;
           background: #f8fafc;
           border: 1px solid #e5e7eb;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          display: grid;
+          place-items: center;
           overflow: hidden;
         }
 
@@ -2076,10 +1425,6 @@ export default function Page() {
           width: 100%;
           height: 100%;
           object-fit: contain;
-        }
-
-        .listMain {
-          min-width: 0;
         }
 
         .listTopRow {
@@ -2093,7 +1438,6 @@ export default function Page() {
           font-size: 16px;
           font-weight: 1000;
           line-height: 1.15;
-          word-break: break-word;
         }
 
         .listMeta {
@@ -2102,20 +1446,6 @@ export default function Page() {
           font-weight: 800;
           margin-top: 3px;
           line-height: 1.35;
-        }
-
-        .listRarityBadge {
-          padding: 5px 8px;
-          border-radius: 999px;
-          font-size: 11px;
-          font-weight: 950;
-          white-space: nowrap;
-        }
-
-        .listStatus {
-          margin-top: 6px;
-          font-size: 13px;
-          font-weight: 950;
         }
 
         .listControls {
@@ -2144,13 +1474,6 @@ export default function Page() {
           cursor: pointer;
         }
 
-        .listQtyValue {
-          min-width: 28px;
-          text-align: center;
-          font-size: 18px;
-          font-weight: 1000;
-        }
-
         .listNoteInput {
           min-height: 38px;
           width: 100%;
@@ -2162,19 +1485,6 @@ export default function Page() {
           background: #ffffff;
           font-family: inherit;
           font-size: 13px;
-        }
-
-        .listSaveButton {
-          min-height: 38px;
-          border: none;
-          border-radius: 11px;
-          padding: 8px 11px;
-          background: #4f46e5;
-          color: #ffffff;
-          font-weight: 950;
-          cursor: pointer;
-          white-space: nowrap;
-          font-family: inherit;
         }
 
         .pager {
@@ -2191,7 +1501,7 @@ export default function Page() {
           border-radius: 12px;
           border: 1px solid rgba(255,255,255,0.16);
           background: rgba(255,255,255,0.08);
-          color: white;
+          color: #ffffff;
           font-weight: 800;
           cursor: pointer;
         }
@@ -2201,7 +1511,7 @@ export default function Page() {
           cursor: not-allowed;
         }
 
-        .eliteMobileSticky {
+        .mobileSticky {
           position: fixed;
           left: 12px;
           right: 12px;
@@ -2219,40 +1529,7 @@ export default function Page() {
           box-shadow: 0 18px 40px rgba(0,0,0,0.36);
         }
 
-        .eliteMobileTop {
-          color: white;
-          font-size: 13px;
-          font-weight: 1000;
-          margin-bottom: 7px;
-        }
-
-        .eliteMobileTrack {
-          height: 8px;
-          border-radius: 999px;
-          background: rgba(255,255,255,0.16);
-          overflow: hidden;
-        }
-
-        .eliteMobileFill {
-          height: 100%;
-          border-radius: inherit;
-          background: linear-gradient(90deg, #60a5fa, #c084fc);
-        }
-
-        .eliteMobileButton {
-          min-height: 44px;
-          border-radius: 15px;
-          padding: 10px 14px;
-          text-decoration: none;
-          color: #312e81;
-          background: white;
-          font-weight: 1000;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .eliteModalOverlay {
+        .modalOverlay {
           position: fixed;
           inset: 0;
           z-index: 9999;
@@ -2263,20 +1540,20 @@ export default function Page() {
           backdrop-filter: blur(10px);
         }
 
-        .eliteModal {
+        .modal {
           position: relative;
-          width: min(540px, 100%);
+          width: min(760px, 100%);
+          max-height: calc(100dvh - 32px);
+          overflow: auto;
           border-radius: 30px;
           padding: 24px;
           color: #111827;
           background: radial-gradient(circle at top right, rgba(196,181,253,0.55), transparent 32%), linear-gradient(180deg, #ffffff, #f8fafc);
           border: 1px solid rgba(255,255,255,0.75);
           box-shadow: 0 28px 80px rgba(0,0,0,0.42);
-          text-align: center;
-          align-self: center;
         }
 
-        .eliteModalClose {
+        .modalClose {
           position: absolute;
           right: 14px;
           top: 12px;
@@ -2291,510 +1568,129 @@ export default function Page() {
           cursor: pointer;
         }
 
-        .eliteModalIcon {
-          width: 64px;
-          height: 64px;
-          margin: 0 auto 12px;
-          border-radius: 22px;
+        .autoSellList {
           display: grid;
-          place-items: center;
-          font-size: 31px;
-          background: linear-gradient(135deg, #ddd6fe, #bfdbfe);
-        }
-
-        .eliteModalTitle {
-          margin: 0;
-          font-size: clamp(1.8rem, 6vw, 2.6rem);
-          line-height: 1;
-          letter-spacing: -1px;
-          font-weight: 1000;
-          color: #111827;
-        }
-
-        .eliteModalText {
-          margin: 13px auto 0;
-          max-width: 430px;
-          color: #4b5563;
-          line-height: 1.6;
-          font-weight: 750;
-        }
-
-        .eliteModalPlans {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-          margin-top: 18px;
-        }
-
-        .eliteModalPlan {
-          border-radius: 20px;
-          padding: 16px;
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.08);
-        }
-
-        .eliteModalPlan.best {
-          border-color: #a78bfa;
-          background: linear-gradient(135deg, #f5f3ff, #eff6ff);
-        }
-
-        .eliteBestValueTag {
-          display: inline-flex;
-          margin-bottom: 8px;
-          padding: 5px 9px;
-          border-radius: 999px;
-          color: white;
-          background: linear-gradient(90deg, #4f46e5, #7c3aed);
-          font-size: 11px;
-          font-weight: 1000;
-        }
-
-        .elitePlanName {
-          font-weight: 1000;
-          color: #334155;
-        }
-
-        .elitePlanPrice {
-          margin-top: 5px;
-          font-size: 31px;
-          line-height: 1;
-          font-weight: 1000;
-          color: #312e81;
-        }
-
-        .elitePlanSub {
-          margin-top: 6px;
-          font-size: 13px;
-          color: #64748b;
-          font-weight: 800;
-        }
-
-        .eliteModalButton {
-          margin-top: 18px;
-          width: 100%;
-        }
-
-        .eliteModalLater {
-          margin-top: 10px;
-          border: none;
-          background: transparent;
-          color: #64748b;
-          font-weight: 900;
-          cursor: pointer;
-        }
-
-        .autoSellSimpleHeader {
-          display: grid;
-          grid-template-columns: auto 1fr;
-          gap: 14px;
-          align-items: center;
-          padding-right: 44px;
-        }
-
-        .autoSellSimpleIcon {
-          margin: 0;
-        }
-
-        .autoSellSimpleText {
-          margin-left: 0;
-          margin-top: 8px;
-          max-width: 760px;
-        }
-
-        .autoSellTopControls {
-          display: grid;
-          grid-template-columns: 1fr auto;
           gap: 10px;
+          margin-top: 12px;
+        }
+
+        .autoSellItem {
+          display: grid;
+          grid-template-columns: auto 1fr 110px;
+          gap: 8px;
           align-items: center;
-          margin-top: 14px;
           padding: 10px;
           border-radius: 16px;
-          background: #f8fafc;
           border: 1px solid #e5e7eb;
-        }
-
-        .autoSellTopSummary {
-          color: #475569;
-          font-size: 13px;
-          font-weight: 900;
-        }
-
-        .autoSellToolbarButtons {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .autoSellSmallButton {
-          min-height: 40px;
-          border-radius: 12px;
-          border: 1px solid #d1d5db;
           background: #ffffff;
-          color: #334155;
-          font-weight: 950;
-          padding: 9px 12px;
-          cursor: pointer;
-          white-space: nowrap;
         }
 
-        .autoSellListTitle {
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-          align-items: end;
-          margin-top: 8px;
-          padding: 0 2px;
-        }
-
-        .autoSellListTitle strong {
-          color: #111827;
-          font-size: 14px;
-          font-weight: 1000;
-        }
-
-        .autoSellListTitle span {
-          color: #64748b;
-          font-size: 12px;
-          font-weight: 850;
-          text-align: right;
-        }
-
-        .autoSellBigList {
-          display: grid;
-          gap: 10px;
-          flex: 1 1 0;
-          min-height: 0;
-          overflow-y: auto;
-          overflow-x: hidden;
-          margin-top: 8px;
-          padding: 10px;
-          padding-bottom: 18px;
-          border-radius: 18px;
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
-          overscroll-behavior: contain;
-        }
-
-        .autoSellCompactItem {
-          display: grid;
-          grid-template-columns: 58px 74px minmax(0, 1fr);
-          gap: 10px;
-          align-items: stretch;
-          padding: 10px;
-          border-radius: 16px;
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
-          box-shadow: 0 8px 18px rgba(0,0,0,0.06);
-        }
-
-        .autoSellCompactItem.selected {
-          border-color: #a78bfa;
-          box-shadow: 0 8px 20px rgba(124,58,237,0.12);
-        }
-
-        .autoSellCompactCheck {
-          min-height: 74px;
-          border-radius: 14px;
-          background: #eef2ff;
-          color: #3730a3;
-          border: 1px solid #c7d2fe;
-          display: grid;
-          place-items: center;
-          align-content: center;
-          gap: 5px;
-          font-size: 12px;
-          font-weight: 1000;
-          cursor: pointer;
-        }
-
-        .autoSellCompactCheck input {
-          width: 18px;
-          height: 18px;
-          accent-color: #7c3aed;
-        }
-
-        .autoSellCompactThumb {
-          width: 74px;
-          height: 74px;
-          border-radius: 14px;
-          background: #f8fafc;
-          border: 1px solid #e5e7eb;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-          color: #64748b;
-          font-size: 11px;
-          font-weight: 900;
-        }
-
-        .autoSellCompactThumb img {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-        }
-
-        .autoSellCompactBody {
-          display: grid;
-          gap: 7px;
-          min-width: 0;
-        }
-
-        .autoSellCompactRow {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) 120px;
-          gap: 8px;
-        }
-
-        .autoSellInput,
-        .autoSellTextarea {
+        .autoSellInput {
           width: 100%;
           box-sizing: border-box;
           border: 1px solid #d1d5db;
           border-radius: 12px;
-          padding: 11px 12px;
+          padding: 10px;
           color: #111827;
-          background: white;
-          font-size: 14px;
+          background: #ffffff;
+          font-size: 13px;
           font-family: inherit;
         }
 
-        .autoSellTextarea {
-          min-height: 70px;
-          resize: vertical;
-        }
-
-        .autoSellCompactTitle,
-        .autoSellCompactPrice {
-          min-height: 40px;
-        }
-
-        .autoSellCompactPrice {
-          font-weight: 950;
-        }
-
-        .autoSellCompactDescription {
-          min-height: 54px;
-          max-height: 74px;
-          resize: vertical;
-        }
-
-        .autoSellPriceReady {
-          border-color: #86efac;
-          background: #f0fdf4;
-        }
-
-        .autoSellCompactMeta {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 5px;
-          color: #475569;
-          font-size: 11px;
-          font-weight: 850;
-        }
-
-        .autoSellCompactMeta span {
-          border-radius: 999px;
-          padding: 4px 7px;
-          background: #f1f5f9;
-          border: 1px solid #e2e8f0;
-        }
-
-        .autoSellCompactMeta span.ready {
-          background: #ecfdf5;
-          border-color: #bbf7d0;
-          color: #065f46;
-        }
-
-        .autoSellCompactMeta span.needs {
-          background: #fff7ed;
-          border-color: #fed7aa;
-          color: #9a3412;
-        }
-
-        .autoSellModalActions {
-          display: grid;
-          grid-template-columns: 1fr auto auto;
-          gap: 10px;
-          margin-top: 10px;
-          padding-top: 10px;
-          border-top: 1px solid #e5e7eb;
-          background: linear-gradient(180deg, rgba(255,255,255,0.98), #ffffff);
-          position: relative;
-          bottom: auto;
-          z-index: 1;
-        }
-
-        .autoSellSimpleActions {
-          flex-shrink: 0;
-          position: sticky;
-          bottom: 0;
-          z-index: 10;
-          margin-top: 10px;
-          padding: 10px;
-          border-radius: 18px;
-          background: rgba(255,255,255,0.98);
-          box-shadow: 0 -10px 24px rgba(15,23,42,0.08);
-        }
-
-        .autoSellSelectedNote {
-          display: flex;
-          align-items: center;
-          color: #475569;
-          font-size: 13px;
-          font-weight: 900;
-        }
-
-        .autoSellCancelButton {
-          min-height: 50px;
-          border-radius: 17px;
-          padding: 13px 18px;
-          font-weight: 1000;
-          border: 1px solid #d1d5db;
-          background: #f8fafc;
-          color: #334155;
-          cursor: pointer;
-        }
-
-        @media (min-width: 641px) {
-          .statsSection {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-          }
-
-          .tierGrid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-
-          .spotlightGrid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-        }
-
-        @media (min-width: 921px) {
-          .cardsGrid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 14px;
-          }
-
-          .spotlightGrid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-        }
-
-        @media (min-width: 1200px) {
-          .cardsGrid {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 16px;
-          }
-        }
-
-        @media (min-width: 1500px) {
-          .cardsGrid {
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-          }
+        @media (max-width: 1200px) {
+          .cardsGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         }
 
         @media (max-width: 920px) {
           .collectionPage {
-            padding: 12px;
-            padding-bottom: 98px;
+            padding: 11px;
+            padding-bottom: 104px;
           }
 
-          .heroSection {
-            border-radius: 24px;
-            padding: 18px;
-            margin-bottom: 14px;
+          .hero {
+            border-radius: 22px;
+            padding: 15px;
+            margin-bottom: 12px;
           }
 
-          .heroTop {
-            display: grid;
-          }
-
-          .heroTitle {
-            font-size: clamp(2rem, 11vw, 2.8rem);
-          }
-
-          .heroSubtitle {
-            font-size: 14px;
-            line-height: 1.45;
-          }
+          .heroTop { display: grid; }
+          .heroTitle { font-size: clamp(1.85rem, 10vw, 2.55rem); }
+          .heroSubtitle { font-size: 13px; line-height: 1.42; }
 
           .heroProgress {
             width: 100%;
             max-width: none;
             min-width: 0;
             box-sizing: border-box;
+            padding: 13px;
+            border-radius: 18px;
           }
 
-          .eliteUpgradeWall {
+          .upgradeWall {
             display: grid;
-            padding: 16px;
-            border-radius: 22px;
+            padding: 14px;
+            border-radius: 21px;
+            gap: 12px;
           }
 
-          .eliteUpgradeButton {
-            width: 100%;
-          }
+          .upgradeTitle { font-size: 1.28rem; }
+          .mutedText { font-size: 13px; line-height: 1.5; }
 
-          .eliteMobileSticky {
+          .planRow {
             display: grid;
+            grid-template-columns: 1fr 1fr;
           }
 
-          .eliteModalPlans {
-            grid-template-columns: 1fr;
-          }
+          .miniPlan { min-width: 0; padding: 10px; }
+          .primaryButton { width: 100%; box-sizing: border-box; }
 
           .tierGrid {
+            grid-template-columns: repeat(3, minmax(220px, 1fr));
             gap: 10px;
             margin-bottom: 14px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
           }
 
-          .tierCard {
-            border-radius: 19px;
-            padding: 14px;
-          }
+          .tierGrid::-webkit-scrollbar { display: none; }
+          .tierCard { border-radius: 19px; padding: 13px; scroll-snap-align: start; }
 
-          .statsSection {
+          .statsGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 10px;
             margin-bottom: 14px;
           }
 
-          .statButton {
-            padding: 14px;
-            border-radius: 18px;
-          }
+          .statCard { padding: 13px; border-radius: 18px; }
+          .panel { border-radius: 19px; padding: 13px; margin-bottom: 13px; }
+          .publicProfileRow { display: grid; }
+          .publicProfileActions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
 
-          .panelCard {
-            border-radius: 20px;
-            padding: 14px;
-            margin-bottom: 14px;
-          }
+          .visibilityButtons { display: grid; grid-template-columns: 1fr; }
+          .spotlightGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .autoSellCard { display: grid; border-radius: 20px; padding: 14px; margin-bottom: 14px; }
 
-          .filterHeader {
-            grid-template-columns: 1fr;
-          }
-
-          .filterHeaderActions {
-            justify-content: stretch;
-            width: 100%;
-          }
-
-          .viewModeToggle {
-            width: 100%;
-            box-sizing: border-box;
-          }
-
-          .viewModeButton {
-            flex: 1;
-          }
+          .filterHeader { grid-template-columns: 1fr; }
+          .filterHeaderActions { justify-content: stretch; width: 100%; }
+          .viewModeToggle { width: 100%; box-sizing: border-box; }
+          .viewModeButton { flex: 1; }
 
           .filterToggleButton {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             width: 100%;
+            min-height: 50px;
+            border: none;
+            border-radius: 14px;
+            padding: 13px 14px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #ffffff;
+            font-weight: 950;
+            cursor: pointer;
+            font-family: inherit;
           }
 
           .quickMobileChips {
@@ -2802,97 +1698,58 @@ export default function Page() {
             margin-top: 12px;
           }
 
-          .filterBody {
-            display: none;
-          }
-
-          .filterBody.open {
-            display: block;
-          }
-
-          .filterWrap {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .collectionToggleWrap {
-            width: 100%;
-            box-sizing: border-box;
-          }
-
-          .collectionToggleWrap button {
-            flex: 1 1 calc(50% - 8px);
-          }
-
-          .searchBox,
-          .mobileSelect {
-            width: 100%;
-            min-width: 0;
-            box-sizing: border-box;
-          }
-
-          .autoSellCard {
-            display: grid;
-            border-radius: 20px;
-            padding: 15px;
-            margin-bottom: 14px;
-          }
-
-          .autoSellButton {
-            width: 100%;
-          }
-
-          .publicProfileRow {
-            display: grid;
-          }
-
-          .publicProfileActions {
-            display: grid;
-            width: 100%;
-          }
-
-          .publicProfileButton {
-            width: 100%;
-            box-sizing: border-box;
-          }
-
-          .spotlightGrid {
-            grid-template-columns: 1fr;
-          }
-
-          .seriesProgressGrid {
-            grid-template-columns: 1fr;
-          }
-
-          .seriesProgressButton {
-            border-radius: 15px;
-            padding: 12px;
-          }
+          .filterBody { display: none; }
+          .filterBody.open { display: block; }
+          .filterWrap { flex-direction: column; align-items: stretch; }
+          .chipWrap { width: 100%; }
+          .chipButton { flex: 1 1 calc(50% - 8px); }
+          .searchBox, .mobileSelect { width: 100%; min-width: 0; }
 
           .cardsGrid {
-            gap: 12px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
           }
 
-          .floatCard {
-            border-radius: 20px !important;
-            padding: 11px !important;
+          .card {
+            border-radius: 18px;
+            padding: 9px;
+            border-width: 3px;
+            gap: 8px;
           }
 
-          .cardImageWrap {
-            height: 150px;
-            border-radius: 16px;
-            padding: 10px;
+          .cardImageBox {
+            height: 112px;
+            border-radius: 15px;
+            padding: 8px;
           }
 
-          .qtyButton {
-            width: 50px;
-            height: 50px;
-            min-width: 50px;
+          .cardName {
+            font-size: 14px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
           }
 
-          .qtyValue {
-            font-size: 24px;
+          .cardMeta {
+            font-size: 11px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
           }
+
+          .rarityBadge { font-size: 10px; padding: 5px 8px; }
+
+          .qtyRow {
+            grid-template-columns: 36px 1fr 36px;
+            gap: 6px;
+          }
+
+          .qtyButton { width: 36px; height: 36px; border-radius: 12px; font-size: 20px; }
+          .qtyValue { font-size: 19px; }
+          .noteInput { min-height: 38px; font-size: 12px; padding: 8px 9px; }
+          .smallButton { min-height: 38px; font-size: 12px; }
 
           .listCard {
             grid-template-columns: 64px minmax(0, 1fr);
@@ -2901,254 +1758,65 @@ export default function Page() {
             border-radius: 16px;
           }
 
-          .listThumb {
-            width: 64px;
-            height: 64px;
-          }
+          .listThumb { width: 64px; height: 64px; }
+          .listControls { grid-template-columns: auto minmax(0, 1fr); }
+          .listControls .smallButton { grid-column: 1 / -1; width: 100%; }
 
-          .listControls {
-            grid-template-columns: auto minmax(0, 1fr);
-          }
-
-          .listSaveButton {
-            grid-column: 1 / -1;
-            width: 100%;
-          }
-
-          .pager {
-            margin-bottom: 14px;
-          }
-
-          .autoSellModal {
-            width: 100% !important;
-            height: calc(100dvh - 28px) !important;
-            max-height: calc(100dvh - 28px) !important;
-            padding: 14px !important;
-            margin-top: 8px;
-          }
-
-          .autoSellSimpleHeader {
-            grid-template-columns: 1fr;
-            gap: 8px;
-            padding-right: 42px;
-          }
-
-          .autoSellSimpleIcon {
-            display: none;
-          }
-
-          .autoSellTopControls {
-            grid-template-columns: 1fr;
-            gap: 8px;
-            margin-top: 10px;
-            padding: 8px;
-          }
-
-          .autoSellTopControls .autoSellToolbarButtons {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            width: 100%;
-          }
-
-          .autoSellTopControls .autoSellSmallButton {
-            width: 100%;
-            padding: 8px 7px;
-            white-space: normal;
-            font-size: 12px;
-          }
-
-          .autoSellListTitle {
-            align-items: start;
-            display: grid;
-          }
-
-          .autoSellListTitle span {
-            text-align: left;
-          }
-
-          .autoSellBigList {
-            min-height: 0;
-            flex: 1 1 auto;
-            padding: 8px;
-          }
-
-          .autoSellCompactItem {
-            grid-template-columns: 48px 62px minmax(0, 1fr);
-            gap: 8px;
-            padding: 8px;
-          }
-
-          .autoSellCompactCheck {
-            min-height: 62px;
-            font-size: 11px;
-          }
-
-          .autoSellCompactThumb {
-            width: 62px;
-            height: 62px;
-          }
-
-          .autoSellCompactRow {
-            grid-template-columns: minmax(0, 1fr) 92px;
-            gap: 6px;
-          }
-
-          .autoSellCompactTitle,
-          .autoSellCompactPrice {
-            min-height: 38px;
-            font-size: 13px;
-            padding: 8px 9px;
-          }
-
-          .autoSellCompactDescription {
-            min-height: 46px;
-            max-height: 62px;
-            font-size: 13px;
-            padding: 8px 9px;
-          }
-
-          .autoSellCompactMeta span {
-            font-size: 10px;
-            padding: 4px 6px;
-          }
-
-          .autoSellModalActions,
-          .autoSellSimpleActions {
-            grid-template-columns: 1fr;
-            gap: 8px;
-            margin-top: 8px;
-            padding: 8px;
-            position: sticky;
-            bottom: 0;
-          }
-
-          .autoSellSelectedNote {
-            justify-content: center;
-            text-align: center;
-          }
-        }
-
-        @media (max-width: 430px) {
-          .autoSellCompactItem {
-            grid-template-columns: 42px 54px minmax(0, 1fr);
-            gap: 7px;
-          }
-
-          .autoSellCompactCheck {
-            min-height: 54px;
-          }
-
-          .autoSellCompactThumb {
-            width: 54px;
-            height: 54px;
-          }
-
-          .autoSellCompactRow {
-            grid-template-columns: minmax(0, 1fr) 78px;
-          }
-
-          .autoSellTopControls .autoSellToolbarButtons {
-            grid-template-columns: 1fr;
-          }
+          .mobileSticky { display: grid; }
+          .modal { border-radius: 24px; padding: 18px; }
+          .autoSellItem { grid-template-columns: auto 1fr; }
+          .autoSellItem .autoSellInput:last-child { grid-column: 1 / -1; }
         }
 
         @media (max-width: 420px) {
-          .statsSection {
-            grid-template-columns: 1fr;
-          }
+          .spotlightGrid { grid-template-columns: 1fr; }
+          .publicProfileActions { grid-template-columns: 1fr; }
+          .cardImageBox { height: 98px; }
+          .cardName { font-size: 13px; }
+          .cardMeta { font-size: 10.5px; }
+          .mobileSticky { grid-template-columns: 1fr; }
+        }
 
-          .eliteMobileSticky {
-            grid-template-columns: 1fr;
-          }
-
-          .eliteMobileButton {
-            width: 100%;
-            box-sizing: border-box;
-          }
+        @media (max-width: 360px) {
+          .cardsGrid { grid-template-columns: 1fr; }
+          .cardImageBox { height: 140px; }
         }
       `}</style>
 
-      <div className="galaxyStars">
-        <div className="eliteStatusStack">
-          {notice && <div className="eliteNotice">{notice}</div>}
-          {error && <div className="eliteError">{error}</div>}
+      <div className="shell">
+        <div className="statusStack">
+          {notice && <div className="notice">{notice}</div>}
+          {error && <div className="error">{error}</div>}
         </div>
 
-        <section className="heroSection">
+        <section className="hero">
           <div className="heroTop">
             <div>
               <h1 className="heroTitle">My Collection 💜</h1>
-              <div className="heroSubtitle">
-                Track what you own, what you need, and what you can trade.
-              </div>
+              <div className="heroSubtitle">Track what you own, what you need, and what you can trade.</div>
             </div>
 
             <div className="heroProgress">
-              <div style={{ fontSize: 14, opacity: 0.88, marginBottom: 8 }}>
-                Collection Completion
-              </div>
-              <div style={{ fontSize: 30, fontWeight: 900, marginBottom: 10 }}>
-                {completion}%
-              </div>
-              <div
-                style={{
-                  height: 10,
-                  borderRadius: 999,
-                  background: "rgba(255,255,255,0.15)",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    width: `${completion}%`,
-                    height: "100%",
-                    background: "linear-gradient(90deg,#60a5fa,#c084fc)",
-                  }}
-                />
-              </div>
+              <div style={{ fontSize: 14, opacity: 0.88, marginBottom: 8 }}>Collection Completion</div>
+              <div style={{ fontSize: 30, fontWeight: 1000, marginBottom: 10 }}>{completion}%</div>
+              <div className="progressTrack"><div className="progressFill" style={{ width: `${completion}%` }} /></div>
             </div>
           </div>
 
           {!isSubscribed && (
             <div className="upgradeBox">
-              <div style={{ fontWeight: 900, marginBottom: 4 }}>
-                Free plan: up to 50 saved Doorables
-              </div>
-              <div style={{ fontSize: 14, color: "#4b5563" }}>
-                You are using {ownedCount}/50 saved Doorables. Upgrade to unlock unlimited collection, marketplace, and selling.
-              </div>
-              <div style={{ marginTop: 10 }}>
-                <Link
-                  href="/pricing"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "10px 14px",
-                    borderRadius: 12,
-                    background: "#4f46e5",
-                    color: "white",
-                    textDecoration: "none",
-                    fontWeight: 800,
-                    minHeight: 44,
-                  }}
-                >
-                  Upgrade
-                </Link>
-              </div>
+              <div style={{ fontWeight: 1000, marginBottom: 4 }}>Free plan: up to 50 saved Doorables</div>
+              <div className="mutedText">You are using {ownedCount}/50 saved Doorables. Upgrade to unlock unlimited collection, marketplace, and selling.</div>
+              <div style={{ marginTop: 10 }}><Link href="/pricing" className="primaryButton">Upgrade</Link></div>
             </div>
           )}
         </section>
 
-        <section id="upgrade-wall" className="eliteUpgradeWall">
+        <section id="upgrade-wall" className="upgradeWall">
           <div>
-            <div className="eliteUpgradeEyebrow">
-              {isSubscribed ? "👑 Full Access Active" : freeLimitReached ? "💜 Free Vault Full" : "✨ Free Collector Plan"}
-            </div>
-            <div className="eliteUpgradeTitle">
-              {isSubscribed ? "Unlimited collector tracking unlocked" : freeLimitReached ? "You reached 50 saved Doorables" : `Save ${freeSlotsLeft} more Doorables for free`}
-            </div>
-            <div className="eliteUpgradeText">
+            <div className="eyebrow">{isSubscribed ? "👑 Full Access Active" : freeLimitReached ? "💜 Free Vault Full" : "✨ Free Collector Plan"}</div>
+            <div className="upgradeTitle">{isSubscribed ? "Unlimited collector tracking unlocked" : freeLimitReached ? "You reached 50 saved Doorables" : `Save ${freeSlotsLeft} more Doorables for free`}</div>
+            <div className="mutedText">
               {isSubscribed
                 ? "You have unlimited collection tracking, marketplace access, selling tools, photo submissions, public collector features, and full vault access."
                 : freeLimitReached
@@ -3156,51 +1824,35 @@ export default function Page() {
                   : `You are using ${ownedCount}/${FREE_LIMIT} free saved Doorables. Upgrade anytime for unlimited tracking.`}
             </div>
             {!isSubscribed && (
-              <div className="elitePlanRow">
-                <div className="eliteMiniPlan">
-                  <span>Monthly</span>
-                  <strong>{MONTHLY_PRICE_LABEL}</strong>
-                </div>
-                <div className="eliteMiniPlan best">
-                  <span>Best Value</span>
-                  <strong>{YEARLY_PRICE_LABEL}</strong>
-                </div>
+              <div className="planRow">
+                <div className="miniPlan"><span>Monthly</span><strong>{MONTHLY_PRICE_LABEL}</strong></div>
+                <div className="miniPlan best"><span>Best Value</span><strong>{YEARLY_PRICE_LABEL}</strong></div>
               </div>
             )}
           </div>
-          {!isSubscribed && (
-            <Link href="/pricing" className="eliteUpgradeButton">
-              Upgrade for Full Access
-            </Link>
-          )}
+          {!isSubscribed && <Link href="/pricing" className="primaryButton">Upgrade for Full Access</Link>}
         </section>
 
         <section className="tierGrid">
-          {[collectionTier, marketplaceTier, communityTier].map((tier) => (
+          {[
+            { title: "Collection Tier", ...collectionTier },
+            { title: "Marketplace Tier", ...marketplaceTier },
+            { title: "Community Tier", ...communityTier },
+          ].map((tier) => (
             <div key={tier.title} className="tierCard">
               <div className="tierAccent" style={{ background: tier.accent }} />
               <div style={{ paddingLeft: 12 }}>
-                <div style={{ fontSize: 13, color: "#6b7280", fontWeight: 800, marginBottom: 6 }}>
-                  {tier.title}
-                </div>
-                <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 6 }}>
-                  {tier.label}
-                </div>
-                <div style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.5 }}>
-                  {tier.subtext}
-                </div>
-
+                <div style={{ fontSize: 13, color: "#6b7280", fontWeight: 800, marginBottom: 6 }}>{tier.title}</div>
+                <div style={{ fontSize: 24, fontWeight: 1000, marginBottom: 6 }}>{tier.label}</div>
+                <div className="mutedText" style={{ fontSize: 14 }}>{tier.subtext}</div>
                 {tier.title === "Marketplace Tier" && (
                   <div style={{ marginTop: 8, fontSize: 14, fontWeight: 800, color: "#7c3aed" }}>
                     {renderStars(marketplaceTier.stars)}{" "}
                     <span style={{ color: "#6b7280", fontWeight: 700 }}>
-                      {marketplaceTier.stars > 0
-                        ? `${marketplaceTier.stars.toFixed(1)} · ${marketplaceReviewCount} review${marketplaceReviewCount === 1 ? "" : "s"}`
-                        : "No ratings yet"}
+                      {marketplaceTier.stars > 0 ? `${marketplaceTier.stars.toFixed(1)} · ${marketplaceReviewCount} review${marketplaceReviewCount === 1 ? "" : "s"}` : "No ratings yet"}
                     </span>
                   </div>
                 )}
-
                 {tier.title === "Community Tier" && (
                   <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
                     This month: {monthlyMessages} chats • {monthlyListings} listings • {monthlyPhotos} photos • {monthlyFeedback} feedback
@@ -3212,107 +1864,59 @@ export default function Page() {
         </section>
 
         {username && (
-          <section className="panelCard">
+          <section className="panel">
             <div className="publicProfileRow">
               <div>
-                <div style={{ fontWeight: 900, marginBottom: 6 }}>Public Collector Page</div>
-                <div className="publicProfileMeta">
-                  Your current visibility: <strong>{getVisibilityLabel()}</strong>
-                  <br />
+                <div style={{ fontWeight: 1000, marginBottom: 6 }}>Public Collector Page</div>
+                <div className="mutedText" style={{ fontSize: 13 }}>
+                  Your current visibility: <strong>{getVisibilityLabel()}</strong><br />
                   Public link:{" "}
-                  <Link
-                    href={`/collector/${username}`}
-                    style={{
-                      color: "#4f46e5",
-                      fontWeight: 900,
-                      textDecoration: "underline",
-                      textUnderlineOffset: 3,
-                    }}
-                  >
+                  <Link href={`/collector/${username}`} style={{ color: "#4f46e5", fontWeight: 900, textDecoration: "underline", textUnderlineOffset: 3 }}>
                     /collector/{username}
                   </Link>
                 </div>
-
                 {shareStatus && <div className="copyStatus">{shareStatus}</div>}
               </div>
 
               <div className="publicProfileActions">
-                <Link href={`/collector/${username}`} className="publicProfileButton">
-                  View Public Profile
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={() => void sharePublicProfile()}
-                  className="publicProfileButton secondary"
-                >
-                  Share Profile 🔗
-                </button>
+                <Link href={`/collector/${username}`} className="primaryButton">View Profile</Link>
+                <button type="button" onClick={() => void sharePublicProfile()} className="primaryButton">Share 🔗</button>
               </div>
             </div>
           </section>
         )}
 
-        <section className="panelCard">
-          <div style={{ fontWeight: 900, marginBottom: 10 }}>Collection Visibility</div>
-
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <section className="panel">
+          <div style={{ fontWeight: 1000, marginBottom: 10 }}>Collection Visibility</div>
+          <div className="visibilityButtons">
             {[
               { value: "private", label: "Private 🔒" },
               { value: "extras_only", label: "Wishlist + Extras 💜" },
               { value: "full", label: "Full Collection 🌟" },
-            ].map((option) => {
-              const active = visibility === option.value;
-
-              return (
-                <button
-                  key={option.value}
-                  onClick={() => void saveVisibility(option.value as "private" | "extras_only" | "full")}
-                  disabled={savingVisibility}
-                  style={{
-                    padding: "10px 14px",
-                    borderRadius: 12,
-                    border: "none",
-                    cursor: savingVisibility ? "wait" : "pointer",
-                    fontWeight: 800,
-                    background: active ? "#4f46e5" : "#eef2ff",
-                    color: active ? "white" : "#3730a3",
-                    opacity: savingVisibility ? 0.7 : 1,
-                    minHeight: 44,
-                  }}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => void saveVisibility(option.value as Visibility)}
+                disabled={savingVisibility}
+                className={`chipButton ${visibility === option.value ? "active" : ""}`}
+                style={{ opacity: savingVisibility ? 0.7 : 1 }}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
-
-          <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
-            Control what other collectors can see on your public profile.
-          </div>
+          <div className="mutedText" style={{ marginTop: 8, fontSize: 13 }}>Control what other collectors can see on your public profile.</div>
         </section>
 
         {publicCollectors.length > 0 && (
-          <section className="panelCard">
-            <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 12 }}>
-              Public Collectors Spotlight ✨
-            </div>
-
+          <section className="panel">
+            <div style={{ fontSize: 18, fontWeight: 1000, marginBottom: 12 }}>Public Collectors Spotlight ✨</div>
             <div className="spotlightGrid">
               {publicCollectors.map((collector) => (
-                <Link
-                  key={collector.id}
-                  href={`/collector/${collector.username}`}
-                  className="spotlightCard"
-                >
-                  <div style={{ fontWeight: 900, fontSize: 16, marginBottom: 6 }}>
-                    @{collector.username}
-                  </div>
-                  <div style={{ fontSize: 13, color: "#6b7280" }}>
-                    {collector.collection_visibility === "full"
-                      ? "Full collection open"
-                      : "Wishlist + extras open"}
-                  </div>
+                <Link key={collector.id} href={`/collector/${collector.username}`} className="spotlightCard">
+                  <div style={{ fontWeight: 1000, fontSize: 16, marginBottom: 6 }}>@{collector.username}</div>
+                  <div style={{ fontSize: 13, color: "#6b7280" }}>{collector.collection_visibility === "full" ? "Full collection open" : "Wishlist + extras open"}</div>
                 </Link>
               ))}
             </div>
@@ -3321,32 +1925,20 @@ export default function Page() {
 
         <section className="autoSellCard">
           <div>
-            <div className="autoSellEyebrow">Marketplace Shortcut</div>
+            <div className="eyebrow">Marketplace Shortcut</div>
             <div className="autoSellTitle">Auto-list your extras 💸</div>
-            <div className="autoSellText">
-              You currently have <strong>{extrasCount}</strong> extra Doorable{extrasCount === 1 ? "" : "s"}.
-              Review your extras first, add prices, and choose exactly which ones become Marketplace listings.
-              Existing active or pending listings are skipped.
+            <div className="mutedText" style={{ fontSize: 14 }}>
+              You currently have <strong>{extrasCount}</strong> extra Doorable{extrasCount === 1 ? "" : "s"}. Review your extras first, add prices, and choose exactly which ones become Marketplace listings.
             </div>
           </div>
-
-          <button
-            type="button"
-            className="autoSellButton"
-            onClick={() => void openAutoSellModal()}
-            disabled={autoSellLoading || extrasCount <= 0}
-          >
-            {autoSellLoading
-              ? "Listing extras..."
-              : extrasCount > 0
-                ? `Review ${extrasCount} Extra${extrasCount === 1 ? "" : "s"}`
-                : "No Extras Yet"}
+          <button type="button" className="primaryButton" onClick={openAutoSellModal} disabled={autoSellLoading || extrasCount <= 0}>
+            {autoSellLoading ? "Listing extras..." : extrasCount > 0 ? `Review ${extrasCount} Extra${extrasCount === 1 ? "" : "s"}` : "No Extras Yet"}
           </button>
         </section>
 
-        <section className="statsSection">
+        <section className="statsGrid">
           {[
-            { label: "Total Doorables", value: totalCount, action: "all" },
+            { label: "Total", value: totalCount, action: "all" },
             { label: "Owned", value: ownedCount, action: "have" },
             { label: "Still Need", value: needCount, action: "need" },
             { label: "Extras", value: extrasCount, action: "extra" },
@@ -3354,25 +1946,22 @@ export default function Page() {
             <button
               key={stat.label}
               type="button"
-              className="statButton"
+              className="statCard"
               onClick={() => {
                 setCollectionFilter(stat.action);
-                document.getElementById("cards-grid")?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "start",
-                });
+                document.getElementById("cards-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
             >
-              <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 6 }}>{stat.label}</div>
-              <div style={{ fontSize: 30, fontWeight: 900 }}>{stat.value}</div>
+              <div className="statLabel">{stat.label}</div>
+              <div className="statValue">{stat.value}</div>
             </button>
           ))}
         </section>
 
-        <section className="panelCard filterPanel">
+        <section className="panel">
           <div className="filterHeader">
             <div>
-              <div style={{ fontWeight: 900, fontSize: 18 }}>Find Doorables</div>
+              <div style={{ fontWeight: 1000, fontSize: 18 }}>Find Doorables</div>
               <div style={{ color: "#64748b", fontSize: 13, marginTop: 3 }}>
                 Showing {pagedCards.length} of {filteredCards.length}
                 {activeFilterCount > 0 ? ` • ${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} active` : ""}
@@ -3382,28 +1971,10 @@ export default function Page() {
 
             <div className="filterHeaderActions">
               <div className="viewModeToggle" aria-label="Collection view mode">
-                <button
-                  type="button"
-                  className={`viewModeButton ${collectionViewMode === "cards" ? "active" : ""}`}
-                  onClick={() => setCollectionViewMode("cards")}
-                >
-                  Cards
-                </button>
-
-                <button
-                  type="button"
-                  className={`viewModeButton ${collectionViewMode === "list" ? "active" : ""}`}
-                  onClick={() => setCollectionViewMode("list")}
-                >
-                  List
-                </button>
+                <button type="button" className={`viewModeButton ${collectionViewMode === "cards" ? "active" : ""}`} onClick={() => setCollectionViewMode("cards")}>Cards</button>
+                <button type="button" className={`viewModeButton ${collectionViewMode === "list" ? "active" : ""}`} onClick={() => setCollectionViewMode("list")}>List</button>
               </div>
-
-              <button
-                type="button"
-                className="filterToggleButton"
-                onClick={() => setShowMobileFilters((prev) => !prev)}
-              >
+              <button type="button" className="filterToggleButton" onClick={() => setShowMobileFilters((prev) => !prev)}>
                 {showMobileFilters ? "Hide Filters" : "Filters"}
               </button>
             </div>
@@ -3416,185 +1987,75 @@ export default function Page() {
               { value: "need", label: "Need" },
               { value: "extra", label: "Extras" },
             ].map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={`quickChip ${collectionFilter === option.value ? "active" : ""}`}
-                onClick={() => setCollectionFilter(option.value)}
-              >
+              <button key={option.value} type="button" className={`chipButton ${collectionFilter === option.value ? "active" : ""}`} onClick={() => setCollectionFilter(option.value)}>
                 {option.label}
               </button>
             ))}
-            {activeFilterCount > 0 && (
-              <button type="button" className="clearFiltersButton" onClick={clearFilters}>
-                Clear
-              </button>
-            )}
+            {activeFilterCount > 0 && <button type="button" className="chipButton" onClick={clearFilters}>Clear</button>}
           </div>
 
           <div className={`filterBody ${showMobileFilters || !isMobile ? "open" : ""}`}>
             <div className="filterWrap">
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search name, series, rarity, movie, notes..."
-                className="searchBox"
-              />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, series, rarity, movie, notes..." className="searchBox" />
 
-              <div className="collectionToggleWrap">
+              <div className="chipWrap">
                 {[
                   { value: "all", label: "All" },
                   { value: "have", label: "Have" },
                   { value: "need", label: "Need" },
                   { value: "extra", label: "+Extra" },
-                ].map((option) => {
-                  const active = collectionFilter === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      onClick={() => setCollectionFilter(option.value)}
-                      style={{
-                        padding: "9px 14px",
-                        borderRadius: 10,
-                        border: "none",
-                        cursor: "pointer",
-                        fontWeight: 800,
-                        background: active ? "#4f46e5" : "transparent",
-                        color: active ? "white" : "#3730a3",
-                        minHeight: 40,
-                      }}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
+                ].map((option) => (
+                  <button key={option.value} type="button" onClick={() => setCollectionFilter(option.value)} className={`chipButton ${collectionFilter === option.value ? "active" : ""}`}>
+                    {option.label}
+                  </button>
+                ))}
               </div>
 
               <select value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)} className="mobileSelect">
-                {seriesOptions.map((series) => (
-                  <option key={series} value={series}>
-                    {series === "all" ? "All Series" : series}
-                  </option>
-                ))}
+                {seriesOptions.map((series) => <option key={series} value={series}>{series === "all" ? "All Series" : series}</option>)}
               </select>
 
               <select value={subcategoryFilter} onChange={(e) => setSubcategoryFilter(e.target.value)} className="mobileSelect">
-                {subcategoryOptions.map((subcategory) => (
-                  <option key={subcategory} value={subcategory}>
-                    {subcategory === "all" ? "All Subcategories" : subcategory}
-                  </option>
-                ))}
+                {subcategoryOptions.map((subcategory) => <option key={subcategory} value={subcategory}>{subcategory === "all" ? "All Subcategories" : subcategory}</option>)}
               </select>
 
               <select value={movieFilter} onChange={(e) => setMovieFilter(e.target.value)} className="mobileSelect">
-                {movieOptions.map((movie) => (
-                  <option key={movie} value={movie}>
-                    {movie === "all" ? "All Movies" : movie}
-                  </option>
-                ))}
+                {movieOptions.map((movie) => <option key={movie} value={movie}>{movie === "all" ? "All Movies" : movie}</option>)}
               </select>
 
               <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} className="mobileSelect">
-                {rarityOptions.map((rarity) => (
-                  <option key={rarity} value={rarity}>
-                    {rarity === "all" ? "All Rarities" : rarity}
-                  </option>
-                ))}
+                {rarityOptions.map((rarity) => <option key={rarity} value={rarity}>{rarity === "all" ? "All Rarities" : rarity}</option>)}
               </select>
 
-              {activeFilterCount > 0 && (
-                <button type="button" className="clearFiltersButton" onClick={clearFilters}>
-                  Clear Filters
-                </button>
-              )}
+              {activeFilterCount > 0 && <button type="button" className="secondaryButton" onClick={clearFilters}>Clear Filters</button>}
             </div>
           </div>
         </section>
 
-        <section className="panelCard">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              marginBottom: showSeriesProgress ? 12 : 0,
-              flexWrap: "wrap",
-            }}
-          >
+        <section className="panel">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: showSeriesProgress ? 12 : 0, flexWrap: "wrap" }}>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 900 }}>Series Progress</div>
-              <div style={{ fontSize: 13, color: "#64748b", marginTop: 3, fontWeight: 700 }}>
-                {seriesProgress.length} series tracked • open when you want to jump by series
-              </div>
+              <div style={{ fontSize: 18, fontWeight: 1000 }}>Series Progress</div>
+              <div style={{ fontSize: 13, color: "#64748b", marginTop: 3, fontWeight: 700 }}>{seriesProgress.length} series tracked • open when you want to jump by series</div>
             </div>
-
-            <button
-              type="button"
-              className="clearFiltersButton"
-              onClick={() => setShowSeriesProgress((prev) => !prev)}
-            >
-              {showSeriesProgress ? "Hide Series" : "Show Series"}
-            </button>
+            <button type="button" className="secondaryButton" onClick={() => setShowSeriesProgress((prev) => !prev)}>{showSeriesProgress ? "Hide Series" : "Show Series"}</button>
           </div>
 
           {showSeriesProgress && (
             <>
               <div className="seriesProgressGrid" style={{ marginTop: 12 }}>
                 {visibleSeriesProgress.map((entry) => (
-                  <button
-                    key={entry.series}
-                    onClick={() => jumpToSeries(entry.series)}
-                    className="seriesProgressButton"
-                  >
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>
-                      {entry.series}
-                      {entry.subcategoryLabel && (
-                        <span
-                          style={{
-                            marginLeft: 8,
-                            color: "#6366f1",
-                            fontWeight: 700,
-                          }}
-                        >
-                          • {entry.subcategoryLabel}
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
-                      {entry.owned}/{entry.total} collected • {entry.percent}%
-                    </div>
-
-                    <div
-                      style={{
-                        height: 10,
-                        borderRadius: 999,
-                        background: "#e5e7eb",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${entry.percent}%`,
-                          height: "100%",
-                          background: "linear-gradient(90deg,#60a5fa,#a78bfa)",
-                        }}
-                      />
+                  <button key={entry.series} onClick={() => jumpToSeries(entry.series)} className="seriesProgressButton">
+                    <div style={{ fontWeight: 900, marginBottom: 6 }}>{entry.series}{entry.subcategoryLabel && <span style={{ marginLeft: 8, color: "#6366f1", fontWeight: 700 }}>• {entry.subcategoryLabel}</span>}</div>
+                    <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>{entry.owned}/{entry.total} collected • {entry.percent}%</div>
+                    <div style={{ height: 10, borderRadius: 999, background: "#e5e7eb", overflow: "hidden" }}>
+                      <div style={{ width: `${entry.percent}%`, height: "100%", background: "linear-gradient(90deg,#60a5fa,#a78bfa)" }} />
                     </div>
                   </button>
                 ))}
               </div>
 
-              {isMobile && seriesProgress.length > 6 && (
-                <button
-                  type="button"
-                  className="showMoreButton"
-                  onClick={() => setExpandedSeries((prev) => !prev)}
-                >
-                  {expandedSeries ? "Show fewer series" : `Show all ${seriesProgress.length} series`}
-                </button>
-              )}
+              {isMobile && seriesProgress.length > 6 && <button type="button" className="secondaryButton" style={{ width: "100%", marginTop: 12 }} onClick={() => setExpandedSeries((prev) => !prev)}>{expandedSeries ? "Show fewer series" : `Show all ${seriesProgress.length} series`}</button>}
             </>
           )}
         </section>
@@ -3602,138 +2063,42 @@ export default function Page() {
         <section id="cards-grid" className={collectionViewMode === "list" ? "cardsList" : "cardsGrid"}>
           {pagedCards.map((item, index) => {
             const rarity = rarityTheme(item.rarity);
-            const subtleOverlay =
-              item.qty > 0
-                ? "linear-gradient(rgba(34,197,94,0.08), rgba(34,197,94,0.08))"
-                : "linear-gradient(rgba(168,85,247,0.08), rgba(168,85,247,0.08))";
-
+            const subtleOverlay = item.qty > 0 ? "linear-gradient(rgba(34,197,94,0.08), rgba(34,197,94,0.08))" : "linear-gradient(rgba(168,85,247,0.08), rgba(168,85,247,0.08))";
             const statusText = collectionStatus(item.qty);
             const photoOpen = expandedPhotoCardId === item.id;
+            const canAdd = isSubscribed || item.qty > 0 || ownedCount < FREE_LIMIT;
 
             if (collectionViewMode === "list") {
               return (
-                <div
-                  key={item.id}
-                  className="listCard"
-                  style={{
-                    borderLeft: `6px solid ${rarity.border}`,
-                  }}
-                >
+                <div key={item.id} className="listCard" style={{ borderLeft: `6px solid ${rarity.border}` }}>
                   <div className="listThumb">
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        loading={index < 6 ? "eager" : "lazy"}
-                        decoding="async"
-                      />
-                    ) : (
-                      <div style={{ fontSize: 11, color: "#64748b", fontWeight: 900 }}>
-                        No Image
-                      </div>
-                    )}
+                    {item.image ? <img src={item.image} alt={item.name} loading={index < 6 ? "eager" : "lazy"} decoding="async" /> : <div style={{ fontSize: 11, color: "#64748b", fontWeight: 900 }}>No Image</div>}
                   </div>
 
-                  <div className="listMain">
+                  <div style={{ minWidth: 0 }}>
                     <div className="listTopRow">
                       <div>
                         <div className="listName">{item.name}</div>
-                        <div className="listMeta">
-                          {item.series}
-                          {item.subcategory ? ` • ${item.subcategory}` : ""}
-                          {item.movie ? ` • ${item.movie}` : ""}
-                        </div>
+                        <div className="listMeta">{item.series}{item.subcategory ? ` • ${item.subcategory}` : ""}{item.movie ? ` • ${item.movie}` : ""}</div>
                       </div>
-
-                      <div
-                        className="listRarityBadge"
-                        style={{
-                          background: rarity.badgeBg,
-                          color: rarity.badgeText,
-                        }}
-                      >
-                        {item.rarity}
-                      </div>
+                      <div className="rarityBadge" style={{ background: rarity.badgeBg, color: rarity.badgeText }}>{item.rarity}</div>
                     </div>
 
-                    {!isSubscribed && item.qty <= 0 && ownedCount >= FREE_LIMIT && (
-                      <div style={{ marginTop: 6, padding: 8, borderRadius: 10, background: "#fff1f2", color: "#9f1239", fontWeight: 850, fontSize: 12, lineHeight: 1.35 }}>
-                        Free limit reached. Upgrade to add more.
-                      </div>
-                    )}
+                    {!canAdd && <div className="limitBox" style={{ marginTop: 6 }}>Free limit reached. Upgrade to add more.</div>}
 
-                    <div
-                      className="listStatus"
-                      style={{
-                        color:
-                          statusText === "Need"
-                            ? "#7c3aed"
-                            : statusText === "Extra"
-                              ? "#2563eb"
-                              : "#166534",
-                      }}
-                    >
+                    <div className="statusText" style={{ color: statusText === "Need" ? "#7c3aed" : statusText === "Extra" ? "#2563eb" : "#166534", marginTop: 6 }}>
                       {savingId === item.id ? "Saving..." : statusText}
                     </div>
 
                     <div className="listControls">
                       <div className="listQtyControls">
-                        <button
-                          type="button"
-                          onClick={() => void saveCard(item, item.qty - 1, item.note)}
-                          disabled={savingId === item.id}
-                          className="listQtyButton"
-                        >
-                          −
-                        </button>
-
-                        <div className="listQtyValue">{item.qty}</div>
-
-                        <button
-                          type="button"
-                          onClick={() => void saveCard(item, item.qty + 1, item.note)}
-                          disabled={
-                            savingId === item.id ||
-                            (!isSubscribed && item.qty <= 0 && ownedCount >= FREE_LIMIT)
-                          }
-                          className="listQtyButton"
-                          style={{
-                            opacity:
-                              !isSubscribed && item.qty <= 0 && ownedCount >= FREE_LIMIT
-                                ? 0.45
-                                : 1,
-                            cursor:
-                              !isSubscribed && item.qty <= 0 && ownedCount >= FREE_LIMIT
-                                ? "not-allowed"
-                                : "pointer",
-                          }}
-                        >
-                          +
-                        </button>
+                        <button type="button" onClick={() => void saveCard(item, item.qty - 1, item.note)} disabled={savingId === item.id} className="listQtyButton">−</button>
+                        <div style={{ minWidth: 28, textAlign: "center", fontSize: 18, fontWeight: 1000 }}>{item.qty}</div>
+                        <button type="button" onClick={() => void saveCard(item, item.qty + 1, item.note)} disabled={savingId === item.id || !canAdd} className="listQtyButton" style={{ opacity: !canAdd ? 0.45 : 1, cursor: !canAdd ? "not-allowed" : "pointer" }}>+</button>
                       </div>
 
-                      <input
-                        value={item.note}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setCards((prev) =>
-                            prev.map((c) =>
-                              c.id === item.id ? { ...c, note: value } : c
-                            )
-                          );
-                        }}
-                        placeholder="Note..."
-                        className="listNoteInput"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() => void saveCard(item, item.qty, item.note)}
-                        disabled={savingId === item.id}
-                        className="listSaveButton"
-                      >
-                        {savingId === item.id ? "Saving..." : "Save"}
-                      </button>
+                      <input value={item.note} onChange={(e) => setCards((prev) => prev.map((c) => c.id === item.id ? { ...c, note: e.target.value } : c))} placeholder="Note..." className="listNoteInput" />
+                      <button type="button" onClick={() => void saveCard(item, item.qty, item.note)} disabled={savingId === item.id} className="smallButton saveButton">{savingId === item.id ? "Saving..." : "Save"}</button>
                     </div>
                   </div>
                 </div>
@@ -3741,229 +2106,52 @@ export default function Page() {
             }
 
             return (
-              <div
-                key={item.id}
-                className="floatCard"
-                style={{
-                  background: `${subtleOverlay}, linear-gradient(rgba(0,0,0,0.08), rgba(0,0,0,0.08)), ${rarity.bg}`,
-                  color: rarity.text,
-                  borderRadius: 22,
-                  padding: 12,
-                  border: `4px solid ${rarity.border}`,
-                  boxShadow: `0 12px 28px rgba(0,0,0,0.14), 0 0 18px ${rarity.glow}`,
-                  filter: item.qty > 0 ? "saturate(1.02)" : "saturate(0.98)",
-                }}
-              >
-                <div className="cardImageWrap">
-                  {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      loading={index < 2 ? "eager" : "lazy"}
-                      decoding="async"
-                      className="cardImage"
-                    />
-                  ) : (
-                    <div>No Image</div>
-                  )}
+              <div key={item.id} className="card" style={{ background: `${subtleOverlay}, ${rarity.bg}`, color: rarity.text, borderColor: rarity.border, boxShadow: `0 12px 28px rgba(0,0,0,0.14), 0 0 18px ${rarity.glow}` }}>
+                <div className="cardImageBox">
+                  {item.image ? <img src={item.image} alt={item.name} loading={index < 4 ? "eager" : "lazy"} decoding="async" /> : <div>No Image</div>}
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 8,
-                    alignItems: "start",
-                    marginBottom: 6,
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontWeight: 900,
-                        fontSize: isMobile ? 18 : 20,
-                        lineHeight: 1.1,
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {item.name}
-                    </div>
-                    <div style={{ opacity: 0.8, fontSize: 14 }}>{item.series}</div>
-                  </div>
-                  <div
-                    style={{
-                      padding: "6px 10px",
-                      borderRadius: 999,
-                      fontSize: 12,
-                      fontWeight: 900,
-                      background: rarity.badgeBg,
-                      color: rarity.badgeText,
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {item.rarity}
-                  </div>
+                <div>
+                  <div className="cardName">{item.name}</div>
+                  <div className="cardMeta">{item.series}{item.subcategory ? ` • ${item.subcategory}` : ""}{item.movie ? ` • ${item.movie}` : ""}</div>
                 </div>
 
-                <div style={{ opacity: 0.86, fontSize: 14, marginBottom: 10 }}>
-                  {item.subcategory && <div>{item.subcategory}</div>}
-                  {item.movie && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span aria-hidden="true">🎬</span>
-                      <span>{item.movie}</span>
-                    </div>
-                  )}
-                </div>
+                <div className="rarityBadge" style={{ background: rarity.badgeBg, color: rarity.badgeText }}>{item.rarity}</div>
 
-                {!isSubscribed && item.qty <= 0 && ownedCount >= FREE_LIMIT && (
-                  <div style={{ marginBottom: 8, padding: 10, borderRadius: 12, background: "#fff1f2", color: "#9f1239", fontWeight: 850, fontSize: 13, lineHeight: 1.35 }}>
-                    Free limit reached. Upgrade to add more.
-                  </div>
-                )}
+                {!canAdd && <div className="limitBox">Free limit reached. Upgrade to add more.</div>}
 
-                <div className="qtyControls">
-                  <button
-                    type="button"
-                    onClick={() => void saveCard(item, item.qty - 1, item.note)}
-                    disabled={savingId === item.id}
-                    className="qtyButton"
-                    style={{
-                      border: "1px solid " + rarity.border,
-                      background: "rgba(255,255,255,0.90)",
-                      color: rarity.text,
-                    }}
-                  >
-                    −
-                  </button>
-
+                <div className="qtyRow">
+                  <button type="button" onClick={() => void saveCard(item, item.qty - 1, item.note)} disabled={savingId === item.id} className="qtyButton">−</button>
                   <div className="qtyValue">{item.qty}</div>
-
-                  <button
-                    type="button"
-                    onClick={() => void saveCard(item, item.qty + 1, item.note)}
-                    disabled={savingId === item.id || (!isSubscribed && item.qty <= 0 && ownedCount >= FREE_LIMIT)}
-                    className="qtyButton"
-                    style={{
-                      border: "1px solid " + rarity.border,
-                      background: !isSubscribed && item.qty <= 0 && ownedCount >= FREE_LIMIT ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.90)",
-                      color: rarity.text,
-                      opacity: !isSubscribed && item.qty <= 0 && ownedCount >= FREE_LIMIT ? 0.55 : 1,
-                      cursor: !isSubscribed && item.qty <= 0 && ownedCount >= FREE_LIMIT ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    +
-                  </button>
+                  <button type="button" onClick={() => void saveCard(item, item.qty + 1, item.note)} disabled={savingId === item.id || !canAdd} className="qtyButton" style={{ opacity: !canAdd ? 0.45 : 1, cursor: !canAdd ? "not-allowed" : "pointer" }}>+</button>
                 </div>
 
-                <div
-                  style={{
-                    marginTop: 8,
-                    marginBottom: 8,
-                    fontWeight: 800,
-                    color:
-                      statusText === "Need"
-                        ? "#7c3aed"
-                        : statusText === "Extra"
-                          ? "#2563eb"
-                          : "#166534",
-                  }}
-                >
+                <div className="statusText" style={{ color: statusText === "Need" ? "#7c3aed" : statusText === "Extra" ? "#2563eb" : "#166534" }}>
                   {savingId === item.id ? "Saving..." : statusText}
                 </div>
 
-                <textarea
-                  value={item.note}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setCards((prev) =>
-                      prev.map((c) => (c.id === item.id ? { ...c, note: value } : c))
-                    );
-                  }}
-                  placeholder="Notes..."
-                  style={{
-                    width: "100%",
-                    marginTop: 8,
-                    minHeight: isMobile ? 58 : 70,
-                    borderRadius: 12,
-                    border: "1px solid " + rarity.border,
-                    background: "rgba(255,255,255,0.82)",
-                    padding: 10,
-                    color: "#111827",
-                    boxSizing: "border-box",
-                    fontSize: 14,
-                  }}
-                />
+                {isMobile ? (
+                  <input value={item.note} onChange={(e) => setCards((prev) => prev.map((c) => c.id === item.id ? { ...c, note: e.target.value } : c))} placeholder="Note..." className="noteInput" />
+                ) : (
+                  <textarea value={item.note} onChange={(e) => setCards((prev) => prev.map((c) => c.id === item.id ? { ...c, note: e.target.value } : c))} placeholder="Notes..." className="noteInput" style={{ minHeight: 70 }} />
+                )}
 
-                <button
-                  onClick={() => void saveCard(item, item.qty, item.note)}
-                  disabled={savingId === item.id}
-                  style={{
-                    marginTop: 8,
-                    width: "100%",
-                    padding: "11px 12px",
-                    borderRadius: 12,
-                    border: "none",
-                    cursor: "pointer",
-                    fontWeight: 800,
-                    background: rarity.badgeBg,
-                    color: rarity.badgeText,
-                    minHeight: 44,
-                  }}
-                >
-                  {savingId === item.id ? "Saving Note..." : "Save Note"}
-                </button>
-
-                <button
-                  type="button"
-                  className="photoToggleButton"
-                  onClick={() => setExpandedPhotoCardId(photoOpen ? "" : item.id)}
-                >
-                  {photoOpen ? "Hide photo upload" : "Submit better photo"}
-                </button>
+                <div className="cardButtonRow">
+                  <button type="button" onClick={() => void saveCard(item, item.qty, item.note)} disabled={savingId === item.id} className="smallButton saveButton">{savingId === item.id ? "Saving..." : "Save"}</button>
+                  <button type="button" className="smallButton photoButton" onClick={() => setExpandedPhotoCardId(photoOpen ? "" : item.id)}>{photoOpen ? "Hide" : "Photo"}</button>
+                </div>
 
                 {photoOpen && (
                   <div className="photoBox">
-                    <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>
-                      Submit a better photo
-                    </div>
-
                     <textarea
                       value={photoNote[item.id] || ""}
-                      onChange={(e) =>
-                        setPhotoNote((prev) => ({
-                          ...prev,
-                          [item.id]: e.target.value,
-                        }))
-                      }
-                      placeholder="Optional note about this image..."
-                      style={{
-                        width: "100%",
-                        minHeight: 56,
-                        borderRadius: 10,
-                        border: "1px solid #d1d5db",
-                        padding: 8,
-                        boxSizing: "border-box",
-                        marginBottom: 8,
-                        background: "rgba(255,255,255,0.9)",
-                        color: "#111827",
-                        fontSize: 14,
-                      }}
+                      onChange={(e) => setPhotoNote((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                      placeholder="Optional image note..."
+                      className="noteInput"
+                      style={{ minHeight: 52, marginBottom: 8 }}
                     />
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => void handlePhotoSubmission(item, e.target.files?.[0] ?? null)}
-                      disabled={uploadingPhotoId === item.id}
-                      style={{ width: "100%" }}
-                    />
-
-                    <div style={{ marginTop: 6, fontSize: 12, color: "#4b5563" }}>
-                      {uploadingPhotoId === item.id
-                        ? "Submitting photo..."
-                        : "Uploads are sent for review before they replace the main image."}
-                    </div>
+                    <input type="file" accept="image/*" onChange={(e) => void handlePhotoSubmission(item, e.target.files?.[0] ?? null)} disabled={uploadingPhotoId === item.id} style={{ width: "100%" }} />
+                    <div style={{ marginTop: 6, fontSize: 11, color: "#4b5563" }}>{uploadingPhotoId === item.id ? "Submitting..." : "Sent for review."}</div>
                   </div>
                 )}
               </div>
@@ -3973,264 +2161,70 @@ export default function Page() {
 
         {totalPages > 1 && (
           <div className="pager">
-            <button
-              type="button"
-              className="pagerButton"
-              disabled={safePage <= 1}
-              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-            >
-              Previous
-            </button>
-
-            <div style={{ fontWeight: 800 }}>
-              Page {safePage} of {totalPages}
-            </div>
-
-            <button
-              type="button"
-              className="pagerButton"
-              disabled={safePage >= totalPages}
-              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-            >
-              Next
-            </button>
+            <button type="button" className="pagerButton" disabled={safePage <= 1} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>Previous</button>
+            <div style={{ fontWeight: 900 }}>Page {safePage} of {totalPages}</div>
+            <button type="button" className="pagerButton" disabled={safePage >= totalPages} onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}>Next</button>
           </div>
         )}
 
         {!isSubscribed && (
-          <div className="eliteMobileSticky">
+          <div className="mobileSticky">
             <div>
-              <div className="eliteMobileTop">
-                {ownedCount}/{FREE_LIMIT} free saves used
-              </div>
-              <div className="eliteMobileTrack">
-                <div
-                  className="eliteMobileFill"
-                  style={{ width: `${Math.min(100, Math.round((ownedCount / FREE_LIMIT) * 100))}%` }}
-                />
-              </div>
+              <div style={{ color: "#ffffff", fontSize: 13, fontWeight: 1000, marginBottom: 7 }}>{ownedCount}/{FREE_LIMIT} free saves used</div>
+              <div className="progressTrack"><div className="progressFill" style={{ width: `${Math.min(100, Math.round((ownedCount / FREE_LIMIT) * 100))}%` }} /></div>
             </div>
-
-            <Link href="/pricing" className="eliteMobileButton">
-              Upgrade
-            </Link>
+            <Link href="/pricing" className="secondaryButton">Upgrade</Link>
           </div>
         )}
 
         {showAutoSellModal && (
-          <div className="eliteModalOverlay">
-            <div
-              className="eliteModal autoSellModal"
-              style={{
-                width: "min(980px, 100%)",
-                textAlign: "left",
-                height: "min(82vh, 760px)",
-                maxHeight: "82vh",
-                display: "flex",
-                flexDirection: "column",
-                overflow: "hidden",
-              }}
-            >
-              <button
-                type="button"
-                className="eliteModalClose"
-                onClick={() => setShowAutoSellModal(false)}
-              >
-                ×
-              </button>
+          <div className="modalOverlay">
+            <div className="modal">
+              <button type="button" className="modalClose" onClick={() => setShowAutoSellModal(false)}>×</button>
+              <h2 style={{ marginTop: 0, fontSize: "clamp(1.7rem, 5vw, 2.4rem)", lineHeight: 1, fontWeight: 1000 }}>Choose extras to list</h2>
+              <div className="mutedText">Check the extras you want to post, add a price, and keep the description short.</div>
 
-              <div className="autoSellSimpleHeader">
-                <div className="eliteModalIcon autoSellSimpleIcon">💸</div>
-                <div>
-                  <h2 className="eliteModalTitle">Choose extras to list</h2>
-                  <div className="eliteModalText autoSellSimpleText">
-                    Check the extras you want to post, add a price, and keep the description short.
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+                <button type="button" className="secondaryButton" onClick={() => setAllAutoSellDraftsSelected(true)}>Select All</button>
+                <button type="button" className="secondaryButton" onClick={() => setAllAutoSellDraftsSelected(false)}>Deselect All</button>
+              </div>
+
+              <div className="autoSellList">
+                {autoSellDrafts.map((draft) => (
+                  <div key={draft.cardId} className="autoSellItem">
+                    <label style={{ display: "grid", gap: 4, justifyItems: "center", fontWeight: 1000, fontSize: 12 }}>
+                      <input type="checkbox" checked={draft.selected} onChange={(e) => updateAutoSellDraft(draft.cardId, { selected: e.target.checked })} />
+                      {draft.selected ? "List" : "Skip"}
+                    </label>
+                    <input className="autoSellInput" value={draft.title} onChange={(e) => updateAutoSellDraft(draft.cardId, { title: e.target.value })} placeholder="Listing title" />
+                    <input className="autoSellInput" value={draft.price} onChange={(e) => updateAutoSellDraft(draft.cardId, { price: e.target.value })} placeholder="Price" inputMode="decimal" />
+                    <textarea className="autoSellInput" value={draft.description} onChange={(e) => updateAutoSellDraft(draft.cardId, { description: e.target.value })} placeholder="Description" style={{ gridColumn: "1 / -1", minHeight: 62 }} />
                   </div>
-                </div>
+                ))}
               </div>
 
-              <div className="autoSellTopControls">
-                <div className="autoSellTopSummary">
-                  {autoSellStats.total} extra{autoSellStats.total === 1 ? "" : "s"} • {autoSellStats.selected} selected
-                </div>
-
-                <div className="autoSellToolbarButtons">
-                  <button
-                    type="button"
-                    className="autoSellSmallButton"
-                    onClick={() => setAllAutoSellDraftsSelected(true)}
-                  >
-                    Select All
-                  </button>
-
-                  <button
-                    type="button"
-                    className="autoSellSmallButton"
-                    onClick={() => setAllAutoSellDraftsSelected(false)}
-                  >
-                    Deselect All
-                  </button>
-                </div>
-              </div>
-
-              <div className="autoSellListTitle">
-                <strong>Extras being reviewed</strong>
-                <span>Scroll this big section. Each row shows the picture, title, price, and short description.</span>
-              </div>
-
-              <div className="autoSellBigList">
-                {autoSellDrafts.map((draft) => {
-                  const item = cards.find((card) => card.id === draft.cardId);
-                  const extraQty = item ? Math.max(1, Number(item.qty || 0) - 1) : 1;
-                  const hasPrice = draft.price.trim() !== "";
-
-                  return (
-                    <div key={draft.cardId} className={`autoSellCompactItem ${draft.selected ? "selected" : ""}`}>
-                      <label className="autoSellCompactCheck">
-                        <input
-                          type="checkbox"
-                          checked={draft.selected}
-                          onChange={(e) =>
-                            updateAutoSellDraft(draft.cardId, {
-                              selected: e.target.checked,
-                            })
-                          }
-                        />
-                        <span>{draft.selected ? "List" : "Skip"}</span>
-                      </label>
-
-                      <div className="autoSellCompactThumb">
-                        {item?.image ? (
-                          <img src={item.image} alt={item.name} loading="lazy" decoding="async" />
-                        ) : (
-                          <div>No image</div>
-                        )}
-                      </div>
-
-                      <div className="autoSellCompactBody">
-                        <div className="autoSellCompactRow">
-                          <input
-                            className="autoSellInput autoSellCompactTitle"
-                            value={draft.title}
-                            onChange={(e) =>
-                              updateAutoSellDraft(draft.cardId, {
-                                title: e.target.value,
-                              })
-                            }
-                            placeholder="Listing title"
-                          />
-
-                          <input
-                            className={`autoSellInput autoSellCompactPrice ${hasPrice ? "autoSellPriceReady" : ""}`}
-                            value={draft.price}
-                            onChange={(e) =>
-                              updateAutoSellDraft(draft.cardId, {
-                                price: e.target.value,
-                              })
-                            }
-                            placeholder="Price"
-                            inputMode="decimal"
-                          />
-                        </div>
-
-                        <textarea
-                          className="autoSellTextarea autoSellCompactDescription"
-                          value={draft.description}
-                          onChange={(e) =>
-                            updateAutoSellDraft(draft.cardId, {
-                              description: e.target.value,
-                            })
-                          }
-                          placeholder="Small description"
-                        />
-
-                        <div className="autoSellCompactMeta">
-                          <span>Extra qty: {extraQty}</span>
-                          <span>{item?.series || "Unknown Series"}</span>
-                          <span>{item?.rarity || "Unknown rarity"}</span>
-                          <span className={hasPrice ? "ready" : "needs"}>
-                            {hasPrice ? "Price ready" : "No price"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="autoSellModalActions autoSellSimpleActions">
-                <div className="autoSellSelectedNote">
-                  {autoSellStats.selected} selected
-                </div>
-
-                <button
-                  type="button"
-                  className="autoSellCancelButton"
-                  onClick={() => setShowAutoSellModal(false)}
-                  disabled={autoSellLoading}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  className="eliteModalButton"
-                  onClick={() => void handleAutoSellExtras()}
-                  disabled={autoSellLoading || autoSellStats.selected <= 0}
-                  style={{ marginTop: 0 }}
-                >
-                  {autoSellLoading ? "Creating..." : "Create Listings 💜"}
-                </button>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 10, alignItems: "center", marginTop: 14 }}>
+                <div style={{ color: "#475569", fontWeight: 900 }}>{autoSellStats.selected} selected</div>
+                <button type="button" className="secondaryButton" onClick={() => setShowAutoSellModal(false)} disabled={autoSellLoading}>Cancel</button>
+                <button type="button" className="primaryButton" onClick={() => void handleAutoSellExtras()} disabled={autoSellLoading || autoSellStats.selected <= 0}>{autoSellLoading ? "Creating..." : "Create Listings 💜"}</button>
               </div>
             </div>
           </div>
         )}
 
         {showUpgradeModal && (
-          <div className="eliteModalOverlay">
-            <div className="eliteModal">
-              <button
-                type="button"
-                className="eliteModalClose"
-                onClick={() => setShowUpgradeModal(false)}
-              >
-                ×
-              </button>
-
-              <div className="eliteModalIcon">💜</div>
-              <h2 className="eliteModalTitle">Your free vault is full</h2>
-
-              <div className="eliteModalText">
-                Free accounts can save up to {FREE_LIMIT} Doorables. Upgrade for unlimited tracking,
-                marketplace tools, selling extras, and full collector access.
+          <div className="modalOverlay">
+            <div className="modal" style={{ textAlign: "center", width: "min(540px, 100%)" }}>
+              <button type="button" className="modalClose" onClick={() => setShowUpgradeModal(false)}>×</button>
+              <div style={{ width: 64, height: 64, margin: "0 auto 12px", borderRadius: 22, display: "grid", placeItems: "center", fontSize: 31, background: "linear-gradient(135deg, #ddd6fe, #bfdbfe)" }}>💜</div>
+              <h2 style={{ margin: 0, fontSize: "clamp(1.8rem, 6vw, 2.6rem)", lineHeight: 1, letterSpacing: -1, fontWeight: 1000 }}>Your free vault is full</h2>
+              <div className="mutedText" style={{ marginTop: 13 }}>Free accounts can save up to {FREE_LIMIT} Doorables. Upgrade for unlimited tracking, marketplace tools, selling extras, and full collector access.</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 18 }}>
+                <div className="miniPlan"><span>Monthly</span><strong>$3</strong></div>
+                <div className="miniPlan best"><span>Best Value</span><strong>$15</strong></div>
               </div>
-
-              <div className="eliteModalPlans">
-                <div className="eliteModalPlan">
-                  <div className="elitePlanName">Monthly</div>
-                  <div className="elitePlanPrice">$3</div>
-                  <div className="elitePlanSub">Flexible full access</div>
-                </div>
-
-                <div className="eliteModalPlan best">
-                  <div className="eliteBestValueTag">Best Value</div>
-                  <div className="elitePlanName">Yearly</div>
-                  <div className="elitePlanPrice">$15</div>
-                  <div className="elitePlanSub">Best for collectors</div>
-                </div>
-              </div>
-
-              <Link href="/pricing" className="eliteModalButton">
-                Upgrade for Full Access
-              </Link>
-
-              <button
-                type="button"
-                className="eliteModalLater"
-                onClick={() => setShowUpgradeModal(false)}
-              >
-                Maybe later
-              </button>
+              <Link href="/pricing" className="primaryButton" style={{ marginTop: 18, width: "100%" }}>Upgrade for Full Access</Link>
+              <button type="button" className="secondaryButton" style={{ marginTop: 10, width: "100%" }} onClick={() => setShowUpgradeModal(false)}>Maybe later</button>
             </div>
           </div>
         )}

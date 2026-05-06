@@ -44,6 +44,20 @@ export default function AppHeader() {
   }, [pathname]);
 
   useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const originalOverflow = document.body.style.overflow;
+
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
     let active = true;
 
     async function safeLoadUnreadCount(userId: string) {
@@ -306,7 +320,7 @@ export default function AppHeader() {
         .adorableHeader {
           position: sticky;
           top: 0;
-          z-index: 50;
+          z-index: 10000;
           backdrop-filter: blur(18px);
           background:
             radial-gradient(circle at 10% 0%, rgba(236, 72, 153, 0.2), transparent 26%),
@@ -616,24 +630,38 @@ export default function AppHeader() {
           }
 
           .avMobilePanel {
-            grid-column: 1 / -1;
-            width: 100%;
+            position: fixed;
+            left: 12px;
+            right: 12px;
+            top: 76px;
+            bottom: 12px;
+            z-index: 10001;
             display: none;
-            gap: 12px;
-            padding: 14px;
+            gap: 9px;
+            padding: 12px;
             border-radius: 24px;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-width: thin;
             background:
               radial-gradient(circle at top right, rgba(147, 197, 253, 0.17), transparent 34%),
-              linear-gradient(135deg, rgba(30, 27, 75, 0.96), rgba(49, 46, 129, 0.92));
-            border: 1px solid rgba(255, 255, 255, 0.16);
+              linear-gradient(135deg, rgba(30, 27, 75, 0.98), rgba(49, 46, 129, 0.96));
+            border: 1px solid rgba(255, 255, 255, 0.18);
             box-shadow:
               inset 0 1px 0 rgba(255, 255, 255, 0.12),
-              0 14px 30px rgba(0, 0, 0, 0.26);
+              0 24px 60px rgba(0, 0, 0, 0.46);
           }
 
           .avMobilePanelOpen {
             display: grid;
+            grid-auto-rows: max-content;
           }
+
+          .avMobilePanel::after {
+            content: "";
+            height: 4px;
+          }
+
 
           .avMobilePanelHeader {
             display: flex;
@@ -644,28 +672,28 @@ export default function AppHeader() {
 
           .avMobileTitle {
             color: white;
-            font-size: 26px;
+            font-size: 21px;
             line-height: 1.05;
             font-weight: 1000;
           }
 
           .avMobileSubtitle {
-            margin-top: 5px;
+            margin-top: 4px;
             color: rgba(255, 255, 255, 0.78);
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 850;
           }
 
           .avMobileEmailBubble {
-            min-height: 54px;
-            padding: 13px 16px;
+            min-height: 44px;
+            padding: 10px 13px;
             border-radius: 18px;
             display: flex;
             align-items: center;
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.09));
             border: 1px solid rgba(255, 255, 255, 0.18);
             color: #f3f4f6;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 900;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -675,27 +703,27 @@ export default function AppHeader() {
           .avMobileNav {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 10px;
+            gap: 8px;
           }
 
           .avMobileNav .avNavBubble {
             width: 100%;
-            min-height: 66px;
+            min-height: 52px;
             justify-content: flex-start;
-            padding: 13px 16px;
-            border-radius: 18px;
+            padding: 9px 12px;
+            border-radius: 17px;
             white-space: nowrap;
           }
 
           .avMobileNav .avNavIcon {
-            width: 42px;
-            height: 42px;
-            min-width: 42px;
-            font-size: 22px;
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            font-size: 18px;
           }
 
           .avMobileNav .avNavLabel {
-            font-size: 19px;
+            font-size: 16px;
             font-weight: 1000;
           }
         }
@@ -719,9 +747,19 @@ export default function AppHeader() {
             display: none;
           }
 
+          .avMobilePanel {
+            top: 70px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            padding: 10px;
+            gap: 8px;
+          }
+
           .avMobilePanelHeader {
             flex-direction: column;
             align-items: stretch;
+            gap: 8px;
           }
 
           .avMobileAccountButton {

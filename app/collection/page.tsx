@@ -1292,19 +1292,21 @@ export default function Page() {
           height: 180px;
           background: rgba(255,255,255,0.95);
           border-radius: 18px;
-          display: grid;
-          place-items: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           overflow: hidden;
-          padding: 14px;
+          padding: 10px;
           position: relative;
         }
 
         .cardImageBox img {
-          width: auto;
-          height: auto;
-          max-width: 84%;
-          max-height: 84%;
+          width: 100%;
+          height: 100%;
+          max-width: 100%;
+          max-height: 100%;
           object-fit: contain;
+          object-position: center center;
           display: block;
           transform-origin: center center;
           transition: transform 0.22s ease;
@@ -1443,17 +1445,21 @@ export default function Page() {
           border-radius: 14px;
           background: #f8fafc;
           border: 1px solid #e5e7eb;
-          display: grid;
-          place-items: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           overflow: hidden;
+          padding: 6px;
+          box-sizing: border-box;
         }
 
         .listThumb img {
-          width: auto;
-          height: auto;
-          max-width: 84%;
-          max-height: 84%;
+          width: 100%;
+          height: 100%;
+          max-width: 100%;
+          max-height: 100%;
           object-fit: contain;
+          object-position: center center;
           display: block;
           transform-origin: center center;
           transition: transform 0.22s ease;

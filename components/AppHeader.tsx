@@ -301,11 +301,11 @@ export default function AppHeader() {
           position: sticky;
           top: 0;
           z-index: 50;
-          backdrop-filter: blur(16px);
+          backdrop-filter: blur(18px);
           background:
-            radial-gradient(circle at 12% 0%, rgba(236, 72, 153, 0.2), transparent 28%),
-            radial-gradient(circle at 88% 0%, rgba(59, 130, 246, 0.2), transparent 28%),
-            linear-gradient(135deg, rgba(8, 11, 24, 0.96), rgba(32, 17, 68, 0.94), rgba(30, 41, 99, 0.94));
+            radial-gradient(circle at 10% 0%, rgba(236, 72, 153, 0.18), transparent 24%),
+            radial-gradient(circle at 90% 0%, rgba(59, 130, 246, 0.18), transparent 24%),
+            linear-gradient(135deg, rgba(8, 11, 24, 0.98), rgba(32, 17, 68, 0.95), rgba(30, 41, 99, 0.95));
           border-bottom: 1px solid rgba(255, 255, 255, 0.12);
           box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
         }
@@ -321,11 +321,11 @@ export default function AppHeader() {
         }
 
         .brandLink {
-          display: inline-flex;
+          display: inline-flex !important;
           align-items: center;
           gap: 12px;
-          color: white;
-          text-decoration: none;
+          color: #ffffff !important;
+          text-decoration: none !important;
           min-width: 0;
         }
 
@@ -419,42 +419,43 @@ export default function AppHeader() {
 
         .navBubble {
           position: relative;
-          display: inline-flex;
-          align-items: center;
+          display: inline-flex !important;
+          align-items: center !important;
           justify-content: center;
           gap: 8px;
-          min-height: 44px;
-          padding: 10px 14px;
-          border-radius: 999px;
-          color: #ffffff;
-          text-decoration: none;
+          min-height: 46px;
+          padding: 10px 15px;
+          border-radius: 18px !important;
+          color: #ffffff !important;
+          text-decoration: none !important;
           font-size: 14px;
           font-weight: 900;
           line-height: 1;
           letter-spacing: 0.1px;
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
-          border: 1px solid rgba(255, 255, 255, 0.16);
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08)) !important;
+          border: 1px solid rgba(255, 255, 255, 0.18) !important;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.1),
-            0 8px 18px rgba(0, 0, 0, 0.12);
+            inset 0 1px 0 rgba(255, 255, 255, 0.12),
+            0 8px 18px rgba(0, 0, 0, 0.14) !important;
           transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
           white-space: nowrap;
+          overflow: hidden;
         }
 
         .navBubble:hover {
           transform: translateY(-1px);
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.1)) !important;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.1),
-            0 10px 20px rgba(0, 0, 0, 0.15);
+            inset 0 1px 0 rgba(255, 255, 255, 0.14),
+            0 10px 22px rgba(0, 0, 0, 0.18) !important;
         }
 
         .navBubbleActive {
-          background: linear-gradient(135deg, rgba(236, 72, 153, 0.95), rgba(124, 58, 237, 0.95), rgba(59, 130, 246, 0.95));
-          border-color: rgba(255, 255, 255, 0.26);
+          background: linear-gradient(135deg, rgba(236, 72, 153, 0.98), rgba(124, 58, 237, 0.95), rgba(59, 130, 246, 0.95)) !important;
+          border-color: rgba(255, 255, 255, 0.3) !important;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.14),
-            0 12px 24px rgba(124, 58, 237, 0.28);
+            inset 0 1px 0 rgba(255, 255, 255, 0.15),
+            0 12px 24px rgba(124, 58, 237, 0.32) !important;
         }
 
         .navBubbleIcon {
@@ -472,7 +473,8 @@ export default function AppHeader() {
         }
 
         .navBubbleLabel {
-          color: #ffffff;
+          color: #ffffff !important;
+          text-decoration: none !important;
         }
 
         .unreadBadge {
@@ -502,7 +504,7 @@ export default function AppHeader() {
           max-width: 230px;
           min-height: 42px;
           padding: 10px 14px;
-          border-radius: 999px;
+          border-radius: 18px;
           display: inline-flex;
           align-items: center;
           background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
@@ -520,7 +522,7 @@ export default function AppHeader() {
         .mobileAccountButton {
           min-height: 42px;
           padding: 10px 16px;
-          border-radius: 999px;
+          border-radius: 18px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -548,7 +550,7 @@ export default function AppHeader() {
           display: none;
           min-height: 42px;
           padding: 10px 14px;
-          border-radius: 999px;
+          border-radius: 18px;
           align-items: center;
           justify-content: center;
           gap: 8px;
@@ -574,7 +576,7 @@ export default function AppHeader() {
           }
 
           .navBubble {
-            padding: 10px 12px;
+            padding: 10px 13px;
           }
         }
 
@@ -640,7 +642,7 @@ export default function AppHeader() {
           .mobileSignedInBubble {
             min-height: 44px;
             padding: 10px 14px;
-            border-radius: 999px;
+            border-radius: 18px;
             display: flex;
             align-items: center;
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
@@ -655,7 +657,7 @@ export default function AppHeader() {
 
           .mobileNav {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: 1fr;
             gap: 10px;
           }
 
@@ -664,7 +666,7 @@ export default function AppHeader() {
             min-height: 58px;
             justify-content: flex-start;
             padding: 12px 14px;
-            border-radius: 20px;
+            border-radius: 20px !important;
             white-space: nowrap;
           }
 
@@ -706,14 +708,6 @@ export default function AppHeader() {
 
           .mobileAccountButton {
             width: 100%;
-          }
-
-          .mobileNav {
-            grid-template-columns: 1fr;
-          }
-
-          .mobileNav .navBubble {
-            min-height: 54px;
           }
         }
 

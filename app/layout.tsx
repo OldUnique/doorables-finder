@@ -1,6 +1,8 @@
 
 import AppHeader from "../components/AppHeader";
 
+import { Analytics } from "@vercel/analytics/next";
+
 export const metadata = {
   title: "Adorable Vault | Doorabes Collection Tracker",
   description: "Track your Doorables collection, wishlist, extras, marketplace, and public collector profile with Adorable Vault",
@@ -25,6 +27,7 @@ export default function RootLayout({
       >
         <AppHeader />
         <div style={{ minHeight: "calc(100vh - 76px)" }}>{children}</div>
+<Analytics />
       </body>
     </html>
   );

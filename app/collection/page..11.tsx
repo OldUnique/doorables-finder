@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
@@ -154,8 +154,6 @@ export default function Page() {
   const [movieFilter, setMovieFilter] = useState("all");
   const [collectionFilter, setCollectionFilter] = useState("all");
   const [collectionViewMode, setCollectionViewMode] = useState<"cards" | "list">("cards");
-  const viewModeTouchedRef = useRef(false);
-  const mobileDefaultAppliedRef = useRef(false);
   const [page, setPage] = useState(1);
 
   const [loading, setLoading] = useState(true);
@@ -182,22 +180,7 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
-    const updateMobile = () => {
-      const nextIsMobile = window.innerWidth <= 920;
-      setIsMobile(nextIsMobile);
-
-      // Phones should open in the cleaner List view by default,
-      // but collectors can still switch back to Cards any time.
-      if (
-        nextIsMobile &&
-        !mobileDefaultAppliedRef.current &&
-        !viewModeTouchedRef.current
-      ) {
-        setCollectionViewMode("list");
-        mobileDefaultAppliedRef.current = true;
-      }
-    };
-
+    const updateMobile = () => setIsMobile(window.innerWidth <= 920);
     updateMobile();
     window.addEventListener("resize", updateMobile);
     return () => window.removeEventListener("resize", updateMobile);
@@ -738,7 +721,7 @@ export default function Page() {
     (collectionFilter !== "all" ? 1 : 0) +
     (search.trim() ? 1 : 0);
 
-  const cardsPerPage = collectionViewMode === "list" ? (isMobile ? 35 : 60) : isMobile ? 12 : 24;
+  const cardsPerPage = collectionViewMode === "list" ? (isMobile ? 35 : 80) : isMobile ? 12 : 24;
   const totalPages = Math.max(1, Math.ceil(filteredCards.length / cardsPerPage));
   const safePage = Math.min(page, totalPages);
   const pagedCards = filteredCards.slice((safePage - 1) * cardsPerPage, safePage * cardsPerPage);
@@ -1273,9 +1256,7 @@ export default function Page() {
 
         .cardsList {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-          gap: 12px;
-          align-items: start;
+          gap: 10px;
         }
 
         .card {
@@ -1418,21 +1399,20 @@ export default function Page() {
 
         .listCard {
           display: grid;
-          grid-template-columns: 68px minmax(0, 1fr);
-          gap: 10px;
-          align-items: start;
+          grid-template-columns: 76px minmax(0, 1fr);
+          gap: 12px;
+          align-items: center;
           border-radius: 18px;
           padding: 10px;
           background: rgba(255,255,255,0.96);
           color: #111827;
           border: 1px solid rgba(255,255,255,0.35);
           box-shadow: 0 8px 18px rgba(0,0,0,0.14);
-          min-width: 0;
         }
 
         .listThumb {
-          width: 68px;
-          height: 68px;
+          width: 76px;
+          height: 76px;
           border-radius: 14px;
           background: #f8fafc;
           border: 1px solid #e5e7eb;
@@ -1455,31 +1435,23 @@ export default function Page() {
         }
 
         .listName {
-          font-size: 15px;
+          font-size: 16px;
           font-weight: 1000;
           line-height: 1.15;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
         }
 
         .listMeta {
           color: #64748b;
-          font-size: 11.5px;
+          font-size: 12px;
           font-weight: 800;
           margin-top: 3px;
-          line-height: 1.3;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
+          line-height: 1.35;
         }
 
         .listControls {
           display: grid;
           grid-template-columns: auto minmax(0, 1fr) auto;
-          gap: 7px;
+          gap: 8px;
           align-items: center;
           margin-top: 8px;
         }
@@ -1491,8 +1463,8 @@ export default function Page() {
         }
 
         .listQtyButton {
-          width: 34px;
-          height: 34px;
+          width: 36px;
+          height: 36px;
           border-radius: 11px;
           border: 1px solid #cbd5e1;
           background: #ffffff;
@@ -1503,7 +1475,7 @@ export default function Page() {
         }
 
         .listNoteInput {
-          min-height: 36px;
+          min-height: 38px;
           width: 100%;
           box-sizing: border-box;
           border-radius: 11px;
@@ -1735,11 +1707,6 @@ export default function Page() {
 
           .cardsGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-          }
-
-          .cardsList {
-            grid-template-columns: 1fr;
             gap: 10px;
           }
 
@@ -2004,26 +1971,8 @@ export default function Page() {
 
             <div className="filterHeaderActions">
               <div className="viewModeToggle" aria-label="Collection view mode">
-                <button
-                  type="button"
-                  className={`viewModeButton ${collectionViewMode === "cards" ? "active" : ""}`}
-                  onClick={() => {
-                    viewModeTouchedRef.current = true;
-                    setCollectionViewMode("cards");
-                  }}
-                >
-                  Cards
-                </button>
-                <button
-                  type="button"
-                  className={`viewModeButton ${collectionViewMode === "list" ? "active" : ""}`}
-                  onClick={() => {
-                    viewModeTouchedRef.current = true;
-                    setCollectionViewMode("list");
-                  }}
-                >
-                  List
-                </button>
+                <button type="button" className={`viewModeButton ${collectionViewMode === "cards" ? "active" : ""}`} onClick={() => setCollectionViewMode("cards")}>Cards</button>
+                <button type="button" className={`viewModeButton ${collectionViewMode === "list" ? "active" : ""}`} onClick={() => setCollectionViewMode("list")}>List</button>
               </div>
               <button type="button" className="filterToggleButton" onClick={() => setShowMobileFilters((prev) => !prev)}>
                 {showMobileFilters ? "Hide Filters" : "Filters"}

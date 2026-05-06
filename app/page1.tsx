@@ -83,7 +83,7 @@ export default function HomePage() {
     setMeta("description", description);
     setMeta(
       "keywords",
-      "Doorables tracker, Disney Doorables tracker, Doorables collection tracker, Disney Doorables collection tracker, Doorables checklist, Doorables wishlist, Doorables inventory, Doorables rarity tracker, Doorables marketplace, Doorables trading, Doorables extras, buy sell trade Doorables, Adorable Vault"
+      "Doorables tracker, Disney Doorables tracker, Doorables collection tracker, Doorables checklist, Doorables wishlist, Doorables inventory, Doorables rarity tracker, Doorables marketplace, Doorables trading, Doorables extras, buy sell trade Doorables, Adorable Vault"
     );
     setMeta("robots", "index, follow");
     setProperty("og:title", "Adorable Vault | Doorables Collection Tracker");
@@ -287,10 +287,14 @@ export default function HomePage() {
     body.trim() ||
     "New collector tools, marketplace upgrades, secret promos, and smoother Doorables tracking features are coming soon 💜";
 
+  const hasPersonalStats = stats.total > 0 && (stats.owned > 0 || stats.extras > 0);
+  const displayOwned = hasPersonalStats ? stats.owned : "50";
+  const displayNeeded = hasPersonalStats ? stats.needed.toLocaleString() : "Need";
+  const displayExtras = hasPersonalStats ? stats.extras : "Extras";
+  const displayProgress = hasPersonalStats ? `${stats.progress}%` : "Free";
   const freeUsed = Math.min(stats.owned, FREE_LIMIT);
   const freePercent = Math.min(100, Math.round((freeUsed / FREE_LIMIT) * 100));
   const remainingFree = Math.max(0, FREE_LIMIT - freeUsed);
-  const hasPersonalStats = stats.total > 0 && (stats.owned > 0 || stats.extras > 0);
 
   return (
     <main className="page">
@@ -324,81 +328,51 @@ export default function HomePage() {
 
         .shell {
           position: relative;
+          z-index: 1;
           max-width: 1180px;
           margin: 0 auto;
-          padding: 18px 22px 112px;
-        }
-
-        .brand {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          color: white;
-          text-decoration: none;
-          min-width: 0;
-        }
-
-        .brandIcon {
-          width: 64px;
-          height: 64px;
-          border-radius: 21px;
-          display: grid;
-          place-items: center;
-          font-size: 35px;
-          background: radial-gradient(circle at top left, #fef3c7, #a855f7 48%, #020617);
-          box-shadow: 0 18px 38px rgba(168, 85, 247, 0.42);
-          flex: 0 0 auto;
-        }
-
-        .brandTitle {
-          display: block;
-          font-size: clamp(1.6rem, 4vw, 2.45rem);
-          font-weight: 1000;
-          line-height: 0.95;
-          letter-spacing: -1px;
-          background: linear-gradient(90deg, #fef3c7, #f0abfc, #bfdbfe);
-          -webkit-background-clip: text;
-          color: transparent;
-        }
-
-        .brandSub {
-          display: block;
-          margin-top: 5px;
-          color: #d8b4fe;
-          font-weight: 950;
-          font-size: 15px;
+          padding: 22px;
+          padding-bottom: 110px;
         }
 
         .hero {
           display: grid;
-          grid-template-columns: 1fr 0.95fr;
+          grid-template-columns: minmax(0, 1.06fr) minmax(360px, 0.94fr);
           gap: 20px;
           align-items: stretch;
           margin-bottom: 18px;
         }
 
         .heroCard,
-        .previewPanel {
+        .vaultPreview,
+        .launchStrip,
+        .whiteCard,
+        .darkCard,
+        .finalCta {
           border-radius: 32px;
           border: 1px solid rgba(255,255,255,0.16);
-          background:
-            radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 32%),
-            linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
           box-shadow: 0 26px 64px rgba(0,0,0,0.36);
         }
 
         .heroCard {
-          padding: 32px;
+          padding: 34px;
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 32%),
+            linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
+          display: grid;
+          align-content: center;
         }
 
         .badge {
           display: inline-flex;
+          width: fit-content;
           align-items: center;
           gap: 8px;
           padding: 9px 13px;
           border-radius: 999px;
           background: rgba(255,255,255,0.12);
           border: 1px solid rgba(255,255,255,0.15);
+          color: #fde68a;
           font-size: 13px;
           font-weight: 1000;
           margin-bottom: 16px;
@@ -406,7 +380,7 @@ export default function HomePage() {
 
         .headline {
           margin: 0;
-          font-size: clamp(2.25rem, 5.8vw, 4.55rem);
+          font-size: clamp(2.35rem, 5.6vw, 4.55rem);
           line-height: 0.94;
           letter-spacing: -2px;
           font-weight: 1000;
@@ -419,14 +393,6 @@ export default function HomePage() {
           font-size: 17px;
           line-height: 1.65;
           max-width: 720px;
-        }
-
-        .seoLine {
-          margin-top: 14px;
-          color: rgba(255,255,255,0.78);
-          font-size: 13px;
-          line-height: 1.55;
-          font-weight: 750;
         }
 
         .trustRow {
@@ -447,119 +413,237 @@ export default function HomePage() {
           box-shadow: 0 10px 20px rgba(0,0,0,0.18);
         }
 
-        .previewPanel {
-          padding: 18px;
+        .heroActions {
           display: grid;
-          align-content: stretch;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-top: 24px;
         }
 
-        .premiumDash {
+        .actionCard,
+        .actionCard:visited {
+          display: grid;
+          grid-template-columns: 50px 1fr;
+          gap: 12px;
+          align-items: center;
+          min-height: 84px;
+          border-radius: 24px;
+          padding: 14px;
+          color: white !important;
+          text-decoration: none !important;
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.13), transparent 34%),
+            linear-gradient(135deg, rgba(15,23,42,0.58), rgba(79,70,229,0.64));
+          border: 1px solid rgba(255,255,255,0.22);
+          box-shadow: 0 16px 34px rgba(0,0,0,0.24);
+          transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .actionCard:hover {
+          transform: translateY(-2px);
+          border-color: rgba(255,255,255,0.42);
+          box-shadow: 0 22px 42px rgba(0,0,0,0.30), 0 0 26px rgba(168,85,247,0.20);
+        }
+
+        .actionCard.alt {
+          background:
+            radial-gradient(circle at top right, rgba(250,204,21,0.16), transparent 36%),
+            linear-gradient(135deg, rgba(88,28,135,0.66), rgba(15,23,42,0.66));
+        }
+
+        .actionIcon {
+          width: 50px;
+          height: 50px;
+          border-radius: 18px;
+          display: grid;
+          place-items: center;
+          font-size: 27px;
+          color: #312e81;
+          background: linear-gradient(135deg, #ffffff, #fef3c7);
+          box-shadow: 0 12px 24px rgba(255,255,255,0.12);
+        }
+
+        .actionTitle {
+          display: block;
+          font-weight: 1000;
+          line-height: 1.12;
+          color: white;
+        }
+
+        .actionSub {
+          display: block;
+          margin-top: 4px;
+          color: rgba(255,255,255,0.76);
+          font-size: 12px;
+          font-weight: 850;
+          line-height: 1.28;
+        }
+
+        .vaultPreview {
+          padding: 18px;
+          background:
+            radial-gradient(circle at top right, rgba(250,204,21,0.18), transparent 34%),
+            radial-gradient(circle at bottom left, rgba(236,72,153,0.18), transparent 36%),
+            linear-gradient(135deg, rgba(15,23,42,0.78), rgba(88,28,135,0.80));
+          display: grid;
+          gap: 13px;
+        }
+
+        .previewHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .previewLabel {
+          color: #fde68a;
+          font-size: 13px;
+          font-weight: 1000;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+        }
+
+        .previewLink,
+        .previewLink:visited {
+          color: #312e81 !important;
+          background: linear-gradient(90deg, #ffffff, #fef3c7);
+          border-radius: 999px;
+          padding: 9px 12px;
+          text-decoration: none;
+          font-size: 12px;
+          font-weight: 1000;
+          white-space: nowrap;
+        }
+
+        .mockSearch {
+          min-height: 48px;
+          border-radius: 17px;
+          padding: 12px 14px;
+          color: rgba(255,255,255,0.82);
+          font-weight: 900;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.16);
+        }
+
+        .previewStats {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 9px;
+        }
+
+        .miniStat {
+          border-radius: 18px;
+          padding: 12px;
+          background: rgba(255,255,255,0.11);
+          border: 1px solid rgba(255,255,255,0.14);
+          min-height: 74px;
+        }
+
+        .miniStatValue {
+          font-size: 25px;
+          font-weight: 1000;
+          color: #ffffff;
+          line-height: 1;
+          margin-bottom: 6px;
+        }
+
+        .miniStatLabel {
+          color: rgba(255,255,255,0.78);
+          font-size: 11px;
+          font-weight: 900;
+          line-height: 1.24;
+        }
+
+        .mockCards {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 12px;
         }
 
-        .statBubble {
-          padding: 7px;
-          border-radius: 31px;
+        .mockCard {
+          min-height: 205px;
+          border-radius: 22px;
+          padding: 12px;
+          color: #2f1458;
+          border: 4px solid #7c3aed;
           background:
-            linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.04)),
-            radial-gradient(circle at top, rgba(192,132,252,0.26), transparent 55%);
-          border: 1px solid rgba(255,255,255,0.16);
-          box-shadow: 0 16px 34px rgba(0,0,0,0.26);
+            linear-gradient(rgba(0,0,0,0.07), rgba(0,0,0,0.07)),
+            #e6d2ff;
+          box-shadow: 0 14px 28px rgba(0,0,0,0.18), 0 0 18px rgba(124,58,237,0.20);
         }
 
-        .statCard {
-          min-height: 148px;
-          border-radius: 24px;
-          padding: 16px;
-          color: white !important;
-          position: relative;
-          overflow: hidden;
-          border: 1px solid rgba(255,255,255,0.2);
-          box-shadow:
-            0 18px 40px rgba(0,0,0,0.36),
-            inset 0 1px 0 rgba(255,255,255,0.14);
-          text-decoration: none !important;
-          backdrop-filter: blur(12px);
-          transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-          display: block;
-        }
-
-        .statCard::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          border-radius: inherit;
+        .mockCard.gold {
+          color: #403000;
+          border-color: #d4a500;
           background:
-            radial-gradient(circle at top left, rgba(255,255,255,0.22), transparent 38%),
-            radial-gradient(circle at bottom right, rgba(255,255,255,0.12), transparent 42%);
-          pointer-events: none;
-          z-index: 0;
+            linear-gradient(rgba(0,0,0,0.07), rgba(0,0,0,0.07)),
+            #f8ef9b;
         }
 
-        .statCard > * {
-          position: relative;
-          z-index: 1;
-        }
-
-        .statIcon {
-          width: 54px;
-          height: 54px;
+        .mockImage {
+          height: 92px;
           border-radius: 18px;
           display: grid;
           place-items: center;
-          font-size: 27px;
-          background: rgba(255,255,255,0.22);
-          margin-bottom: 12px;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
-        }
-
-        .statLabel {
-          font-size: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.07em;
-          font-weight: 1000;
-          color: #fef3c7 !important;
-          opacity: 1;
-        }
-
-        .statValue {
+          background: rgba(255,255,255,0.88);
           font-size: 40px;
-          line-height: 0.95;
+          margin-bottom: 11px;
+        }
+
+        .mockCardTop {
+          display: flex;
+          align-items: start;
+          justify-content: space-between;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+
+        .mockTitle {
+          font-size: 16px;
           font-weight: 1000;
-          letter-spacing: -1px;
-          margin: 7px 0;
-          text-shadow: 0 2px 14px rgba(0,0,0,0.48);
-          color: #ffffff !important;
+          line-height: 1.08;
         }
 
-        .statSub {
-          font-size: 13px;
-          color: #ffffff !important;
-          font-weight: 850;
+        .mockBadge {
+          border-radius: 999px;
+          padding: 5px 8px;
+          font-size: 10px;
+          font-weight: 1000;
+          white-space: nowrap;
+          background: #c084fc;
+          color: #2f1458;
         }
 
-        .owned {
-          background: linear-gradient(135deg, #7e22ce, #4c1d95);
+        .mockCard.gold .mockBadge {
+          background: #f2d64c;
+          color: #403000;
         }
 
-        .needed {
-          background: linear-gradient(135deg, #0369a1, #1d4ed8);
+        .mockSub {
+          font-size: 12px;
+          font-weight: 900;
+          opacity: 0.78;
         }
 
-        .extras {
-          background: linear-gradient(135deg, #92400e, #78350f);
+        .mockChipRow {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 10px;
         }
 
-        .market {
-          background: linear-gradient(135deg, #166534, #14532d);
+        .mockChip {
+          border-radius: 999px;
+          padding: 5px 8px;
+          background: rgba(255,255,255,0.68);
+          font-size: 11px;
+          font-weight: 1000;
         }
 
         .progressPanel {
-          margin-top: 12px;
           border-radius: 24px;
-          padding: 18px;
+          padding: 17px;
           background:
             radial-gradient(circle at top right, rgba(236,72,153,0.24), transparent 36%),
             linear-gradient(135deg, rgba(88,28,135,0.88), rgba(15,23,42,0.95));
@@ -567,126 +651,15 @@ export default function HomePage() {
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
         }
 
-        .progressHeader {
-          display: grid;
-          grid-template-columns: 58px 1fr auto;
-          gap: 14px;
-          align-items: center;
-        }
-
-        .gem {
-          width: 58px;
-          height: 58px;
-          border-radius: 999px;
-          display: grid;
-          place-items: center;
-          font-size: 30px;
-          background: linear-gradient(135deg, #7c3aed, #22d3ee);
-          box-shadow: 0 12px 24px rgba(124,58,237,0.28);
-        }
-
-        .upgradeButton {
-          min-height: 52px;
-          border-radius: 18px;
-          padding: 13px 20px;
-          text-decoration: none !important;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 1000;
-          color: #ffffff !important;
-          background: linear-gradient(90deg, #f472b6, #a855f7, #4f46e5);
-          border: 1px solid rgba(255,255,255,0.55);
-          box-shadow:
-            0 16px 34px rgba(168,85,247,0.58),
-            inset 0 1px 0 rgba(255,255,255,0.20);
-          white-space: nowrap;
-        }
-
-        .premiumActivePanel {
-          margin-top: 12px;
-          border-radius: 24px;
-          padding: 18px;
-          background:
-            radial-gradient(circle at 10% 20%, rgba(34,211,238,0.28), transparent 30%),
-            radial-gradient(circle at 90% 0%, rgba(244,114,182,0.24), transparent 34%),
-            linear-gradient(135deg, rgba(49,46,129,0.96), rgba(88,28,135,0.92));
-          border: 1px solid rgba(255,255,255,0.22);
-          box-shadow:
-            0 18px 40px rgba(124,58,237,0.24),
-            0 0 34px rgba(34,211,238,0.14),
-            inset 0 1px 0 rgba(255,255,255,0.16);
-          overflow: hidden;
-          position: relative;
-        }
-
-        .premiumActivePanel::before {
-          content: "";
-          position: absolute;
-          inset: -40%;
-          background: conic-gradient(from 90deg, transparent, rgba(255,255,255,0.16), transparent);
-          opacity: 0.30;
-          pointer-events: none;
-        }
-
-        .premiumActiveContent {
-          position: relative;
-          z-index: 1;
-          display: grid;
-          grid-template-columns: 58px 1fr auto;
-          gap: 14px;
-          align-items: center;
-        }
-
-        .premiumIcon {
-          width: 58px;
-          height: 58px;
-          border-radius: 999px;
-          display: grid;
-          place-items: center;
-          font-size: 30px;
-          background: linear-gradient(135deg, #22d3ee, #a855f7, #f472b6);
-          box-shadow: 0 12px 24px rgba(124,58,237,0.30);
-        }
-
-        .premiumBadge {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 42px;
-          border-radius: 999px;
-          padding: 10px 14px;
-          color: #312e81;
-          background: linear-gradient(90deg, #ffffff, #fef3c7);
-          font-weight: 1000;
-          box-shadow: 0 12px 24px rgba(255,255,255,0.14);
-          white-space: nowrap;
-        }
-
-        .premiumPerks {
-          position: relative;
-          z-index: 1;
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 10px;
-          margin-top: 14px;
-          padding-top: 14px;
-          border-top: 1px solid rgba(255,255,255,0.14);
-        }
-
-        .premiumPerk {
-          border-radius: 18px;
-          padding: 12px;
-          background: rgba(15,23,42,0.34);
-          border: 1px solid rgba(255,255,255,0.14);
-          color: rgba(255,255,255,0.92);
-          font-size: 13px;
-          font-weight: 900;
-          text-align: center;
+        .progressTop {
+          display: flex;
+          justify-content: space-between;
+          align-items: end;
+          gap: 12px;
+          margin-bottom: 12px;
         }
 
         .progressTrack {
-          margin-top: 14px;
           height: 10px;
           border-radius: 999px;
           background: rgba(255,255,255,0.16);
@@ -699,56 +672,47 @@ export default function HomePage() {
           background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
         }
 
-        .quickActions {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 12px;
-          margin-top: 18px;
-          padding-top: 16px;
-          border-top: 1px solid rgba(255,255,255,0.12);
-        }
-
-        .quickAction {
-          min-height: 92px;
-          border-radius: 20px;
-          padding: 14px;
+        .launchStrip {
+          margin-bottom: 18px;
+          padding: 18px;
+          color: #111827;
           background:
-            radial-gradient(circle at top, rgba(255,255,255,0.15), transparent 45%),
-            rgba(15,23,42,0.55);
-          border: 1px solid rgba(255,255,255,0.18);
-          color: #ffffff !important;
-          text-decoration: none !important;
+            radial-gradient(circle at top right, rgba(250,204,21,0.36), transparent 32%),
+            radial-gradient(circle at bottom left, rgba(236,72,153,0.22), transparent 34%),
+            linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          border: 1px solid rgba(255,255,255,0.62);
           display: grid;
-          align-content: center;
-          justify-items: center;
-          text-align: center;
-          gap: 7px;
-          box-shadow: 0 12px 24px rgba(0,0,0,0.24);
+          grid-template-columns: 1fr auto;
+          gap: 14px;
+          align-items: center;
         }
 
-        .quickActionIcon {
-          width: 44px;
-          height: 44px;
-          border-radius: 16px;
-          display: grid;
-          place-items: center;
-          font-size: 24px;
-          background: linear-gradient(135deg, rgba(79,70,229,0.95), rgba(168,85,247,0.95));
-          box-shadow: 0 10px 20px rgba(124,58,237,0.32);
-        }
-
-        .quickActionTitle {
-          color: #ffffff !important;
+        .launchTitle {
+          color: #312e81;
+          font-size: 22px;
+          line-height: 1.1;
           font-weight: 1000;
-          font-size: 14px;
-          line-height: 1.12;
+          margin-bottom: 5px;
         }
 
-        .quickActionSub {
-          color: rgba(255,255,255,0.78) !important;
+        .launchText {
+          color: #475569;
+          line-height: 1.55;
+          font-size: 14px;
           font-weight: 800;
-          font-size: 11px;
-          line-height: 1.18;
+        }
+
+        .launchButton,
+        .launchButton:visited {
+          min-height: 50px;
+          border-radius: 999px;
+          padding: 13px 17px;
+          text-decoration: none;
+          color: white !important;
+          background: linear-gradient(135deg, #ec4899, #8b5cf6);
+          font-weight: 1000;
+          box-shadow: 0 14px 28px rgba(236,72,153,0.26);
+          white-space: nowrap;
         }
 
         .section {
@@ -785,6 +749,7 @@ export default function HomePage() {
           color: rgba(255,255,255,0.82);
           line-height: 1.6;
           font-size: 14px;
+          font-weight: 800;
         }
 
         .featureGrid {
@@ -793,15 +758,22 @@ export default function HomePage() {
           gap: 14px;
         }
 
-        .featureCard {
-          color: white !important;
-          text-decoration: none !important;
+        .featureCard,
+        .featureCard:visited {
+          min-height: 214px;
           border-radius: 24px;
           padding: 18px;
-          min-height: 200px;
+          color: white !important;
+          text-decoration: none !important;
           background: rgba(15,23,42,0.78);
           border: 1px solid rgba(255,255,255,0.12);
           box-shadow: 0 16px 34px rgba(0,0,0,0.24);
+          transition: transform 0.16s ease, border-color 0.16s ease;
+        }
+
+        .featureCard:hover {
+          transform: translateY(-3px);
+          border-color: rgba(255,255,255,0.24);
         }
 
         .featureIcon {
@@ -811,6 +783,7 @@ export default function HomePage() {
           display: grid;
           place-items: center;
           font-size: 30px;
+          color: #312e81;
           background: linear-gradient(135deg, #ede9fe, #bfdbfe);
           margin-bottom: 14px;
         }
@@ -828,6 +801,7 @@ export default function HomePage() {
           line-height: 1.55;
           font-size: 14px;
           margin-bottom: 12px;
+          font-weight: 800;
         }
 
         .featureLink {
@@ -844,7 +818,7 @@ export default function HomePage() {
 
         .splitGrid {
           display: grid;
-          grid-template-columns: 1.12fr 0.88fr;
+          grid-template-columns: 1.1fr 0.9fr;
           gap: 18px;
           align-items: stretch;
         }
@@ -852,14 +826,16 @@ export default function HomePage() {
         .whiteCard {
           background: linear-gradient(180deg, #ffffff, #f8fafc);
           color: #111827;
-          border-radius: 28px;
+          border: 1px solid rgba(255,255,255,0.60);
           padding: 24px;
-          border: 1px solid rgba(255,255,255,0.55);
-          box-shadow: 0 18px 38px rgba(0,0,0,0.22);
         }
 
         .whiteCard .eyebrow {
           color: #7c3aed;
+        }
+
+        .whiteCard .sectionTitle {
+          color: #111827;
         }
 
         .whiteCard .sectionText {
@@ -876,10 +852,11 @@ export default function HomePage() {
           border: 1px solid transparent;
           white-space: pre-wrap;
           word-break: break-word;
-          min-height: 118px;
-          line-height: 1.75;
+          min-height: 112px;
+          line-height: 1.7;
           font-size: 15px;
           color: #374151;
+          font-weight: 750;
         }
 
         .adminBox {
@@ -901,7 +878,7 @@ export default function HomePage() {
         }
 
         .textarea {
-          min-height: 220px;
+          min-height: 200px;
           resize: vertical;
           white-space: pre-wrap;
           line-height: 1.6;
@@ -928,7 +905,7 @@ export default function HomePage() {
 
         .miniListItem {
           display: grid;
-          grid-template-columns: 32px 1fr;
+          grid-template-columns: 34px 1fr;
           gap: 10px;
           align-items: start;
           padding: 12px;
@@ -937,7 +914,7 @@ export default function HomePage() {
           border: 1px solid #e5e7eb;
           color: #374151;
           line-height: 1.45;
-          font-weight: 800;
+          font-weight: 850;
         }
 
         .priceGrid {
@@ -983,7 +960,6 @@ export default function HomePage() {
             radial-gradient(circle at top right, rgba(244,114,182,0.28), transparent 36%),
             linear-gradient(135deg, rgba(88,28,135,0.92), rgba(15,23,42,0.95));
           border-color: rgba(217,70,239,0.46);
-          animation: popularGlow 2.8s ease-in-out infinite;
         }
 
         .priceCard.founding {
@@ -992,18 +968,6 @@ export default function HomePage() {
             radial-gradient(circle at bottom left, rgba(236,72,153,0.28), transparent 40%),
             linear-gradient(135deg, rgba(131,24,67,0.94), rgba(49,46,129,0.96));
           border-color: rgba(244,114,182,0.60);
-          box-shadow:
-            0 22px 50px rgba(236,72,153,0.24),
-            0 16px 34px rgba(0,0,0,0.24);
-        }
-
-        @keyframes popularGlow {
-          0%, 100% {
-            box-shadow: 0 16px 34px rgba(0,0,0,0.22), 0 0 0 rgba(217,70,239,0);
-          }
-          50% {
-            box-shadow: 0 22px 48px rgba(0,0,0,0.30), 0 0 34px rgba(217,70,239,0.30);
-          }
         }
 
         .tag {
@@ -1046,6 +1010,7 @@ export default function HomePage() {
           line-height: 1.55;
           font-size: 15px;
           margin-bottom: 18px;
+          font-weight: 800;
         }
 
         .planButton {
@@ -1073,11 +1038,22 @@ export default function HomePage() {
           box-shadow: 0 12px 26px rgba(236,72,153,0.34);
         }
 
+        .errorBox {
+          margin-bottom: 14px;
+          border-radius: 18px;
+          padding: 14px;
+          background: rgba(254,226,226,0.96);
+          color: #991b1b;
+          font-weight: 900;
+        }
+
         .primaryButton,
-        .secondaryButton {
-          min-height: 50px;
-          border-radius: 17px;
-          padding: 13px 18px;
+        .secondaryButton,
+        .primaryButton:visited,
+        .secondaryButton:visited {
+          min-height: 52px;
+          border-radius: 999px;
+          padding: 14px 20px;
           font-weight: 1000;
           text-decoration: none !important;
           display: inline-flex;
@@ -1100,48 +1076,39 @@ export default function HomePage() {
           box-shadow: 0 16px 34px rgba(124,58,237,0.50);
         }
 
-        .buttonRow {
+        .buttonRow,
+        .ctaButtons {
           display: flex;
           gap: 11px;
           flex-wrap: wrap;
-          margin-top: 24px;
+          margin-top: 22px;
         }
 
         .finalCta {
           text-align: center;
           margin: 22px 0 96px;
-          border-radius: 30px;
-          padding: 28px;
+          padding: 30px;
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.13), transparent 32%),
             linear-gradient(135deg, rgba(79,70,229,0.88), rgba(147,51,234,0.86));
           border: 1px solid rgba(255,255,255,0.16);
-          box-shadow: 0 22px 46px rgba(0,0,0,0.28);
         }
 
         .mobileSticky {
           display: none;
         }
 
-        .page a:not(.brand),
-        .page a:not(.brand):visited {
-          color: #ffffff !important;
-        }
-
-        .page a:not(.brand) *,
-        .page a:not(.brand):visited * {
+        .page a,
+        .page a:visited {
           color: inherit;
-        }
-
-        .brand,
-        .brand *,
-        .brand:visited,
-        .brand:visited * {
-          color: inherit !important;
         }
 
         @media (max-width: 1180px) {
           .priceGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .featureGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
@@ -1152,19 +1119,22 @@ export default function HomePage() {
             padding-bottom: 112px;
           }
 
-          .brandIcon {
-            width: 56px;
-            height: 56px;
-            border-radius: 18px;
-            font-size: 30px;
-          }
-
-          .hero {
+          .hero,
+          .splitGrid {
             grid-template-columns: 1fr;
           }
 
+          .heroCard,
+          .vaultPreview,
+          .launchStrip,
+          .whiteCard,
+          .darkCard,
+          .finalCta {
+            border-radius: 24px;
+          }
+
           .heroCard {
-            padding: 20px;
+            padding: 22px;
           }
 
           .headline {
@@ -1175,96 +1145,35 @@ export default function HomePage() {
             font-size: 15.5px;
           }
 
-          .premiumDash {
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+          .heroActions {
+            grid-template-columns: 1fr;
           }
 
-          .previewPanel {
-            padding: 12px;
+          .previewStats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
 
-          .statBubble {
-            padding: 5px;
-            border-radius: 25px;
+          .mockCards {
+            grid-template-columns: 1fr;
           }
 
-          .statCard {
-            min-height: 126px;
-            padding: 13px;
-            border-radius: 20px;
+          .launchStrip {
+            grid-template-columns: 1fr;
           }
 
-          .statIcon {
-            width: 44px;
-            height: 44px;
-            border-radius: 15px;
-            font-size: 23px;
-            margin-bottom: 8px;
-          }
-
-          .statValue {
-            font-size: 31px;
-          }
-
-          .statSub {
-            font-size: 12px;
-          }
-
-          .premiumActiveContent {
-            grid-template-columns: 52px 1fr;
-          }
-
-          .premiumBadge {
-            grid-column: 1 / -1;
+          .launchButton {
             width: 100%;
             box-sizing: border-box;
-          }
-
-          .premiumIcon {
-            width: 52px;
-            height: 52px;
-            font-size: 26px;
-          }
-
-          .premiumPerks {
-            grid-template-columns: 1fr;
-          }
-
-          .progressHeader {
-            grid-template-columns: 52px 1fr;
-          }
-
-          .progressHeader .upgradeButton {
-            grid-column: 1 / -1;
-          }
-
-          .gem {
-            width: 52px;
-            height: 52px;
-            font-size: 26px;
-          }
-
-          .quickActions {
-            grid-template-columns: 1fr;
-          }
-
-          .quickAction {
-            min-height: 76px;
-            grid-template-columns: 44px 1fr;
-            justify-items: start;
-            text-align: left;
+            justify-content: center;
           }
 
           .featureGrid,
-          .splitGrid,
           .priceGrid {
             grid-template-columns: 1fr;
           }
 
           .featureCard {
             min-height: 0;
-            padding: 17px;
           }
 
           .sectionHeader {
@@ -1274,7 +1183,6 @@ export default function HomePage() {
 
           .whiteCard {
             padding: 18px;
-            border-radius: 24px;
           }
 
           .priceCard {
@@ -1324,20 +1232,34 @@ export default function HomePage() {
         }
 
         @media (max-width: 560px) {
-          .brandTitle {
-            font-size: 1.62rem;
+          .previewHeader {
+            display: grid;
           }
 
-          .brandSub {
-            font-size: 13px;
+          .previewLink {
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
           }
 
-          .statLabel {
-            font-size: 10px;
+          .mockCard {
+            min-height: 0;
           }
 
-          .progressPanel {
-            padding: 16px;
+          .buttonRow,
+          .ctaButtons {
+            display: grid;
+            grid-template-columns: 1fr;
+          }
+
+          .primaryButton,
+          .secondaryButton {
+            width: 100%;
+            box-sizing: border-box;
+          }
+
+          .mobileSticky {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
@@ -1348,159 +1270,171 @@ export default function HomePage() {
             <div className="badge">✨ Fan-made collector vault ✨</div>
 
             <h1 className="headline">
-              Track your Doorables without the chaos.
+              Your Doorables checklist, wishlist, and extras — all in one vault.
             </h1>
 
             <div className="heroText">
-              Welcome{username ? ` back, ${username}` : ""}! Adorable Vault helps you track what you own,
-              what you still need, and which extras are ready to sell or trade.
-            </div>
-
-            <div className="seoLine">
-              Made for collectors who want one clean place to track sets, manage extras,
-              and stop wondering, “Do I already have this one?”
+              Welcome{username ? ` back, ${username}` : ""}! Adorable Vault helps collectors track
+              what they own, what they still need, and which extras are ready to sell or trade.
             </div>
 
             <div className="trustRow">
               <span className="trustPill">Free up to 50 saved Doorables</span>
-              <span className="trustPill">Unlimited plans from $3/month</span>
-              <span className="trustPill">Mobile-friendly collector hub</span>
+              <span className="trustPill">Preview before signup</span>
+              <span className="trustPill">Unlimited from $3/month</span>
+              <span className="trustPill">Marketplace tools</span>
+            </div>
+
+            <div className="heroActions">
+              <Link href="/demo" className="actionCard">
+                <span className="actionIcon">👀</span>
+                <span>
+                  <span className="actionTitle">Preview the vault</span>
+                  <span className="actionSub">No signup needed — see how it works first.</span>
+                </span>
+              </Link>
+
+              <Link href="/collection" className="actionCard alt">
+                <span className="actionIcon">💜</span>
+                <span>
+                  <span className="actionTitle">Start tracking free</span>
+                  <span className="actionSub">Save up to 50 Doorables before upgrading.</span>
+                </span>
+              </Link>
             </div>
           </div>
 
-          <div className="previewPanel">
-            <div className="premiumDash">
-              <div className="statBubble">
-                <Link href="/collection" className="statCard owned">
-                  <div className="statIcon">📦</div>
-                  <div className="statLabel">{hasPersonalStats ? "Total Owned" : "Your Vault"}</div>
-                  <div className="statValue">{hasPersonalStats ? stats.owned : "—"}</div>
-                  <div className="statSub">{hasPersonalStats ? "Doorables you own" : "Sign in to see your count"}</div>
-                </Link>
+          <aside className="vaultPreview">
+            <div className="previewHeader">
+              <div>
+                <div className="previewLabel">Inside the vault</div>
+                <div style={{ color: "rgba(255,255,255,0.82)", fontWeight: 850, marginTop: 4 }}>
+                  A cleaner collector dashboard at a glance.
+                </div>
               </div>
 
-              <div className="statBubble">
-                <Link href="/collection" className="statCard needed">
-                  <div className="statIcon">📋</div>
-                  <div className="statLabel">{hasPersonalStats ? "Still Needed" : "Wishlist"}</div>
-                  <div className="statValue">{hasPersonalStats ? stats.needed.toLocaleString() : "—"}</div>
-                  <div className="statSub">{hasPersonalStats ? "Doorables to collect" : "Track what you need"}</div>
-                </Link>
+              <Link href="/demo" className="previewLink">
+                Open Preview →
+              </Link>
+            </div>
+
+            <div className="mockSearch">Search name, series, rarity, movie...</div>
+
+            <div className="previewStats">
+              <div className="miniStat">
+                <div className="miniStatValue">{displayOwned}</div>
+                <div className="miniStatLabel">{hasPersonalStats ? "Owned" : "Free saves"}</div>
+              </div>
+              <div className="miniStat">
+                <div className="miniStatValue">{displayNeeded}</div>
+                <div className="miniStatLabel">Wishlist</div>
+              </div>
+              <div className="miniStat">
+                <div className="miniStatValue">{displayExtras}</div>
+                <div className="miniStatLabel">Extras</div>
+              </div>
+              <div className="miniStat">
+                <div className="miniStatValue">{displayProgress}</div>
+                <div className="miniStatLabel">{hasPersonalStats ? "Complete" : "Starter plan"}</div>
+              </div>
+            </div>
+
+            <div className="mockCards">
+              <div className="mockCard">
+                <div className="mockImage">💜</div>
+                <div className="mockCardTop">
+                  <div>
+                    <div className="mockTitle">Sparkle Sample</div>
+                    <div className="mockSub">Series 12 • Pixel Perfect</div>
+                  </div>
+                  <div className="mockBadge">Special</div>
+                </div>
+                <div className="mockChipRow">
+                  <span className="mockChip">Have</span>
+                  <span className="mockChip">Qty 1</span>
+                  <span className="mockChip">Note saved</span>
+                </div>
               </div>
 
-              <div className="statBubble">
-                <Link href="/sell" className="statCard extras">
-                  <div className="statIcon">⭐</div>
-                  <div className="statLabel">{hasPersonalStats ? "Extras" : "Extras"}</div>
-                  <div className="statValue">{hasPersonalStats ? stats.extras : "—"}</div>
-                  <div className="statSub">{hasPersonalStats ? "Ready to trade or sell" : "List duplicates later"}</div>
-                </Link>
-              </div>
-
-              <div className="statBubble">
-                <Link href="/marketplace" className="statCard market">
-                  <div className="statIcon">🛍️</div>
-                  <div className="statLabel">Marketplace</div>
-                  <div className="statValue">{stats.listings > 0 ? stats.listings : "→"}</div>
-                  <div className="statSub">{stats.listings > 0 ? "Current marketplace listings" : "Browse collector listings"}</div>
-                </Link>
+              <div className="mockCard gold">
+                <div className="mockImage">💎</div>
+                <div className="mockCardTop">
+                  <div>
+                    <div className="mockTitle">Golden Sample</div>
+                    <div className="mockSub">Series 10 • Collector Peek</div>
+                  </div>
+                  <div className="mockBadge">Limited</div>
+                </div>
+                <div className="mockChipRow">
+                  <span className="mockChip">Need</span>
+                  <span className="mockChip">Qty 0</span>
+                  <span className="mockChip">Wishlist</span>
+                </div>
               </div>
             </div>
 
             {isSubscribed ? (
-              <div className="premiumActivePanel">
-                <div className="premiumActiveContent">
-                  <div className="premiumIcon">👑</div>
-
+              <div className="progressPanel">
+                <div className="progressTop">
                   <div>
-                    <div style={{ fontWeight: 1000, fontSize: 20 }}>
-                      Full Access Active
-                    </div>
+                    <div style={{ fontWeight: 1000, fontSize: 18 }}>Full Access Active 👑</div>
                     <div style={{ color: "#d8b4fe", fontWeight: 900, marginTop: 4 }}>
-                      Unlimited tracking, marketplace tools, selling, and collector features are unlocked.
+                      Unlimited tracking and marketplace tools are unlocked.
                     </div>
                   </div>
-
-                  <div className="premiumBadge">Unlocked 💜</div>
+                  <div style={{ color: "#fde68a", fontWeight: 1000 }}>Unlocked</div>
                 </div>
-
-                <div className="premiumPerks">
-                  <div className="premiumPerk">∞ Unlimited saves</div>
-                  <div className="premiumPerk">🛍️ Marketplace access</div>
-                  <div className="premiumPerk">🏷️ Sell extras</div>
+                <div className="progressTrack">
+                  <div className="progressFill" style={{ width: "100%" }} />
                 </div>
               </div>
             ) : (
               <div className="progressPanel">
-                <div className="progressHeader">
-                  <div className="gem">💎</div>
-
+                <div className="progressTop">
                   <div>
-                    <div style={{ fontWeight: 1000, fontSize: 19 }}>
-                      Free collector plan
-                    </div>
+                    <div style={{ fontWeight: 1000, fontSize: 18 }}>Free collector plan</div>
                     <div style={{ color: "#d8b4fe", fontWeight: 900, marginTop: 4 }}>
-                      {hasPersonalStats ? `Save up to 50 Doorables • ${remainingFree} free saves left` : "Your free saves appear here after sign in"}
+                      {hasPersonalStats ? `${remainingFree} free saves left` : "Start free, then upgrade when you need more."}
                     </div>
                   </div>
-
-                  <Link href="/pricing" className="upgradeButton">
-                    <span>Upgrade Now</span>
-                  </Link>
+                  <div style={{ color: "#fde68a", fontWeight: 1000 }}>
+                    {hasPersonalStats ? `${freeUsed}/50` : "0/50"}
+                  </div>
                 </div>
-
                 <div className="progressTrack">
                   <div className="progressFill" style={{ width: `${hasPersonalStats ? freePercent : 0}%` }} />
                 </div>
-
-                <div style={{ marginTop: 10, color: "rgba(255,255,255,0.80)", fontWeight: 800, fontSize: 13 }}>
-                  {hasPersonalStats ? `${freeUsed} / 50 free saved Doorables used` : "Start free, save up to 50 Doorables, then upgrade when you need more."}
-                </div>
               </div>
             )}
+          </aside>
+        </section>
 
-            <div className="quickActions">
-                <Link href="/collection" className="quickAction">
-                  <span className="quickActionIcon">🎯</span>
-                  <span>
-                    <span className="quickActionTitle">Open tracker</span>
-                    <br />
-                    <span className="quickActionSub">View collection</span>
-                  </span>
-                </Link>
-
-                <Link href="/marketplace" className="quickAction">
-                  <span className="quickActionIcon">🛍️</span>
-                  <span>
-                    <span className="quickActionTitle">Browse Marketplace</span>
-                    <br />
-                    <span className="quickActionSub">Find extras & gaps</span>
-                  </span>
-                </Link>
-
-                <Link href="/feedback" className="quickAction">
-                  <span className="quickActionIcon">💬</span>
-                  <span>
-                    <span className="quickActionTitle">Send feedback</span>
-                    <br />
-                    <span className="quickActionSub">Help us improve</span>
-                  </span>
-                </Link>
-              </div>
+        <section className="launchStrip">
+          <div>
+            <div className="launchTitle">Launch special: Founding Collector bundle 💜</div>
+            <div className="launchText">
+              Get one full year of Adorable Vault plus a limited edition keychain while supplies last.
+              Perfect for collectors who want to support the launch and get the full vault experience.
+            </div>
           </div>
+
+          <Link href="/pricing" className="launchButton">
+            See Founding Bundle
+          </Link>
         </section>
 
         <section className="section">
           <div className="sectionHeader">
             <div>
-              <div className="eyebrow">What you can do</div>
+              <div className="eyebrow">How it helps</div>
               <h2 className="sectionTitle">
-                One collector hub instead of screenshots, spreadsheets, and memory.
+                Stop guessing. Start checking your collection faster.
               </h2>
             </div>
 
             <div className="sectionText">
-              Track your collection, manage your wishlist, organize extras, and browse collector listings from one mobile-friendly vault.
+              Built for shopping, live sales, trades, blind openings, duplicate clean-up,
+              and the eternal question: “Do I already have this one?”
             </div>
           </div>
 
@@ -1514,31 +1448,31 @@ export default function HomePage() {
               <div className="featureLink">Open tracker →</div>
             </Link>
 
-            <Link href="/collection" className="featureCard">
-              <div className="featureIcon">🔎</div>
-              <div className="featureTitle">Find what you need</div>
+            <Link href="/demo" className="featureCard">
+              <div className="featureIcon">👀</div>
+              <div className="featureTitle">Preview before signup</div>
               <div className="featureText">
-                Check your wishlist before buying, trading, or joining another live sale.
+                Show new collectors exactly how the vault works before they make an account.
               </div>
-              <div className="featureLink">Find gaps →</div>
+              <div className="featureLink">View preview →</div>
             </Link>
 
             <Link href="/sell" className="featureCard">
               <div className="featureIcon">🔁</div>
-              <div className="featureTitle">Sell extras faster</div>
+              <div className="featureTitle">Organize extras</div>
               <div className="featureText">
-                Turn duplicate Doorables into Marketplace listings with cleaner tools and auto-listing support.
+                Turn duplicate Doorables into cleaner Marketplace listings with less manual chaos.
               </div>
               <div className="featureLink">List extras →</div>
             </Link>
 
             <Link href="/marketplace" className="featureCard">
               <div className="featureIcon">🛍️</div>
-              <div className="featureTitle">Browse marketplace</div>
+              <div className="featureTitle">Browse Marketplace</div>
               <div className="featureText">
                 Search collector listings and message sellers when you find something you need.
               </div>
-              <div className="featureLink">Browse marketplace →</div>
+              <div className="featureLink">Browse listings →</div>
             </Link>
           </div>
         </section>
@@ -1595,26 +1529,24 @@ export default function HomePage() {
 
           <div className="whiteCard">
             <div className="eyebrow">Why collectors use it</div>
-            <h2 className="sectionTitle">
-              It answers: “Do I already have this one?”
-            </h2>
+            <h2 className="sectionTitle">A real home base for the collection.</h2>
             <div className="sectionText">
-              Adorable Vault is made for real collector habits: shopping, live sales, blind bags, trades, duplicates,
-              wishlists, and set completion.
+              Adorable Vault keeps the collector workflow simple: save what you have, filter what you need,
+              track extras, and use the Marketplace when you are ready.
             </div>
 
             <div className="miniList">
               <div className="miniListItem">
                 <span>✅</span>
-                <span>Track owned Doorables, still-needed Doorables, and extras in one place.</span>
+                <span>Track owned, needed, and extra Doorables in one place.</span>
               </div>
               <div className="miniListItem">
-                <span>✅</span>
-                <span>Use filters for series, rarity, movie, subcategory, notes, have, need, and extra.</span>
+                <span>🔎</span>
+                <span>Use search and filters during shopping, shows, and trades.</span>
               </div>
               <div className="miniListItem">
-                <span>✅</span>
-                <span>Upgrade from a free checklist to unlimited collector access.</span>
+                <span>💸</span>
+                <span>Upgrade when you want unlimited saves, selling tools, and messaging.</span>
               </div>
             </div>
           </div>
@@ -1631,24 +1563,11 @@ export default function HomePage() {
 
             <div className="sectionText">
               Free accounts can save up to 50 Doorables. Paid plans unlock unlimited tracking,
-              Marketplace, selling extras, messaging, and full collector features. The limited founding bundle adds a physical keychain thank-you gift while supplies last.
+              Marketplace, selling extras, messaging, and full collector features.
             </div>
           </div>
 
-          {checkoutError && (
-            <div
-              style={{
-                marginBottom: 14,
-                borderRadius: 18,
-                padding: 14,
-                background: "rgba(254,226,226,0.96)",
-                color: "#991b1b",
-                fontWeight: 900,
-              }}
-            >
-              {checkoutError}
-            </div>
-          )}
+          {checkoutError && <div className="errorBox">{checkoutError}</div>}
 
           <div className="priceGrid">
             <Link href="/collection" className="priceCard free">
@@ -1716,7 +1635,7 @@ export default function HomePage() {
                 $20 <span>/ year</span>
               </div>
               <div className="finePrint">
-                1 full year of access plus a limited edition Adorable Vault keychain while supplies last.
+                One full year of access plus a limited edition Adorable Vault keychain while supplies last.
               </div>
               <div className="planButton founding">
                 {loadingPlan === "founding" ? "Starting checkout..." : "Get Bundle + Keychain 💜"}
@@ -1725,53 +1644,51 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="section splitGrid">
+        <section className="splitGrid section">
           <div className="whiteCard">
-            <div className="eyebrow">Built for real collecting</div>
-            <h2 className="sectionTitle">
-              Your collection, wishlist, extras, and listings in one place.
-            </h2>
+            <div className="eyebrow">Fan-made disclaimer</div>
+            <h2 className="sectionTitle">Made by collectors, for collectors.</h2>
             <div className="sectionText">
-              Use Adorable Vault while you are opening blind bags, shopping lives, checking duplicates,
-              or getting extras ready to sell or trade.
+              Adorable Vault is a fan-made collector tracking and marketplace tool. It is not affiliated with,
+              sponsored by, or endorsed by Disney or Just Play. Character names and references are used only
+              to help collectors organize and identify their collections.
             </div>
           </div>
 
           <div className="whiteCard">
-            <div className="eyebrow">Fan-made disclaimer</div>
-            <h2 className="sectionTitle">Made for collectors.</h2>
+            <div className="eyebrow">Marketplace note</div>
+            <h2 className="sectionTitle">Collectors connect directly.</h2>
             <div className="sectionText">
-              Adorable Vault is a fan-made collector tracking and marketplace tool. It is not affiliated with,
-              sponsored by, or endorsed by Disney or Just Play. Character names and references are used only
-              to help collectors organize and identify their collections. Founding keychain bundle is limited and available while supplies last.
+              Adorable Vault helps collectors connect, but buyers and sellers handle payment, pickup,
+              shipping, item condition, refunds, and completed transactions directly.
             </div>
           </div>
         </section>
 
         <section className="finalCta">
           <div className="eyebrow">Ready to organize the chaos?</div>
-          <h2 className="sectionTitle">Start your collection today 💜</h2>
+          <h2 className="sectionTitle">Open your vault and start tracking 💜</h2>
           <div className="sectionText" style={{ margin: "10px auto 0" }}>
-            Open your vault, save your first Doorables, and see exactly what you own, need, and can trade.
+            Save what you own, find what you need, and turn collection chaos into something you can actually use.
           </div>
 
-          <div className="buttonRow" style={{ justifyContent: "center" }}>
-            <Link href="/collection" className="primaryButton">
-              Open My Collection
+          <div className="ctaButtons" style={{ justifyContent: "center" }}>
+            <Link href="/demo" className="primaryButton">
+              Preview First 👀
             </Link>
-            <Link href="/pricing" className="secondaryButton">
-              View Plans
+            <Link href="/collection" className="secondaryButton">
+              Start Free Tracking
             </Link>
           </div>
         </section>
       </div>
 
       <div className="mobileSticky">
-        <Link href="/collection" className="primaryButton">
-          🚀 Start Tracking
+        <Link href="/demo" className="primaryButton">
+          👀 Preview
         </Link>
-        <Link href="/pricing" className="secondaryButton">
-          👑 View Plans
+        <Link href="/collection" className="secondaryButton">
+          💜 Start Free
         </Link>
       </div>
     </main>

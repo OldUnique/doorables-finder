@@ -27,12 +27,29 @@ type PlanKey = "monthly" | "yearly" | "founding";
 const ADMIN_EMAILS = ["riffeljosh80@gmail.com"];
 const FREE_LIMIT = 50;
 
+const DEFAULT_ANNOUNCEMENT_TITLE = "Vault Update: Mobile Glow-Up + Skip Button 💜";
+
+const DEFAULT_ANNOUNCEMENT_BODY = `We’ve been busy polishing the vault! The collection page now has a cleaner mobile layout that makes browsing, tracking, and updating your Doorables much easier on your phone.
+
+We also added a new Skip option for collectors who don’t have a Doorable but aren’t actively hunting for it. That way your “Still Need” list can stay more accurate to what you actually want to collect.
+
+Recent updates include:
+• cleaner mobile list view
+• better centered collection photos
+• desktop image hover zoom
+• improved card and list layouts
+• public profile/share improvements
+• smoother collection browsing
+• new Skip / Don’t Want tracking option
+
+Thank you to everyone checking out the site, testing features, sharing feedback, and helping shape Adorable Vault into a better collector tool. More updates are coming soon 💜`;
+
 export default function HomePage() {
   const [userEmail, setUserEmail] = useState("");
   const [username, setUsername] = useState("");
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
-  const [title, setTitle] = useState("This Week’s Updates");
-  const [body, setBody] = useState("");
+  const [title, setTitle] = useState(DEFAULT_ANNOUNCEMENT_TITLE);
+  const [body, setBody] = useState(DEFAULT_ANNOUNCEMENT_BODY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -188,8 +205,8 @@ export default function HomePage() {
       if (data) {
         const row = data as Announcement;
         setAnnouncement(row);
-        setTitle(String(row.title ?? "This Week’s Updates"));
-        setBody(String(row.body ?? ""));
+        setTitle(String(row.title ?? DEFAULT_ANNOUNCEMENT_TITLE));
+        setBody(String(row.body ?? DEFAULT_ANNOUNCEMENT_BODY));
       }
 
       setLoading(false);
@@ -207,7 +224,7 @@ export default function HomePage() {
       const supabase = getSupabase();
 
       const payload = {
-        title: title.trim() || "This Week’s Updates",
+        title: title.trim() || DEFAULT_ANNOUNCEMENT_TITLE,
         body,
         is_active: true,
         updated_by: userEmail || null,
@@ -283,9 +300,8 @@ export default function HomePage() {
     }
   }
 
-  const announcementText =
-    body.trim() ||
-    "New collector tools, marketplace upgrades, secret promos, and smoother Doorables tracking features are coming soon 💜";
+  const announcementText = body.trim() || DEFAULT_ANNOUNCEMENT_BODY;
+  const announcementTitle = title.trim() || DEFAULT_ANNOUNCEMENT_TITLE;
 
   const hasPersonalStats = stats.total > 0 && (stats.owned > 0 || stats.extras > 0);
   const displayOwned = hasPersonalStats ? stats.owned : "50";
@@ -1115,13 +1131,18 @@ export default function HomePage() {
 
         @media (max-width: 980px) {
           .shell {
-            padding: 14px;
-            padding-bottom: 112px;
+            padding: 12px;
+            padding-bottom: 96px;
           }
 
           .hero,
           .splitGrid {
             grid-template-columns: 1fr;
+          }
+
+          .hero {
+            gap: 12px;
+            margin-bottom: 12px;
           }
 
           .heroCard,
@@ -1130,64 +1151,322 @@ export default function HomePage() {
           .whiteCard,
           .darkCard,
           .finalCta {
-            border-radius: 24px;
+            border-radius: 22px;
           }
 
           .heroCard {
-            padding: 22px;
+            padding: 18px;
+          }
+
+          .badge {
+            margin-bottom: 11px;
+            padding: 7px 10px;
+            font-size: 12px;
           }
 
           .headline {
-            font-size: clamp(2rem, 11vw, 3.05rem);
+            font-size: clamp(1.75rem, 9.5vw, 2.55rem);
+            line-height: 0.98;
+            letter-spacing: -1.4px;
           }
 
           .heroText {
-            font-size: 15.5px;
+            margin-top: 12px;
+            font-size: 14px;
+            line-height: 1.45;
+          }
+
+          .trustRow {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+          }
+
+          .trustRow::-webkit-scrollbar {
+            display: none;
+          }
+
+          .trustPill {
+            flex: 0 0 auto;
+            font-size: 11px;
+            padding: 7px 10px;
           }
 
           .heroActions {
+            grid-template-columns: 1fr 1fr;
+            gap: 9px;
+            margin-top: 14px;
+          }
+
+          .actionCard,
+          .actionCard:visited {
             grid-template-columns: 1fr;
+            gap: 7px;
+            min-height: 94px;
+            padding: 11px;
+            border-radius: 18px;
+            text-align: center;
+          }
+
+          .actionIcon {
+            width: 42px;
+            height: 42px;
+            border-radius: 15px;
+            font-size: 23px;
+            margin: 0 auto;
+          }
+
+          .actionTitle {
+            font-size: 13px;
+          }
+
+          .actionSub {
+            display: none;
+          }
+
+          .vaultPreview {
+            padding: 13px;
+            gap: 10px;
+          }
+
+          .previewHeader {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+          }
+
+          .previewLabel {
+            font-size: 11px;
+          }
+
+          .previewHeader div[style] {
+            display: none;
+          }
+
+          .previewLink {
+            padding: 8px 10px;
+            font-size: 11px;
+          }
+
+          .mockSearch {
+            min-height: 42px;
+            padding: 10px 12px;
+            border-radius: 14px;
+            font-size: 12px;
           }
 
           .previewStats {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 7px;
+          }
+
+          .miniStat {
+            min-height: 60px;
+            padding: 9px 7px;
+            border-radius: 14px;
+            text-align: center;
+          }
+
+          .miniStatValue {
+            font-size: 18px;
+            margin-bottom: 4px;
+          }
+
+          .miniStatLabel {
+            font-size: 9.5px;
           }
 
           .mockCards {
-            grid-template-columns: 1fr;
+            display: none;
+          }
+
+          .progressPanel {
+            padding: 12px;
+            border-radius: 18px;
+          }
+
+          .progressTop {
+            margin-bottom: 9px;
           }
 
           .launchStrip {
             grid-template-columns: 1fr;
+            padding: 14px;
+            gap: 10px;
+            margin-bottom: 12px;
+          }
+
+          .launchTitle {
+            font-size: 17px;
+          }
+
+          .launchText {
+            font-size: 12.5px;
+            line-height: 1.45;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
           }
 
           .launchButton {
             width: 100%;
             box-sizing: border-box;
             justify-content: center;
+            min-height: 44px;
+            padding: 11px 14px;
+            font-size: 13px;
           }
 
-          .featureGrid,
-          .priceGrid {
-            grid-template-columns: 1fr;
-          }
-
-          .featureCard {
-            min-height: 0;
+          .section {
+            margin-bottom: 12px;
           }
 
           .sectionHeader {
             display: grid;
-            margin-top: 20px;
+            margin: 16px 0 10px;
+            gap: 7px;
+          }
+
+          .eyebrow {
+            font-size: 11px;
+            margin-bottom: 4px;
+          }
+
+          .sectionTitle {
+            font-size: clamp(1.25rem, 6vw, 1.55rem);
+            letter-spacing: -0.5px;
+          }
+
+          .sectionText {
+            font-size: 12.5px;
+            line-height: 1.45;
+          }
+
+          .featureGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 9px;
+          }
+
+          .featureCard,
+          .featureCard:visited {
+            min-height: 0;
+            padding: 12px;
+            border-radius: 18px;
+          }
+
+          .featureIcon {
+            width: 42px;
+            height: 42px;
+            border-radius: 15px;
+            font-size: 23px;
+            margin-bottom: 9px;
+          }
+
+          .featureTitle {
+            font-size: 14px;
+            margin-bottom: 6px;
+          }
+
+          .featureText {
+            font-size: 11.5px;
+            line-height: 1.35;
+            margin-bottom: 9px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+
+          .featureLink {
+            padding: 7px 9px;
+            font-size: 11px;
+          }
+
+          .splitGrid {
+            gap: 12px;
           }
 
           .whiteCard {
-            padding: 18px;
+            padding: 15px;
+          }
+
+          .announcementBody {
+            margin-top: 11px;
+            padding: 13px;
+            border-radius: 17px;
+            min-height: 0;
+            max-height: 220px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.55;
+          }
+
+          .miniList {
+            gap: 8px;
+            margin-top: 12px;
+          }
+
+          .miniListItem {
+            grid-template-columns: 28px 1fr;
+            padding: 10px;
+            border-radius: 14px;
+            font-size: 12.5px;
+          }
+
+          .priceGrid {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding-bottom: 6px;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+          }
+
+          .priceGrid::-webkit-scrollbar {
+            display: none;
           }
 
           .priceCard {
+            flex: 0 0 82%;
             min-height: 0;
-            padding: 22px;
+            padding: 17px;
+            border-radius: 22px;
+            scroll-snap-align: start;
+          }
+
+          .price {
+            font-size: 34px;
+            margin: 8px 0;
+          }
+
+          .price span {
+            font-size: 14px;
+          }
+
+          .finePrint {
+            font-size: 12.5px;
+            line-height: 1.42;
+            margin-bottom: 13px;
+          }
+
+          .tag,
+          .saveTag {
+            font-size: 10px;
+            padding: 6px 9px;
+          }
+
+          .planButton {
+            min-height: 44px;
+            border-radius: 14px;
+            font-size: 13px;
+          }
+
+          .finalCta {
+            display: none;
           }
 
           .mobileSticky {
@@ -1198,9 +1477,9 @@ export default function HomePage() {
             bottom: 12px;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            padding: 10px;
-            border-radius: 22px;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 18px;
             background: rgba(15,23,42,0.88);
             border: 1px solid rgba(255,255,255,0.14);
             backdrop-filter: blur(14px);
@@ -1208,10 +1487,10 @@ export default function HomePage() {
           }
 
           .mobileSticky a {
-            min-height: 46px;
+            min-height: 42px;
             border-radius: 15px;
             padding: 10px 12px;
-            font-size: 13px;
+            font-size: 12.5px;
             color: #ffffff !important;
             text-shadow: 0 1px 2px rgba(0,0,0,0.35);
           }
@@ -1232,8 +1511,37 @@ export default function HomePage() {
         }
 
         @media (max-width: 560px) {
-          .previewHeader {
+          .previewStats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .heroActions {
+            grid-template-columns: 1fr 1fr;
+          }
+
+          .featureGrid {
+            grid-template-columns: 1fr 1fr;
+          }
+
+          .priceCard {
+            flex-basis: 88%;
+          }
+
+          .buttonRow,
+          .ctaButtons {
             display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+          }
+
+          .primaryButton,
+          .secondaryButton {
+            width: 100%;
+            box-sizing: border-box;
+          }
+
+          .previewHeader {
+            grid-template-columns: 1fr;
           }
 
           .previewLink {
@@ -1246,16 +1554,22 @@ export default function HomePage() {
             min-height: 0;
           }
 
-          .buttonRow,
-          .ctaButtons {
-            display: grid;
+          .mobileSticky {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+
+        @media (max-width: 390px) {
+          .headline {
+            font-size: 1.75rem;
+          }
+
+          .heroActions {
             grid-template-columns: 1fr;
           }
 
-          .primaryButton,
-          .secondaryButton {
-            width: 100%;
-            box-sizing: border-box;
+          .featureGrid {
+            grid-template-columns: 1fr;
           }
 
           .mobileSticky {
@@ -1481,7 +1795,7 @@ export default function HomePage() {
           <div className="whiteCard">
             <div className="eyebrow">Vault news</div>
             <h2 className="sectionTitle">
-              {loading ? "Loading updates..." : title}
+              {loading ? DEFAULT_ANNOUNCEMENT_TITLE : announcementTitle}
             </h2>
             <div className="sectionText">
               Weekly updates, feature drops, secret codes, collector news, promos, and launch notes.

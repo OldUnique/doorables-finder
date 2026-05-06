@@ -1290,25 +1290,18 @@ export default function Page() {
 
         .cardImageBox {
           height: 180px;
-          background: rgba(255,255,255,0.95);
+          background: rgba(255,255,255,0.92);
           border-radius: 18px;
           display: grid;
           place-items: center;
           overflow: hidden;
           padding: 14px;
-          position: relative;
         }
 
         .cardImageBox img {
-          width: auto;
-          height: auto;
-          max-width: 84%;
-          max-height: 84%;
+          width: 100%;
+          height: 100%;
           object-fit: contain;
-          display: block;
-          transform-origin: center center;
-          transition: transform 0.22s ease;
-          will-change: transform;
         }
 
         .cardName {
@@ -1449,22 +1442,9 @@ export default function Page() {
         }
 
         .listThumb img {
-          width: auto;
-          height: auto;
-          max-width: 84%;
-          max-height: 84%;
+          width: 100%;
+          height: 100%;
           object-fit: contain;
-          display: block;
-          transform-origin: center center;
-          transition: transform 0.22s ease;
-          will-change: transform;
-        }
-
-        @media (hover: hover) and (pointer: fine) {
-          .cardImageBox:hover img,
-          .listThumb:hover img {
-            transform: scale(1.08);
-          }
         }
 
         .listTopRow {

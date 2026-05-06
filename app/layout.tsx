@@ -4,7 +4,7 @@ import AppHeader from "../components/AppHeader";
 import { Analytics } from "@vercel/analytics/next";
 
 export const metadata = {
-  title: "Adorable Vault | Doorabes Collection Tracker",
+  title: "Adorable Vault | Doorables Collection Tracker",
   description: "Track your Doorables collection, wishlist, extras, marketplace, and public collector profile with Adorable Vault",
 };
 

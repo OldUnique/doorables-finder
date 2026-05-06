@@ -50,10 +50,14 @@ export default function AppHeader() {
 
     if (menuOpen) {
       document.body.style.overflow = "hidden";
+      document.body.classList.add("av-menu-open");
+    } else {
+      document.body.classList.remove("av-menu-open");
     }
 
     return () => {
       document.body.style.overflow = originalOverflow;
+      document.body.classList.remove("av-menu-open");
     };
   }, [menuOpen]);
 
@@ -332,8 +336,9 @@ export default function AppHeader() {
         .adorableHeader {
           position: sticky;
           top: 0;
-          z-index: 2147483000;
+          z-index: 999999;
           isolation: isolate;
+          overflow: visible !important;
           backdrop-filter: blur(18px);
           background:
             radial-gradient(circle at 10% 0%, rgba(236, 72, 153, 0.2), transparent 26%),
@@ -361,7 +366,7 @@ export default function AppHeader() {
           align-items: center;
           gap: 14px;
           position: relative;
-          z-index: 2147483002;
+          z-index: 3;
         }
 
         .avBrandLink {
@@ -615,10 +620,7 @@ export default function AppHeader() {
             0 8px 18px rgba(0, 0, 0, 0.14);
         }
 
-        .avMobileBackdrop {
-          display: none;
-        }
-
+        .avMobileBackdrop,
         .avMobilePanel {
           display: none;
         }
@@ -651,7 +653,7 @@ export default function AppHeader() {
           .avMobileBackdrop {
             position: fixed;
             inset: 0;
-            z-index: 2147483001;
+            z-index: 1;
             display: block;
             width: 100vw;
             height: 100dvh;
@@ -659,34 +661,34 @@ export default function AppHeader() {
             border: none;
             background:
               radial-gradient(circle at 15% 12%, rgba(168, 85, 247, 0.26), transparent 34%),
-              rgba(2, 6, 23, 0.88);
-            backdrop-filter: blur(12px);
+              rgba(2, 6, 23, 0.78);
+            backdrop-filter: blur(8px);
             cursor: pointer;
           }
 
           .avMobilePanel {
-            position: fixed;
-            left: 12px;
-            right: 12px;
-            top: 80px;
-            bottom: 12px;
-            z-index: 2147483003;
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            top: calc(100% + 10px);
+            z-index: 4;
             display: none;
             grid-auto-rows: max-content;
-            gap: 9px;
+            gap: 8px;
             padding: 12px;
             border-radius: 24px;
+            max-height: calc(100dvh - 96px);
             overflow-y: auto;
             overscroll-behavior: contain;
             scrollbar-width: thin;
             background:
-              radial-gradient(circle at top right, rgba(147, 197, 253, 0.18), transparent 34%),
-              radial-gradient(circle at bottom left, rgba(236, 72, 153, 0.14), transparent 30%),
-              linear-gradient(135deg, rgba(30, 27, 75, 0.98), rgba(49, 46, 129, 0.96));
-            border: 1px solid rgba(255, 255, 255, 0.18);
+              radial-gradient(circle at top right, rgba(147, 197, 253, 0.2), transparent 34%),
+              radial-gradient(circle at bottom left, rgba(236, 72, 153, 0.16), transparent 30%),
+              linear-gradient(135deg, rgba(30, 27, 75, 0.99), rgba(49, 46, 129, 0.98));
+            border: 1px solid rgba(255, 255, 255, 0.2);
             box-shadow:
               inset 0 1px 0 rgba(255, 255, 255, 0.12),
-              0 24px 60px rgba(0, 0, 0, 0.5);
+              0 24px 60px rgba(0, 0, 0, 0.55);
           }
 
           .avMobilePanelOpen {
@@ -779,12 +781,11 @@ export default function AppHeader() {
           }
 
           .avMobilePanel {
-            top: 72px;
-            left: 10px;
-            right: 10px;
-            bottom: 10px;
+            left: 6px;
+            right: 6px;
             padding: 10px;
             gap: 8px;
+            max-height: calc(100dvh - 88px);
           }
 
           .avMobilePanelHeader {

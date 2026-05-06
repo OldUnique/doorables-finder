@@ -90,6 +90,7 @@ export default function AppHeader() {
         }
       } catch {
         if (!active) return;
+
         setEmail(null);
         setAuthChecked(true);
         setUnreadCount(0);
@@ -194,15 +195,19 @@ export default function AppHeader() {
         key={`${mobile ? "mobile" : "desktop"}-${link.href}`}
         href={link.href}
         onClick={() => setMenuOpen(false)}
-        className={active ? "navBubble navBubbleActive" : "navBubble"}
+        className={active ? "avNavBubble avNavBubbleActive" : "avNavBubble"}
         aria-current={active ? "page" : undefined}
       >
-        <span className="navBubbleIcon" aria-hidden="true">
+        <span className="avNavIcon" aria-hidden="true">
           {link.icon}
         </span>
-        <span className="navBubbleLabel">{label}</span>
+
+        <span className="avNavLabel">{label}</span>
+
+        {mobile ? <span className="avNavArrow" aria-hidden="true">›</span> : null}
+
         {isMessages && unreadCount > 0 ? (
-          <span className="unreadBadge" title={`${unreadCount} unread`}>
+          <span className="avUnreadBadge" title={`${unreadCount} unread`}>
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         ) : null}
@@ -211,41 +216,42 @@ export default function AppHeader() {
   }
 
   return (
-    <header className="appHeader">
-      <div className="headerShell">
-        <Link href="/" className="brandLink" onClick={() => setMenuOpen(false)}>
-          <div className="brandLogo" aria-hidden="true">
-            <div className="chestTop" />
-            <div className="chestBody">
-              <span className="heartLock">💜</span>
+    <header className="adorableHeader">
+      <div className="avHeaderShell">
+        <Link href="/" className="avBrandLink" onClick={() => setMenuOpen(false)}>
+          <div className="avBrandLogo" aria-hidden="true">
+            <div className="avChestTop" />
+            <div className="avChestBody">
+              <span className="avHeartLock">💜</span>
             </div>
-            <div className="chestGlow" />
+            <div className="avChestGlow" />
           </div>
 
-          <div className="brandText">
-            <div className="brandTitle">Adorable Vault</div>
-            <div className="brandTagline">track • trade • showcase</div>
+          <div className="avBrandText">
+            <div className="avBrandTitle">Adorable Vault</div>
+            <div className="avBrandTagline">track • trade • showcase</div>
           </div>
         </Link>
 
-        <nav className="desktopNav" aria-label="Main navigation">
+        <nav className="avDesktopNav" aria-label="Main navigation">
           {links.map((link) => renderNavLink(link))}
         </nav>
 
-        <div className="desktopAccountArea">
+        <div className="avDesktopAccount">
           {!authChecked ? (
-            <span className="accountPlaceholder" aria-hidden="true" />
+            <span className="avAccountPlaceholder" aria-hidden="true" />
           ) : email ? (
             <>
-              <span className="emailBubble" title={email}>
+              <span className="avEmailBubble" title={email}>
                 {email}
               </span>
-              <button type="button" onClick={() => void handleLogout()} className="accountButton">
+
+              <button type="button" onClick={() => void handleLogout()} className="avAccountButton">
                 Log Out
               </button>
             </>
           ) : (
-            <Link href="/login" className="accountButton">
+            <Link href="/login" className="avAccountButton">
               Log In
             </Link>
           )}
@@ -254,7 +260,7 @@ export default function AppHeader() {
         <button
           type="button"
           onClick={() => setMenuOpen((prev) => !prev)}
-          className="mobileMenuToggle"
+          className="avMobileMenuButton"
           aria-expanded={menuOpen}
           aria-controls="mobile-header-panel"
           aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
@@ -265,52 +271,61 @@ export default function AppHeader() {
 
         <div
           id="mobile-header-panel"
-          className={menuOpen ? "mobilePanel mobilePanelOpen" : "mobilePanel"}
+          className={menuOpen ? "avMobilePanel avMobilePanelOpen" : "avMobilePanel"}
         >
-          <div className="mobilePanelHeader">
-            <div className="mobilePanelIntro">
-              <div className="mobilePanelTitle">Where to next?</div>
-              <div className="mobilePanelSubtitle">Quick links for your vault.</div>
+          <div className="avMobilePanelHeader">
+            <div>
+              <div className="avMobileTitle">Where to next?</div>
+              <div className="avMobileSubtitle">Quick links for your vault.</div>
             </div>
 
             {authChecked && email ? (
-              <button type="button" onClick={() => void handleLogout()} className="mobileAccountButton">
+              <button type="button" onClick={() => void handleLogout()} className="avMobileAccountButton">
                 Log Out
               </button>
             ) : (
-              <Link href="/login" onClick={() => setMenuOpen(false)} className="mobileAccountButton">
+              <Link href="/login" onClick={() => setMenuOpen(false)} className="avMobileAccountButton">
                 Log In
               </Link>
             )}
           </div>
 
           {authChecked && email ? (
-            <div className="mobileSignedInBubble" title={email}>
+            <div className="avMobileEmailBubble" title={email}>
               Signed in as {email}
             </div>
           ) : null}
 
-          <nav className="mobileNav" aria-label="Mobile navigation">
+          <nav className="avMobileNav" aria-label="Mobile navigation">
             {links.map((link) => renderNavLink(link, true))}
           </nav>
         </div>
       </div>
 
-      <style jsx>{`
-        .appHeader {
+      <style jsx global>{`
+        .adorableHeader {
           position: sticky;
           top: 0;
           z-index: 50;
           backdrop-filter: blur(18px);
           background:
-            radial-gradient(circle at 10% 0%, rgba(236, 72, 153, 0.18), transparent 24%),
-            radial-gradient(circle at 90% 0%, rgba(59, 130, 246, 0.18), transparent 24%),
+            radial-gradient(circle at 10% 0%, rgba(236, 72, 153, 0.2), transparent 26%),
+            radial-gradient(circle at 90% 0%, rgba(59, 130, 246, 0.2), transparent 26%),
             linear-gradient(135deg, rgba(8, 11, 24, 0.98), rgba(32, 17, 68, 0.95), rgba(30, 41, 99, 0.95));
           border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
         }
 
-        .headerShell {
+        .adorableHeader * {
+          box-sizing: border-box;
+        }
+
+        .adorableHeader a {
+          color: inherit;
+          text-decoration: none !important;
+        }
+
+        .avHeaderShell {
           max-width: 1380px;
           margin: 0 auto;
           padding: 12px 18px;
@@ -320,20 +335,15 @@ export default function AppHeader() {
           gap: 14px;
         }
 
-        .brandLink {
+        .avBrandLink {
           display: inline-flex !important;
           align-items: center;
           gap: 12px;
           color: #ffffff !important;
-          text-decoration: none !important;
           min-width: 0;
         }
 
-        .brandText {
-          min-width: 0;
-        }
-
-        .brandLogo {
+        .avBrandLogo {
           width: 46px;
           height: 46px;
           border-radius: 16px;
@@ -350,7 +360,7 @@ export default function AppHeader() {
           flex: 0 0 auto;
         }
 
-        .chestTop {
+        .avChestTop {
           position: absolute;
           top: 9px;
           width: 31px;
@@ -361,7 +371,7 @@ export default function AppHeader() {
           box-shadow: inset 0 4px 6px rgba(255, 255, 255, 0.28);
         }
 
-        .chestBody {
+        .avChestBody {
           position: absolute;
           bottom: 9px;
           width: 35px;
@@ -374,20 +384,24 @@ export default function AppHeader() {
           box-shadow: inset 0 6px 8px rgba(255, 255, 255, 0.2);
         }
 
-        .heartLock {
+        .avHeartLock {
           font-size: 15px;
           filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
           transform: translateY(1px);
         }
 
-        .chestGlow {
+        .avChestGlow {
           position: absolute;
           inset: -16px;
           background: conic-gradient(from 90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
           opacity: 0.22;
         }
 
-        .brandTitle {
+        .avBrandText {
+          min-width: 0;
+        }
+
+        .avBrandTitle {
           font-size: 22px;
           line-height: 1.05;
           font-weight: 1000;
@@ -398,7 +412,7 @@ export default function AppHeader() {
           white-space: nowrap;
         }
 
-        .brandTagline {
+        .avBrandTagline {
           margin-top: 2px;
           font-size: 12px;
           font-weight: 850;
@@ -408,7 +422,7 @@ export default function AppHeader() {
           opacity: 0.92;
         }
 
-        .desktopNav {
+        .avDesktopNav {
           display: flex;
           flex-wrap: wrap;
           justify-content: center;
@@ -417,48 +431,47 @@ export default function AppHeader() {
           min-width: 0;
         }
 
-        .navBubble {
+        .avNavBubble {
           position: relative;
           display: inline-flex !important;
-          align-items: center !important;
+          align-items: center;
           justify-content: center;
           gap: 8px;
           min-height: 46px;
           padding: 10px 15px;
-          border-radius: 18px !important;
+          border-radius: 18px;
           color: #ffffff !important;
-          text-decoration: none !important;
           font-size: 14px;
           font-weight: 900;
           line-height: 1;
           letter-spacing: 0.1px;
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08)) !important;
-          border: 1px solid rgba(255, 255, 255, 0.18) !important;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.09));
+          border: 1px solid rgba(255, 255, 255, 0.2);
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.12),
-            0 8px 18px rgba(0, 0, 0, 0.14) !important;
+            inset 0 1px 0 rgba(255, 255, 255, 0.13),
+            0 8px 18px rgba(0, 0, 0, 0.14);
           transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
           white-space: nowrap;
           overflow: hidden;
         }
 
-        .navBubble:hover {
+        .avNavBubble:hover {
           transform: translateY(-1px);
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.1)) !important;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.14),
-            0 10px 22px rgba(0, 0, 0, 0.18) !important;
-        }
-
-        .navBubbleActive {
-          background: linear-gradient(135deg, rgba(236, 72, 153, 0.98), rgba(124, 58, 237, 0.95), rgba(59, 130, 246, 0.95)) !important;
-          border-color: rgba(255, 255, 255, 0.3) !important;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.12));
           box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.15),
-            0 12px 24px rgba(124, 58, 237, 0.32) !important;
+            0 10px 22px rgba(0, 0, 0, 0.18);
         }
 
-        .navBubbleIcon {
+        .avNavBubbleActive {
+          background: linear-gradient(135deg, rgba(236, 72, 153, 0.98), rgba(124, 58, 237, 0.96), rgba(59, 130, 246, 0.96));
+          border-color: rgba(255, 255, 255, 0.32);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.15),
+            0 12px 24px rgba(124, 58, 237, 0.32);
+        }
+
+        .avNavIcon {
           width: 28px;
           height: 28px;
           min-width: 28px;
@@ -466,18 +479,26 @@ export default function AppHeader() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          background: rgba(255, 255, 255, 0.15);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.16);
+          border: 1px solid rgba(255, 255, 255, 0.14);
           font-size: 14px;
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
         }
 
-        .navBubbleLabel {
+        .avNavLabel {
           color: #ffffff !important;
           text-decoration: none !important;
         }
 
-        .unreadBadge {
+        .avNavArrow {
+          margin-left: auto;
+          color: rgba(255, 255, 255, 0.86);
+          font-size: 28px;
+          line-height: 1;
+          font-weight: 500;
+        }
+
+        .avUnreadBadge {
           min-width: 18px;
           height: 18px;
           padding: 0 5px;
@@ -492,7 +513,7 @@ export default function AppHeader() {
           box-shadow: 0 0 0 2px rgba(10, 14, 30, 0.88);
         }
 
-        .desktopAccountArea {
+        .avDesktopAccount {
           display: inline-flex;
           align-items: center;
           justify-content: flex-end;
@@ -500,15 +521,15 @@ export default function AppHeader() {
           min-width: 0;
         }
 
-        .emailBubble {
+        .avEmailBubble {
           max-width: 230px;
           min-height: 42px;
           padding: 10px 14px;
           border-radius: 18px;
           display: inline-flex;
           align-items: center;
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
-          border: 1px solid rgba(255, 255, 255, 0.16);
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
+          border: 1px solid rgba(255, 255, 255, 0.18);
           color: #f9fafb;
           font-size: 13px;
           font-weight: 800;
@@ -518,35 +539,34 @@ export default function AppHeader() {
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
 
-        .accountButton,
-        .mobileAccountButton {
+        .avAccountButton,
+        .avMobileAccountButton {
           min-height: 42px;
           padding: 10px 16px;
           border-radius: 18px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
-          color: white;
-          text-decoration: none;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.09));
+          color: white !important;
           font-size: 14px;
           font-weight: 950;
           font-family: inherit;
           cursor: pointer;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.1),
-            0 8px 18px rgba(0, 0, 0, 0.12);
+            inset 0 1px 0 rgba(255, 255, 255, 0.12),
+            0 8px 18px rgba(0, 0, 0, 0.14);
         }
 
-        .accountPlaceholder {
+        .avAccountPlaceholder {
           width: 84px;
           min-height: 42px;
           opacity: 0;
           pointer-events: none;
         }
 
-        .mobileMenuToggle {
+        .avMobileMenuButton {
           display: none;
           min-height: 42px;
           padding: 10px 14px;
@@ -554,48 +574,48 @@ export default function AppHeader() {
           align-items: center;
           justify-content: center;
           gap: 8px;
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.09));
           color: #ffffff;
           font-size: 14px;
           font-weight: 950;
           font-family: inherit;
           cursor: pointer;
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.1),
-            0 8px 18px rgba(0, 0, 0, 0.12);
+            inset 0 1px 0 rgba(255, 255, 255, 0.12),
+            0 8px 18px rgba(0, 0, 0, 0.14);
         }
 
-        .mobilePanel {
+        .avMobilePanel {
           display: none;
         }
 
         @media (max-width: 1320px) {
-          .emailBubble {
+          .avEmailBubble {
             display: none;
           }
 
-          .navBubble {
+          .avNavBubble {
             padding: 10px 13px;
           }
         }
 
         @media (max-width: 1140px) {
-          .headerShell {
+          .avHeaderShell {
             grid-template-columns: auto auto;
             justify-content: space-between;
           }
 
-          .desktopNav,
-          .desktopAccountArea {
+          .avDesktopNav,
+          .avDesktopAccount {
             display: none;
           }
 
-          .mobileMenuToggle {
+          .avMobileMenuButton {
             display: inline-flex;
           }
 
-          .mobilePanel {
+          .avMobilePanel {
             grid-column: 1 / -1;
             width: 100%;
             display: none;
@@ -603,120 +623,118 @@ export default function AppHeader() {
             padding: 14px;
             border-radius: 24px;
             background:
-              radial-gradient(circle at top right, rgba(147, 197, 253, 0.16), transparent 34%),
-              linear-gradient(135deg, rgba(30, 27, 75, 0.94), rgba(49, 46, 129, 0.9));
-            border: 1px solid rgba(255, 255, 255, 0.15);
+              radial-gradient(circle at top right, rgba(147, 197, 253, 0.17), transparent 34%),
+              linear-gradient(135deg, rgba(30, 27, 75, 0.96), rgba(49, 46, 129, 0.92));
+            border: 1px solid rgba(255, 255, 255, 0.16);
             box-shadow:
               inset 0 1px 0 rgba(255, 255, 255, 0.12),
-              0 14px 30px rgba(0, 0, 0, 0.24);
+              0 14px 30px rgba(0, 0, 0, 0.26);
           }
 
-          .mobilePanelOpen {
+          .avMobilePanelOpen {
             display: grid;
           }
 
-          .mobilePanelHeader {
+          .avMobilePanelHeader {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
             gap: 12px;
           }
 
-          .mobilePanelIntro {
-            min-width: 0;
-          }
-
-          .mobilePanelTitle {
+          .avMobileTitle {
             color: white;
-            font-size: 17px;
+            font-size: 26px;
+            line-height: 1.05;
             font-weight: 1000;
           }
 
-          .mobilePanelSubtitle {
-            margin-top: 2px;
-            color: rgba(255, 255, 255, 0.72);
-            font-size: 12px;
-            font-weight: 800;
+          .avMobileSubtitle {
+            margin-top: 5px;
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 15px;
+            font-weight: 850;
           }
 
-          .mobileSignedInBubble {
-            min-height: 44px;
-            padding: 10px 14px;
+          .avMobileEmailBubble {
+            min-height: 54px;
+            padding: 13px 16px;
             border-radius: 18px;
             display: flex;
             align-items: center;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
-            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.09));
+            border: 1px solid rgba(255, 255, 255, 0.18);
             color: #f3f4f6;
-            font-size: 13px;
-            font-weight: 850;
+            font-size: 14px;
+            font-weight: 900;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
           }
 
-          .mobileNav {
+          .avMobileNav {
             display: grid;
             grid-template-columns: 1fr;
             gap: 10px;
           }
 
-          .mobileNav .navBubble {
+          .avMobileNav .avNavBubble {
             width: 100%;
-            min-height: 58px;
+            min-height: 66px;
             justify-content: flex-start;
-            padding: 12px 14px;
-            border-radius: 20px !important;
+            padding: 13px 16px;
+            border-radius: 18px;
             white-space: nowrap;
           }
 
-          .mobileNav .navBubbleIcon {
-            width: 34px;
-            height: 34px;
-            min-width: 34px;
-            font-size: 17px;
+          .avMobileNav .avNavIcon {
+            width: 42px;
+            height: 42px;
+            min-width: 42px;
+            font-size: 22px;
           }
 
-          .mobileNav .navBubbleLabel {
-            font-size: 15px;
+          .avMobileNav .avNavLabel {
+            font-size: 19px;
+            font-weight: 1000;
           }
         }
 
         @media (max-width: 560px) {
-          .headerShell {
+          .avHeaderShell {
             padding: 12px 14px;
           }
 
-          .brandLogo {
+          .avBrandLogo {
             width: 42px;
             height: 42px;
             border-radius: 14px;
           }
 
-          .brandTitle {
+          .avBrandTitle {
             font-size: 18px;
           }
 
-          .brandTagline {
+          .avBrandTagline {
             display: none;
           }
 
-          .mobilePanelHeader {
+          .avMobilePanelHeader {
             flex-direction: column;
             align-items: stretch;
           }
 
-          .mobileAccountButton {
+          .avMobileAccountButton {
             width: 100%;
           }
         }
 
         @media (max-width: 360px) {
-          .brandTitle {
+          .avBrandTitle {
             font-size: 16px;
           }
 
-          .mobileMenuToggle span:first-child {
+          .avMobileMenuButton span:first-child {
             display: none;
           }
         }

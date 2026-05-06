@@ -345,56 +345,16 @@ export default function HomePage() {
         .page a,
         .page a:visited,
         .page a:hover,
-        .page a:active,
-        .actionCard,
-        .actionCard:visited,
-        .actionCard:hover,
-        .actionCard:active,
-        .featureCard,
-        .featureCard:visited,
-        .featureCard:hover,
-        .featureCard:active,
-        .primaryButton,
-        .primaryButton:visited,
-        .primaryButton:hover,
-        .primaryButton:active,
-        .secondaryButton,
-        .secondaryButton:visited,
-        .secondaryButton:hover,
-        .secondaryButton:active,
-        .mobileSticky a,
-        .mobileSticky a:visited,
-        .mobileSticky a:hover,
-        .mobileSticky a:active {
+        .page a:active {
           color: inherit;
           text-decoration: none !important;
-          text-decoration-line: none !important;
-          -webkit-text-decoration-line: none !important;
-          border-bottom: none !important;
-          box-shadow: none;
         }
 
         .page a *,
         .page a:visited *,
         .page a:hover *,
-        .page a:active *,
-        .actionCard *,
-        .featureCard *,
-        .mobileSticky a * {
+        .page a:active * {
           text-decoration: none !important;
-          text-decoration-line: none !important;
-          -webkit-text-decoration-line: none !important;
-          border-bottom: none !important;
-        }
-
-        .actionIcon,
-        .featureIcon,
-        .mobileStickyIcon {
-          text-decoration: none !important;
-          text-decoration-line: none !important;
-          -webkit-text-decoration-line: none !important;
-          border-bottom: none !important;
-          line-height: 1;
         }
 
         .shell {
@@ -1145,14 +1105,14 @@ export default function HomePage() {
           background: linear-gradient(90deg, #ffffff, #fef3c7);
           color: #312e81 !important;
           border: 1px solid rgba(255,255,255,0.55);
-          box-shadow: 0 18px 40px rgba(255,255,255,0.22) !important;
+          box-shadow: 0 18px 40px rgba(255,255,255,0.22);
         }
 
         .secondaryButton {
           background: linear-gradient(90deg, #4f46e5, #a855f7);
           color: #ffffff !important;
           border: 1px solid rgba(255,255,255,0.45);
-          box-shadow: 0 16px 34px rgba(124,58,237,0.50) !important;
+          box-shadow: 0 16px 34px rgba(124,58,237,0.50);
         }
 
         .buttonRow,
@@ -1660,7 +1620,7 @@ export default function HomePage() {
             </div>
 
             <div className="heroActions">
-              <Link href="/demo" className="actionCard" style={{ textDecoration: "none" }}>
+              <Link href="/demo" className="actionCard">
                 <span className="actionIcon">👀</span>
                 <span>
                   <span className="actionTitle">Preview the vault</span>
@@ -1668,7 +1628,7 @@ export default function HomePage() {
                 </span>
               </Link>
 
-              <Link href="/collection" className="actionCard alt" style={{ textDecoration: "none" }}>
+              <Link href="/collection" className="actionCard alt">
                 <span className="actionIcon">💜</span>
                 <span>
                   <span className="actionTitle">Start tracking free</span>
@@ -1813,7 +1773,7 @@ export default function HomePage() {
           </div>
 
           <div className="featureGrid">
-            <Link href="/collection" className="featureCard" style={{ textDecoration: "none" }}>
+            <Link href="/collection" className="featureCard">
               <div className="featureIcon">💜</div>
               <div className="featureTitle">Track your collection</div>
               <div className="featureText">
@@ -1822,7 +1782,7 @@ export default function HomePage() {
               <div className="featureLink">Open tracker →</div>
             </Link>
 
-            <Link href="/demo" className="featureCard" style={{ textDecoration: "none" }}>
+            <Link href="/demo" className="featureCard">
               <div className="featureIcon">👀</div>
               <div className="featureTitle">Preview before signup</div>
               <div className="featureText">
@@ -1831,7 +1791,7 @@ export default function HomePage() {
               <div className="featureLink">View preview →</div>
             </Link>
 
-            <Link href="/sell" className="featureCard" style={{ textDecoration: "none" }}>
+            <Link href="/sell" className="featureCard">
               <div className="featureIcon">🔁</div>
               <div className="featureTitle">Organize extras</div>
               <div className="featureText">
@@ -1840,7 +1800,7 @@ export default function HomePage() {
               <div className="featureLink">List extras →</div>
             </Link>
 
-            <Link href="/marketplace" className="featureCard" style={{ textDecoration: "none" }}>
+            <Link href="/marketplace" className="featureCard">
               <div className="featureIcon">🛍️</div>
               <div className="featureTitle">Browse Marketplace</div>
               <div className="featureText">
@@ -2047,10 +2007,10 @@ export default function HomePage() {
           </div>
 
           <div className="ctaButtons" style={{ justifyContent: "center" }}>
-            <Link href="/demo" className="primaryButton" style={{ textDecoration: "none" }}>
+            <Link href="/demo" className="primaryButton">
               Preview First 👀
             </Link>
-            <Link href="/collection" className="secondaryButton" style={{ textDecoration: "none" }}>
+            <Link href="/collection" className="secondaryButton">
               Start Free Tracking
             </Link>
           </div>
@@ -2058,13 +2018,11 @@ export default function HomePage() {
       </div>
 
       <div className="mobileSticky">
-        <Link href="/demo" className="primaryButton" style={{ textDecoration: "none" }}>
-          <span className="mobileStickyIcon" aria-hidden="true">👀</span>
-          <span>Preview</span>
+        <Link href="/demo" className="primaryButton">
+          👀 Preview
         </Link>
-        <Link href="/collection" className="secondaryButton" style={{ textDecoration: "none" }}>
-          <span className="mobileStickyIcon" aria-hidden="true">💜</span>
-          <span>Start Free</span>
+        <Link href="/collection" className="secondaryButton">
+          💜 Start Free
         </Link>
       </div>
     </main>

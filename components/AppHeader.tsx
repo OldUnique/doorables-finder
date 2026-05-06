@@ -104,7 +104,6 @@ export default function AppHeader() {
         }
       } catch {
         if (!active) return;
-
         setEmail(null);
         setAuthChecked(true);
         setUnreadCount(0);
@@ -218,19 +217,32 @@ export default function AppHeader() {
 
         <span className="avNavLabel">{label}</span>
 
-        {mobile ? <span className="avNavArrow" aria-hidden="true">›</span> : null}
+        {mobile && (
+          <span className="avNavArrow" aria-hidden="true">
+            ›
+          </span>
+        )}
 
-        {isMessages && unreadCount > 0 ? (
+        {isMessages && unreadCount > 0 && (
           <span className="avUnreadBadge" title={`${unreadCount} unread`}>
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
-        ) : null}
+        )}
       </Link>
     );
   }
 
   return (
     <header className="adorableHeader">
+      {menuOpen && (
+        <button
+          type="button"
+          className="avMobileBackdrop"
+          aria-label="Close navigation menu"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
       <div className="avHeaderShell">
         <Link href="/" className="avBrandLink" onClick={() => setMenuOpen(false)}>
           <div className="avBrandLogo" aria-hidden="true">
@@ -304,11 +316,11 @@ export default function AppHeader() {
             )}
           </div>
 
-          {authChecked && email ? (
+          {authChecked && email && (
             <div className="avMobileEmailBubble" title={email}>
               Signed in as {email}
             </div>
-          ) : null}
+          )}
 
           <nav className="avMobileNav" aria-label="Mobile navigation">
             {links.map((link) => renderNavLink(link, true))}
@@ -320,7 +332,8 @@ export default function AppHeader() {
         .adorableHeader {
           position: sticky;
           top: 0;
-          z-index: 10000;
+          z-index: 2147483000;
+          isolation: isolate;
           backdrop-filter: blur(18px);
           background:
             radial-gradient(circle at 10% 0%, rgba(236, 72, 153, 0.2), transparent 26%),
@@ -347,6 +360,8 @@ export default function AppHeader() {
           grid-template-columns: auto minmax(0, 1fr) auto;
           align-items: center;
           gap: 14px;
+          position: relative;
+          z-index: 2147483002;
         }
 
         .avBrandLink {
@@ -600,6 +615,10 @@ export default function AppHeader() {
             0 8px 18px rgba(0, 0, 0, 0.14);
         }
 
+        .avMobileBackdrop {
+          display: none;
+        }
+
         .avMobilePanel {
           display: none;
         }
@@ -629,14 +648,31 @@ export default function AppHeader() {
             display: inline-flex;
           }
 
+          .avMobileBackdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 2147483001;
+            display: block;
+            width: 100vw;
+            height: 100dvh;
+            padding: 0;
+            border: none;
+            background:
+              radial-gradient(circle at 15% 12%, rgba(168, 85, 247, 0.26), transparent 34%),
+              rgba(2, 6, 23, 0.88);
+            backdrop-filter: blur(12px);
+            cursor: pointer;
+          }
+
           .avMobilePanel {
             position: fixed;
             left: 12px;
             right: 12px;
-            top: 76px;
+            top: 80px;
             bottom: 12px;
-            z-index: 10001;
+            z-index: 2147483003;
             display: none;
+            grid-auto-rows: max-content;
             gap: 9px;
             padding: 12px;
             border-radius: 24px;
@@ -644,30 +680,25 @@ export default function AppHeader() {
             overscroll-behavior: contain;
             scrollbar-width: thin;
             background:
-              radial-gradient(circle at top right, rgba(147, 197, 253, 0.17), transparent 34%),
+              radial-gradient(circle at top right, rgba(147, 197, 253, 0.18), transparent 34%),
+              radial-gradient(circle at bottom left, rgba(236, 72, 153, 0.14), transparent 30%),
               linear-gradient(135deg, rgba(30, 27, 75, 0.98), rgba(49, 46, 129, 0.96));
             border: 1px solid rgba(255, 255, 255, 0.18);
             box-shadow:
               inset 0 1px 0 rgba(255, 255, 255, 0.12),
-              0 24px 60px rgba(0, 0, 0, 0.46);
+              0 24px 60px rgba(0, 0, 0, 0.5);
           }
 
           .avMobilePanelOpen {
             display: grid;
-            grid-auto-rows: max-content;
           }
-
-          .avMobilePanel::after {
-            content: "";
-            height: 4px;
-          }
-
 
           .avMobilePanelHeader {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 12px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 10px;
+            padding: 2px;
           }
 
           .avMobileTitle {
@@ -748,7 +779,7 @@ export default function AppHeader() {
           }
 
           .avMobilePanel {
-            top: 70px;
+            top: 72px;
             left: 10px;
             right: 10px;
             bottom: 10px;
@@ -757,9 +788,7 @@ export default function AppHeader() {
           }
 
           .avMobilePanelHeader {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 8px;
+            grid-template-columns: 1fr;
           }
 
           .avMobileAccountButton {

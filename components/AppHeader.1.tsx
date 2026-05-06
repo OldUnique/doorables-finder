@@ -5,29 +5,16 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getSupabase } from "../lib/supabase";
 
-type HeaderLink = {
-  href: string;
-  icon: string;
-  label: string;
-  shortLabel?: string;
-};
-
-const links: HeaderLink[] = [
+const links = [
   { href: "/", icon: "🏠", label: "Home" },
   { href: "/about", icon: "💜", label: "About" },
   { href: "/collection", icon: "🧸", label: "Collection" },
   { href: "/sell", icon: "🏷️", label: "Sell" },
-  { href: "/marketplace", icon: "🛍️", label: "Marketplace", shortLabel: "Market" },
+  { href: "/marketplace", icon: "🛍️", label: "Marketplace" },
   { href: "/messages", icon: "💬", label: "Messages" },
-  { href: "/pricing", icon: "👑", label: "Subscription", shortLabel: "Plans" },
+  { href: "/pricing", icon: "👑", label: "Subscription" },
   { href: "/feedback", icon: "💙", label: "Feedback" },
 ];
-
-function getIsActive(pathname: string | null, href: string) {
-  if (!pathname) return false;
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
 
 export default function AppHeader() {
   const pathname = usePathname();
@@ -74,6 +61,7 @@ export default function AppHeader() {
 
     async function loadUser() {
       try {
+        // getSession is faster for UI display than getUser and avoids a visible header loading message.
         const {
           data: { session },
         } = await supabase.auth.getSession();
@@ -159,12 +147,12 @@ export default function AppHeader() {
       return;
     }
 
-    const conversationIds = conversations.map((conversation: { id: string }) => conversation.id);
+    const ids = conversations.map((c: any) => c.id);
 
     const { data: messages, error: msgError } = await supabase
       .from("marketplace_messages")
       .select("id")
-      .in("conversation_id", conversationIds)
+      .in("conversation_id", ids)
       .neq("sender_id", userId)
       .is("read_at", null);
 
@@ -184,33 +172,6 @@ export default function AppHeader() {
     router.push("/login");
   }
 
-  function renderNavLink(link: HeaderLink, compact = false) {
-    const active = getIsActive(pathname, link.href);
-    const isMessages = link.href === "/messages";
-    const label = compact && link.shortLabel ? link.shortLabel : link.label;
-
-    return (
-      <Link
-        key={`${compact ? "mobile" : "desktop"}-${link.href}`}
-        href={link.href}
-        onClick={() => setMenuOpen(false)}
-        className={active ? "navLink navLinkActive" : "navLink"}
-        aria-current={active ? "page" : undefined}
-      >
-        <span className="navIcon" aria-hidden="true">
-          {link.icon}
-        </span>
-        <span className="navLabel">{label}</span>
-
-        {isMessages && unreadCount > 0 && (
-          <span title={`${unreadCount} unread`} className="unreadBadge">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </Link>
-    );
-  }
-
   return (
     <header className="appHeader">
       <div className="headerShell">
@@ -223,74 +184,68 @@ export default function AppHeader() {
             <div className="chestGlow" />
           </div>
 
-          <div className="brandCopy">
+          <div>
             <div className="brandTitle">Adorable Vault</div>
             <div className="brandTagline">track • trade • showcase</div>
           </div>
         </Link>
-
-        <nav className="desktopNav" aria-label="Main navigation">
-          {links.map((link) => renderNavLink(link))}
-        </nav>
-
-        <div className="desktopAccount">
-          {!authChecked ? (
-            <span className="accountSkeleton" aria-hidden="true" />
-          ) : email ? (
-            <>
-              <span className="emailText" title={email}>
-                {email}
-              </span>
-              <button type="button" onClick={() => void handleLogout()} className="accountButton">
-                Log Out
-              </button>
-            </>
-          ) : (
-            <Link href="/login" className="accountButton">
-              Log In
-            </Link>
-          )}
-        </div>
 
         <button
           type="button"
           onClick={() => setMenuOpen((prev) => !prev)}
           className="mobileMenuToggle"
           aria-expanded={menuOpen}
-          aria-controls="mobile-navigation"
           aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
         >
           <span>{menuOpen ? "Close" : "Menu"}</span>
           <span aria-hidden="true">{menuOpen ? "✕" : "☰"}</span>
         </button>
 
-        <div id="mobile-navigation" className={menuOpen ? "mobilePanel mobilePanelOpen" : "mobilePanel"}>
-          <div className="mobilePanelTop">
-            <div>
-              <div className="mobilePanelTitle">Where to next?</div>
-              <div className="mobilePanelText">Quick links for your vault.</div>
-            </div>
+        <nav className={menuOpen ? "navOpen" : ""}>
+          {links.map((link) => {
+            const active =
+              pathname === link.href ||
+              (link.href !== "/" && pathname?.startsWith(link.href + "/"));
+            const isMessages = link.href === "/messages";
 
-            {authChecked && email ? (
-              <button type="button" onClick={() => void handleLogout()} className="mobileAccountButton">
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMenuOpen(false)}
+                className={active ? "navLink navLinkActive" : "navLink"}
+              >
+                <span className="navIcon" aria-hidden="true">
+                  {link.icon}
+                </span>
+
+                <span className="navLabel">{link.label}</span>
+
+                {isMessages && unreadCount > 0 && (
+                  <span title={`${unreadCount} unread`} className="unreadBadge">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="accountArea">
+          {!authChecked ? (
+            <span className="accountPlaceholder" aria-hidden="true" />
+          ) : email ? (
+            <>
+              <span className="emailText">{email}</span>
+              <button type="button" onClick={() => void handleLogout()} className="accountButton">
                 Log Out
               </button>
-            ) : (
-              <Link href="/login" onClick={() => setMenuOpen(false)} className="mobileAccountButton">
-                Log In
-              </Link>
-            )}
-          </div>
-
-          {authChecked && email && (
-            <div className="mobileEmail" title={email}>
-              Signed in as {email}
-            </div>
+            </>
+          ) : (
+            <Link href="/login" onClick={() => setMenuOpen(false)} className="accountButton">
+              Log In
+            </Link>
           )}
-
-          <nav className="mobileNav" aria-label="Mobile navigation">
-            {links.map((link) => renderNavLink(link, true))}
-          </nav>
         </div>
       </div>
 
@@ -298,39 +253,40 @@ export default function AppHeader() {
         .appHeader {
           position: sticky;
           top: 0;
-          z-index: 50;
-          backdrop-filter: blur(18px);
+          z-index: 40;
+          backdrop-filter: blur(16px);
           background:
-            radial-gradient(circle at 10% 0%, rgba(236,72,153,0.22), transparent 28%),
-            radial-gradient(circle at 88% 0%, rgba(59,130,246,0.22), transparent 28%),
-            linear-gradient(135deg, rgba(8,11,24,0.96), rgba(32,17,68,0.94), rgba(30,41,99,0.94));
-          border-bottom: 1px solid rgba(255,255,255,0.12);
-          box-shadow: 0 12px 30px rgba(0,0,0,0.26);
+            radial-gradient(circle at 12% 0%, rgba(236,72,153,0.22), transparent 26%),
+            radial-gradient(circle at 82% 0%, rgba(59,130,246,0.20), transparent 26%),
+            linear-gradient(135deg, rgba(8,11,24,0.96), rgba(32,17,68,0.92), rgba(30,41,99,0.92));
+          border-bottom: 1px solid rgba(255,255,255,0.10);
+          box-shadow: 0 12px 28px rgba(0,0,0,0.25);
         }
 
         .headerShell {
-          max-width: 1440px;
+          max-width: 1320px;
           margin: 0 auto;
-          padding: 12px 18px;
-          display: grid;
-          grid-template-columns: auto minmax(0, 1fr) auto;
-          gap: 14px;
+          padding: 14px 18px;
+          display: flex;
           align-items: center;
-          position: relative;
+          justify-content: space-between;
+          gap: 14px;
+          flex-wrap: wrap;
         }
 
         .brandLink {
-          display: inline-flex;
+          display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 13px;
           color: white;
           text-decoration: none;
-          min-width: 0;
+          font-weight: 900;
+          min-width: 220px;
         }
 
         .brandLogo {
-          width: 46px;
-          height: 46px;
+          width: 48px;
+          height: 48px;
           border-radius: 16px;
           position: relative;
           display: grid;
@@ -382,10 +338,6 @@ export default function AppHeader() {
           opacity: 0.22;
         }
 
-        .brandCopy {
-          min-width: 0;
-        }
-
         .brandTitle {
           font-size: 22px;
           line-height: 1.05;
@@ -394,25 +346,38 @@ export default function AppHeader() {
           background: linear-gradient(90deg, #fde68a, #f9a8d4, #93c5fd);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
-          white-space: nowrap;
         }
 
         .brandTagline {
-          margin-top: 2px;
           font-size: 12px;
-          font-weight: 850;
+          opacity: 0.88;
+          font-weight: 800;
           color: #d8b4fe;
           letter-spacing: 0.2px;
-          white-space: nowrap;
-          opacity: 0.9;
         }
 
-        .desktopNav {
-          display: flex;
+        .mobileMenuToggle {
+          display: none;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          min-width: 0;
+          min-height: 44px;
+          padding: 10px 13px;
+          border-radius: 16px;
+          border: 1px solid rgba(255,255,255,0.20);
+          background:
+            linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+          color: #ffffff;
+          font-weight: 1000;
+          cursor: pointer;
+          box-shadow: 0 8px 18px rgba(0,0,0,0.16);
+        }
+
+        nav {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
         }
 
         .navLink {
@@ -420,17 +385,17 @@ export default function AppHeader() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 7px;
-          min-height: 42px;
-          padding: 8px 11px;
-          border-radius: 16px;
+          gap: 8px;
+          padding: 10px 13px;
+          border-radius: 17px;
           color: #ffffff;
           text-decoration: none;
           font-weight: 900;
-          letter-spacing: 0.05px;
-          background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.055));
+          letter-spacing: 0.1px;
+          background:
+            linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.055));
           border: 1px solid rgba(255,255,255,0.13);
-          transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+          transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
           white-space: nowrap;
           text-shadow: 0 1px 2px rgba(0,0,0,0.45);
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
@@ -438,27 +403,28 @@ export default function AppHeader() {
 
         .navLink:hover {
           transform: translateY(-1px);
-          background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+          background:
+            linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
           box-shadow: 0 8px 18px rgba(0,0,0,0.16);
         }
 
         .navLinkActive {
-          background: linear-gradient(135deg, #ec4899, #7c3aed, #2563eb);
-          border-color: rgba(255,255,255,0.30);
-          box-shadow: 0 10px 22px rgba(124,58,237,0.32);
+          background: linear-gradient(135deg, rgba(236,72,153,1), rgba(124,58,237,1), rgba(59,130,246,1));
+          border: 1px solid rgba(255,255,255,0.28);
+          box-shadow: 0 10px 22px rgba(124,58,237,0.30);
         }
 
         .navIcon {
-          width: 28px;
-          height: 28px;
-          min-width: 28px;
-          border-radius: 11px;
+          width: 30px;
+          height: 30px;
+          min-width: 30px;
+          border-radius: 12px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           background: rgba(255,255,255,0.15);
           border: 1px solid rgba(255,255,255,0.12);
-          font-size: 14px;
+          font-size: 15px;
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
         }
 
@@ -481,253 +447,168 @@ export default function AppHeader() {
           box-shadow: 0 0 0 2px rgba(10,14,30,0.88);
         }
 
-        .desktopAccount {
-          display: inline-flex;
+        .accountArea {
+          display: flex;
           align-items: center;
+          gap: 10px;
+          color: white;
+          font-size: 14px;
+          font-weight: 800;
+          flex-wrap: wrap;
           justify-content: flex-end;
-          gap: 9px;
           min-height: 42px;
-          color: white;
-          font-size: 13px;
-          font-weight: 850;
-          min-width: 0;
         }
 
-        .emailText {
-          max-width: 190px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          color: #f9fafb;
-          opacity: 0.92;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.45);
-        }
-
-        .accountButton,
-        .mobileAccountButton {
+        .accountPlaceholder {
           display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 40px;
-          padding: 9px 13px;
+          width: 84px;
+          min-height: 42px;
           border-radius: 14px;
-          border: 1px solid rgba(255,255,255,0.16);
-          background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.07));
-          color: white;
-          font-weight: 950;
-          cursor: pointer;
-          text-decoration: none;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
-          font-family: inherit;
-          white-space: nowrap;
-        }
-
-        .accountSkeleton {
-          width: 82px;
-          min-height: 40px;
-          border-radius: 14px;
-          background: rgba(255,255,255,0.08);
           opacity: 0;
           pointer-events: none;
         }
 
-        .mobileMenuToggle {
-          display: none;
+        .emailText {
+          opacity: 0.90;
+          max-width: 220px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          color: #f9fafb;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+        }
+
+        .accountButton {
+          display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
           min-height: 42px;
-          padding: 9px 13px;
-          border-radius: 16px;
-          border: 1px solid rgba(255,255,255,0.20);
-          background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
-          color: #ffffff;
-          font-weight: 1000;
+          padding: 10px 14px;
+          border-radius: 14px;
+          border: 1px solid rgba(255,255,255,0.16);
+          background: linear-gradient(135deg, rgba(255,255,255,0.13), rgba(255,255,255,0.06));
+          color: white;
+          font-weight: 900;
           cursor: pointer;
-          box-shadow: 0 8px 18px rgba(0,0,0,0.16);
-          font-family: inherit;
+          text-decoration: none;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
         }
 
-        .mobilePanel {
-          display: none;
+        @media (max-width: 1100px) {
+          .brandLink {
+            min-width: auto;
+          }
+
+          .navLink {
+            padding: 10px 12px;
+          }
         }
 
-        @media (max-width: 1260px) {
+        @media (max-width: 920px) {
           .headerShell {
-            grid-template-columns: auto 1fr auto;
+            padding: 12px 14px;
+          }
+
+          .brandLogo {
+            width: 44px;
+            height: 44px;
+            border-radius: 15px;
           }
 
           .brandTitle {
             font-size: 20px;
           }
 
-          .desktopNav {
-            gap: 6px;
+          .mobileMenuToggle {
+            display: inline-flex;
+            margin-left: auto;
+          }
+
+          nav {
+            width: 100%;
+            display: none !important;
+            flex-direction: column;
+            align-items: stretch !important;
+            order: 3;
+            padding: 10px;
+            border-radius: 24px;
+            background:
+              radial-gradient(circle at top right, rgba(147,197,253,0.15), transparent 32%),
+              linear-gradient(135deg, rgba(30,27,75,0.92), rgba(49,46,129,0.88));
+            border: 1px solid rgba(255,255,255,0.14);
+            box-shadow:
+              inset 0 1px 0 rgba(255,255,255,0.12),
+              0 14px 28px rgba(0,0,0,0.22);
+          }
+
+          nav.navOpen {
+            display: grid !important;
+            grid-template-columns: 1fr;
+            gap: 10px;
           }
 
           .navLink {
-            padding: 8px 9px;
-            font-size: 13px;
-          }
-
-          .navIcon {
-            width: 26px;
-            height: 26px;
-            min-width: 26px;
-          }
-
-          .emailText {
-            display: none;
-          }
-        }
-
-        @media (max-width: 1040px) {
-          .desktopNav,
-          .desktopAccount {
-            display: none;
-          }
-
-          .headerShell {
-            grid-template-columns: auto auto;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 11px 14px;
-          }
-
-          .mobileMenuToggle {
-            display: inline-flex;
-          }
-
-          .mobilePanel {
-            display: none;
-            grid-column: 1 / -1;
             width: 100%;
-            padding: 12px;
-            border-radius: 24px;
-            background:
-              radial-gradient(circle at top right, rgba(147,197,253,0.16), transparent 34%),
-              linear-gradient(135deg, rgba(30,27,75,0.94), rgba(49,46,129,0.90));
-            border: 1px solid rgba(255,255,255,0.15);
-            box-shadow:
-              inset 0 1px 0 rgba(255,255,255,0.12),
-              0 14px 30px rgba(0,0,0,0.25);
-          }
-
-          .mobilePanelOpen {
-            display: grid;
-            gap: 12px;
-          }
-
-          .mobilePanelTop {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-          }
-
-          .mobilePanelTitle {
-            color: white;
-            font-size: 17px;
-            font-weight: 1000;
-          }
-
-          .mobilePanelText {
-            margin-top: 2px;
-            color: rgba(255,255,255,0.72);
-            font-size: 12px;
-            font-weight: 850;
-          }
-
-          .mobileEmail {
-            padding: 9px 11px;
-            border-radius: 14px;
-            background: rgba(255,255,255,0.10);
-            border: 1px solid rgba(255,255,255,0.12);
-            color: rgba(255,255,255,0.86);
-            font-size: 12px;
-            font-weight: 850;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-
-          .mobileNav {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 9px;
-          }
-
-          .mobileNav .navLink {
-            width: 100%;
-            min-height: 58px;
+            min-height: 56px;
             box-sizing: border-box;
             justify-content: flex-start;
-            padding: 10px 11px;
+            padding: 12px 14px;
             border-radius: 18px;
-            background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.09));
+            color: #ffffff !important;
+            background:
+              linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.09));
             border: 1px solid rgba(255,255,255,0.18);
             box-shadow:
               inset 0 1px 0 rgba(255,255,255,0.10),
               0 8px 18px rgba(0,0,0,0.14);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.55);
           }
 
-          .mobileNav .navLinkActive {
+          .navLinkActive {
             background: linear-gradient(135deg, #ec4899, #7c3aed, #2563eb);
+            color: white !important;
             border-color: rgba(255,255,255,0.30);
             box-shadow: 0 12px 24px rgba(124,58,237,0.34);
           }
 
-          .mobileNav .navIcon {
-            width: 36px;
-            height: 36px;
-            min-width: 36px;
+          .navIcon {
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
             border-radius: 14px;
-            font-size: 17px;
+            font-size: 18px;
             background: rgba(255,255,255,0.20);
           }
 
-          .mobileNav .navLabel {
-            font-size: 15px;
+          .navLabel {
+            color: #ffffff !important;
+            font-size: 16px;
             font-weight: 1000;
+          }
+
+          .accountArea {
+            width: 100%;
+            order: 4;
+            justify-content: space-between;
+            padding-top: 2px;
+          }
+
+          .emailText {
+            max-width: calc(100vw - 145px);
           }
         }
 
-        @media (max-width: 520px) {
-          .brandLogo {
-            width: 42px;
-            height: 42px;
-            border-radius: 14px;
+        @media (max-width: 420px) {
+          .brandTagline {
+            display: none;
           }
 
           .brandTitle {
             font-size: 18px;
           }
 
-          .brandTagline {
-            display: none;
-          }
-
-          .mobileMenuToggle {
-            min-height: 40px;
-            padding: 8px 11px;
-          }
-
-          .mobileNav {
-            grid-template-columns: 1fr;
-          }
-
-          .mobileNav .navLink {
-            min-height: 54px;
-          }
-        }
-
-        @media (max-width: 360px) {
-          .brandTitle {
-            font-size: 16px;
-          }
-
-          .mobileMenuToggle span:first-child {
-            display: none;
+          .accountArea {
+            font-size: 12px;
           }
         }
       `}</style>

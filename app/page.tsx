@@ -342,6 +342,21 @@ export default function HomePage() {
           mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 78%);
         }
 
+        .page a,
+        .page a:visited,
+        .page a:hover,
+        .page a:active {
+          color: inherit;
+          text-decoration: none !important;
+        }
+
+        .page a *,
+        .page a:visited *,
+        .page a:hover *,
+        .page a:active * {
+          text-decoration: none !important;
+        }
+
         .shell {
           position: relative;
           z-index: 1;
@@ -474,9 +489,11 @@ export default function HomePage() {
           display: grid;
           place-items: center;
           font-size: 27px;
+          line-height: 1;
           color: #312e81;
           background: linear-gradient(135deg, #ffffff, #fef3c7);
           box-shadow: 0 12px 24px rgba(255,255,255,0.12);
+          text-decoration: none !important;
         }
 
         .actionTitle {
@@ -484,6 +501,7 @@ export default function HomePage() {
           font-weight: 1000;
           line-height: 1.12;
           color: white;
+          text-decoration: none !important;
         }
 
         .actionSub {
@@ -493,6 +511,7 @@ export default function HomePage() {
           font-size: 12px;
           font-weight: 850;
           line-height: 1.28;
+          text-decoration: none !important;
         }
 
         .vaultPreview {
@@ -526,7 +545,7 @@ export default function HomePage() {
           background: linear-gradient(90deg, #ffffff, #fef3c7);
           border-radius: 999px;
           padding: 9px 12px;
-          text-decoration: none;
+          text-decoration: none !important;
           font-size: 12px;
           font-weight: 1000;
           white-space: nowrap;
@@ -723,7 +742,7 @@ export default function HomePage() {
           min-height: 50px;
           border-radius: 999px;
           padding: 13px 17px;
-          text-decoration: none;
+          text-decoration: none !important;
           color: white !important;
           background: linear-gradient(135deg, #ec4899, #8b5cf6);
           font-weight: 1000;
@@ -799,9 +818,11 @@ export default function HomePage() {
           display: grid;
           place-items: center;
           font-size: 30px;
+          line-height: 1;
           color: #312e81;
           background: linear-gradient(135deg, #ede9fe, #bfdbfe);
           margin-bottom: 14px;
+          text-decoration: none !important;
         }
 
         .featureTitle {
@@ -810,6 +831,7 @@ export default function HomePage() {
           line-height: 1.1;
           font-weight: 1000;
           margin-bottom: 9px;
+          text-decoration: none !important;
         }
 
         .featureText {
@@ -818,13 +840,14 @@ export default function HomePage() {
           font-size: 14px;
           margin-bottom: 12px;
           font-weight: 800;
+          text-decoration: none !important;
         }
 
         .featureLink {
           color: #ffffff !important;
           font-weight: 1000;
           font-size: 13px;
-          text-decoration: none;
+          text-decoration: none !important;
           display: inline-flex;
           padding: 8px 11px;
           border-radius: 999px;
@@ -1036,7 +1059,7 @@ export default function HomePage() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          text-decoration: none;
+          text-decoration: none !important;
           font-weight: 1000;
           color: white !important;
           background: linear-gradient(135deg, #2563eb, #8b5cf6);
@@ -1114,11 +1137,6 @@ export default function HomePage() {
           display: none;
         }
 
-        .page a,
-        .page a:visited {
-          color: inherit;
-        }
-
         @media (max-width: 1180px) {
           .priceGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1132,7 +1150,7 @@ export default function HomePage() {
         @media (max-width: 980px) {
           .shell {
             padding: 12px;
-            padding-bottom: 96px;
+            padding-bottom: 92px;
           }
 
           .hero,
@@ -1165,9 +1183,9 @@ export default function HomePage() {
           }
 
           .headline {
-            font-size: clamp(1.75rem, 9.5vw, 2.55rem);
+            font-size: clamp(1.8rem, 9.6vw, 2.7rem);
             line-height: 0.98;
-            letter-spacing: -1.4px;
+            letter-spacing: -1.3px;
           }
 
           .heroText {
@@ -1196,31 +1214,41 @@ export default function HomePage() {
           }
 
           .heroActions {
-            grid-template-columns: 1fr 1fr;
-            gap: 9px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
             margin-top: 14px;
           }
 
           .actionCard,
           .actionCard:visited {
+            aspect-ratio: 1 / 1;
+            min-height: 0;
+            padding: 12px 10px;
+            border-radius: 20px;
             grid-template-columns: 1fr;
-            gap: 7px;
-            min-height: 94px;
-            padding: 11px;
-            border-radius: 18px;
+            gap: 8px;
             text-align: center;
+            align-content: center;
+            justify-items: center;
+          }
+
+          .actionCard > span:last-child {
+            display: grid;
+            gap: 4px;
+            justify-items: center;
           }
 
           .actionIcon {
-            width: 42px;
-            height: 42px;
-            border-radius: 15px;
-            font-size: 23px;
+            width: 50px;
+            height: 50px;
+            border-radius: 16px;
+            font-size: 26px;
             margin: 0 auto;
           }
 
           .actionTitle {
-            font-size: 13px;
+            font-size: 14px;
+            line-height: 1.2;
           }
 
           .actionSub {
@@ -1259,7 +1287,7 @@ export default function HomePage() {
           }
 
           .previewStats {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 7px;
           }
 
@@ -1348,42 +1376,42 @@ export default function HomePage() {
 
           .featureGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 9px;
+            gap: 10px;
           }
 
           .featureCard,
           .featureCard:visited {
             min-height: 0;
+            aspect-ratio: 1 / 1;
             padding: 12px;
-            border-radius: 18px;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
           }
 
           .featureIcon {
-            width: 42px;
-            height: 42px;
-            border-radius: 15px;
-            font-size: 23px;
-            margin-bottom: 9px;
+            width: 46px;
+            height: 46px;
+            border-radius: 16px;
+            font-size: 24px;
+            margin-bottom: 8px;
           }
 
           .featureTitle {
-            font-size: 14px;
+            font-size: 15px;
             margin-bottom: 6px;
+            line-height: 1.15;
           }
 
           .featureText {
-            font-size: 11.5px;
-            line-height: 1.35;
-            margin-bottom: 9px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
+            display: none;
           }
 
           .featureLink {
-            padding: 7px 9px;
+            padding: 7px 10px;
             font-size: 11px;
+            align-self: flex-start;
           }
 
           .splitGrid {
@@ -1480,7 +1508,7 @@ export default function HomePage() {
             gap: 8px;
             padding: 8px;
             border-radius: 18px;
-            background: rgba(15,23,42,0.88);
+            background: rgba(15,23,42,0.9);
             border: 1px solid rgba(255,255,255,0.14);
             backdrop-filter: blur(14px);
             box-shadow: 0 18px 40px rgba(0,0,0,0.36);
@@ -1511,16 +1539,14 @@ export default function HomePage() {
         }
 
         @media (max-width: 560px) {
-          .previewStats {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+          .previewHeader {
+            grid-template-columns: 1fr;
           }
 
-          .heroActions {
-            grid-template-columns: 1fr 1fr;
-          }
-
-          .featureGrid {
-            grid-template-columns: 1fr 1fr;
+          .previewLink {
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
           }
 
           .priceCard {
@@ -1539,37 +1565,31 @@ export default function HomePage() {
             width: 100%;
             box-sizing: border-box;
           }
-
-          .previewHeader {
-            grid-template-columns: 1fr;
-          }
-
-          .previewLink {
-            width: 100%;
-            box-sizing: border-box;
-            text-align: center;
-          }
-
-          .mockCard {
-            min-height: 0;
-          }
-
-          .mobileSticky {
-            grid-template-columns: 1fr 1fr;
-          }
         }
 
         @media (max-width: 390px) {
           .headline {
-            font-size: 1.75rem;
+            font-size: 1.72rem;
           }
 
-          .heroActions {
-            grid-template-columns: 1fr;
-          }
-
+          .heroActions,
           .featureGrid {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .actionCard,
+          .featureCard {
+            padding: 10px;
+          }
+
+          .actionTitle,
+          .featureTitle {
+            font-size: 13px;
+          }
+
+          .featureLink {
+            font-size: 10px;
+            padding: 6px 8px;
           }
 
           .mobileSticky {

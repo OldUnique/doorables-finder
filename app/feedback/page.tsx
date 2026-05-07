@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { getSupabase } from "../../lib/supabase";
 
 type FeedbackPost = {
@@ -22,6 +21,7 @@ type FeedbackPost = {
 
 const ADMIN_EMAILS = [
   "riffeljosh80@gmail.com",
+  "rffeljosh80@gmail.com",
   "jjowens@ktc.edu",
   "dntuttle1@gmail.com",
 ];
@@ -226,7 +226,12 @@ export default function FeedbackPage() {
       category,
       anonymous,
       contact_me: contactMe,
-      approved: false,
+
+      // IMPORTANT:
+      // This is set to true so new feedback shows on the Feedback Wall right away.
+      // Admins can still hide a post later with the Hide button.
+      approved: true,
+
       status_tag: "new",
       likes: 0,
       user_id: user?.id || null,
@@ -252,8 +257,8 @@ export default function FeedbackPage() {
 
       setStatusMessage(
         sendPrivateCopy || contactMe
-          ? "Thanks! Your feedback was submitted for approval and sent to the Adorable Vault inbox 💜"
-          : "Thanks! Your feedback was submitted for approval 💜"
+          ? "Thanks! Your feedback was posted to the Feedback Wall and sent to the Adorable Vault inbox 💜"
+          : "Thanks! Your feedback was posted to the Feedback Wall 💜"
       );
     } catch (emailError) {
       setStatusMessage(
@@ -1074,13 +1079,14 @@ export default function FeedbackPage() {
       `}</style>
 
       <div className="shell">
-<section className="hero">
+        <section className="hero">
           <div>
             <div className="heroBadge">💜 Help build the vault</div>
             <h1 className="heroTitle">Feedback Wall</h1>
             <div className="heroText">
               Share bugs, ideas, missing Doorables, marketplace concerns, and requests.
               Feedback helps make Adorable Vault cleaner, safer, and more useful for collectors.
+              New feedback posts to the wall right away, and admins can hide anything later if needed.
               Private messages can also be sent to the Adorable Vault inbox without showing the email address on the site.
             </div>
 
@@ -1094,7 +1100,7 @@ export default function FeedbackPage() {
           <div className="statsGrid">
             <div className="statBubble">
               <div className="statNumber">{approvedPosts.length}</div>
-              <div className="statLabel">approved posts</div>
+              <div className="statLabel">visible posts</div>
             </div>
             <div className="statBubble">
               <div className="statNumber">{plannedCount}</div>
@@ -1130,7 +1136,7 @@ export default function FeedbackPage() {
             <section className="card">
               <div className="sectionTitle">Leave feedback</div>
               <div className="muted" style={{ marginBottom: 14 }}>
-                Tell me what should be fixed, added, clarified, or improved. Posts are reviewed before they appear publicly.
+                Tell me what should be fixed, added, clarified, or improved. Feedback appears on the wall after submitting.
               </div>
 
               <div className="privateNote">
@@ -1271,7 +1277,7 @@ export default function FeedbackPage() {
                   { value: "Missing Doorable", label: "🔎 Missing" },
                   { value: "Marketplace Concern", label: "⚠️ Marketplace" },
                   { value: "resolved", label: "✅ Resolved" },
-                  ...(isAdmin ? [{ value: "pending", label: `⏳ Pending (${pendingCount})` }] : []),
+                  ...(isAdmin ? [{ value: "pending", label: `⏳ Hidden/Pending (${pendingCount})` }] : []),
                 ].map((option) => (
                   <button
                     key={option.value}
@@ -1320,7 +1326,7 @@ export default function FeedbackPage() {
 
                           {isAdmin ? (
                             <span className={`badge ${post.approved ? "approvedBadge" : "pendingBadge"}`}>
-                              {post.approved ? "Approved" : "Pending Approval"}
+                              {post.approved ? "Visible" : "Hidden/Pending"}
                             </span>
                           ) : null}
                         </div>
@@ -1353,7 +1359,7 @@ export default function FeedbackPage() {
                                 disabled={busyId === post.id}
                                 className="bubbleButton greenButton"
                               >
-                                Approve ✅
+                                Show ✅
                               </button>
                             ) : (
                               <button

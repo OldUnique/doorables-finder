@@ -97,6 +97,18 @@ export default function HomePage() {
       tag.content = content;
     }
 
+    function setCanonical(href: string) {
+      let tag = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+      if (!tag) {
+        tag = document.createElement("link");
+        tag.rel = "canonical";
+        document.head.appendChild(tag);
+      }
+      tag.href = href;
+    }
+
+    setCanonical("https://www.mydoorables.com/");
+
     setMeta("description", description);
     setMeta(
       "keywords",
@@ -106,6 +118,7 @@ export default function HomePage() {
     setProperty("og:title", "Adorable Vault | Doorables Collection Tracker");
     setProperty("og:description", description);
     setProperty("og:type", "website");
+    setProperty("og:url", "https://www.mydoorables.com/");
     setProperty("og:site_name", "Adorable Vault");
   }, []);
 

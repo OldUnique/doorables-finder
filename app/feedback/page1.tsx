@@ -55,16 +55,8 @@ function niceDate(value?: string | null) {
   });
 }
 
-function cleanTag(value?: string | null) {
-  return String(value || "new").trim().toLowerCase();
-}
-
-function isResolvedPost(post: FeedbackPost) {
-  return Boolean(post.resolved) || cleanTag(post.status_tag) === "resolved";
-}
-
 function getStatusMeta(status?: string | null) {
-  const tag = cleanTag(status);
+  const tag = status || "new";
 
   if (tag === "added") return { label: "Added", icon: "✨", className: "statusAdded" };
   if (tag === "planned") return { label: "Planned", icon: "🗓️", className: "statusPlanned" };
@@ -235,7 +227,8 @@ export default function FeedbackPage() {
       anonymous,
       contact_me: contactMe,
 
-      // This is true so feedback shows on the wall right away.
+      // IMPORTANT:
+      // This is set to true so new feedback shows on the Feedback Wall right away.
       // Admins can still hide a post later with the Hide button.
       approved: true,
 
@@ -306,7 +299,6 @@ export default function FeedbackPage() {
 
   async function approvePost(post: FeedbackPost) {
     setBusyId(post.id);
-    setStatusMessage("");
 
     const { error } = await supabase
       .from("feedback_posts")
@@ -314,14 +306,10 @@ export default function FeedbackPage() {
       .eq("id", post.id);
 
     if (error) {
-      setStatusMessage("Could not show post: " + error.message);
+      setStatusMessage("Could not approve post: " + error.message);
       setBusyId(null);
       return;
     }
-
-    setPosts((prev) =>
-      prev.map((p) => (p.id === post.id ? { ...p, approved: true } : p))
-    );
 
     await loadPosts();
     setBusyId(null);
@@ -329,7 +317,6 @@ export default function FeedbackPage() {
 
   async function unapprovePost(post: FeedbackPost) {
     setBusyId(post.id);
-    setStatusMessage("");
 
     const { error } = await supabase
       .from("feedback_posts")
@@ -342,26 +329,18 @@ export default function FeedbackPage() {
       return;
     }
 
-    setPosts((prev) =>
-      prev.map((p) => (p.id === post.id ? { ...p, approved: false } : p))
-    );
-
     await loadPosts();
     setBusyId(null);
   }
 
   async function changeStatus(post: FeedbackPost, statusTag: string) {
-    const nextTag = statusTag.trim().toLowerCase();
-    const nextResolved = nextTag === "resolved";
-
     setBusyId(post.id);
-    setStatusMessage("");
 
     const { error } = await supabase
       .from("feedback_posts")
       .update({
-        status_tag: nextTag,
-        resolved: nextResolved,
+        status_tag: statusTag,
+        resolved: statusTag === "resolved",
       })
       .eq("id", post.id);
 
@@ -371,32 +350,12 @@ export default function FeedbackPage() {
       return;
     }
 
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === post.id
-          ? {
-              ...p,
-              status_tag: nextTag,
-              resolved: nextResolved,
-            }
-          : p
-      )
-    );
-
-    if (nextResolved) {
-      setFilter("resolved");
-      setStatusMessage("Marked as resolved and moved to the Resolved filter ✅");
-    } else {
-      setStatusMessage(`Status changed to ${nextTag}.`);
-    }
-
     await loadPosts();
     setBusyId(null);
   }
 
   async function markResolved(post: FeedbackPost) {
     setBusyId(post.id);
-    setStatusMessage("");
 
     const { error } = await supabase
       .from("feedback_posts")
@@ -412,28 +371,12 @@ export default function FeedbackPage() {
       return;
     }
 
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === post.id
-          ? {
-              ...p,
-              resolved: true,
-              status_tag: "resolved",
-            }
-          : p
-      )
-    );
-
-    setFilter("resolved");
-    setStatusMessage("Marked as resolved and moved to the Resolved filter ✅");
-
     await loadPosts();
     setBusyId(null);
   }
 
   async function saveReply(post: FeedbackPost) {
     setBusyId(post.id);
-    setStatusMessage("");
 
     const reply = (replyDrafts[post.id] || "").trim();
 
@@ -448,10 +391,6 @@ export default function FeedbackPage() {
       return;
     }
 
-    setPosts((prev) =>
-      prev.map((p) => (p.id === post.id ? { ...p, admin_reply: reply || null } : p))
-    );
-
     setStatusMessage(reply ? "Reply saved." : "Reply cleared.");
     await loadPosts();
     setBusyId(null);
@@ -462,7 +401,6 @@ export default function FeedbackPage() {
     if (!ok) return;
 
     setBusyId(post.id);
-    setStatusMessage("");
 
     const { error } = await supabase.from("feedback_posts").delete().eq("id", post.id);
 
@@ -471,8 +409,6 @@ export default function FeedbackPage() {
       setBusyId(null);
       return;
     }
-
-    setPosts((prev) => prev.filter((p) => p.id !== post.id));
 
     await loadPosts();
     setBusyId(null);
@@ -483,13 +419,13 @@ export default function FeedbackPage() {
   const visiblePosts = approvedPosts.filter((post) => {
     if (filter === "all") return true;
     if (filter === "pending") return isAdmin && !post.approved;
-    if (filter === "resolved") return isResolvedPost(post);
+    if (filter === "resolved") return !!post.resolved || post.status_tag === "resolved";
     return post.category === filter;
   });
 
   const pendingCount = posts.filter((p) => !p.approved).length;
-  const plannedCount = approvedPosts.filter((p) => cleanTag(p.status_tag) === "planned").length;
-  const addedCount = approvedPosts.filter((p) => cleanTag(p.status_tag) === "added").length;
+  const plannedCount = approvedPosts.filter((p) => p.status_tag === "planned").length;
+  const addedCount = approvedPosts.filter((p) => p.status_tag === "added").length;
 
   return (
     <main className="page">
@@ -1182,9 +1118,7 @@ export default function FeedbackPage() {
             className={`statusBox ${
               statusMessage.toLowerCase().includes("thanks") ||
               statusMessage.toLowerCase().includes("saved") ||
-              statusMessage.toLowerCase().includes("cleared") ||
-              statusMessage.toLowerCase().includes("marked as resolved") ||
-              statusMessage.toLowerCase().includes("status changed")
+              statusMessage.toLowerCase().includes("cleared")
                 ? "successStatus"
                 : statusMessage.toLowerCase().includes("could not") ||
                     statusMessage.toLowerCase().includes("please") ||
@@ -1438,7 +1372,7 @@ export default function FeedbackPage() {
                             )}
 
                             <select
-                              value={cleanTag(post.status_tag)}
+                              value={post.status_tag || "new"}
                               onChange={(e) => void changeStatus(post, e.target.value)}
                               className="adminSelect"
                               disabled={busyId === post.id}

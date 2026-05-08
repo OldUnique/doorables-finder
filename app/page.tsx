@@ -24,7 +24,13 @@ type HomeStats = {
 
 type PlanKey = "monthly" | "yearly" | "founding";
 
-const ADMIN_EMAILS = ["riffeljosh80@gmail.com"];
+const ADMIN_EMAILS = [
+  "riffeljosh80@gmail.com",
+  "rffeljosh80@gmail.com",
+  "jjowens@ktc.edu",
+  "dntuttle1@gmail.com",
+];
+
 const FREE_LIMIT = 50;
 
 const DEFAULT_ANNOUNCEMENT_TITLE = "Vault Update: Mobile Glow-Up + Skip Button 💜";
@@ -419,6 +425,30 @@ export default function HomePage() {
           padding-bottom: 110px;
         }
 
+        .adFreeTopper {
+          margin-bottom: 14px;
+          border-radius: 999px;
+          padding: 11px 16px;
+          color: #fef3c7;
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 30%),
+            linear-gradient(135deg, rgba(236,72,153,0.32), rgba(79,70,229,0.32));
+          border: 1px solid rgba(255,255,255,0.20);
+          box-shadow: 0 18px 42px rgba(0,0,0,0.24);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+          text-align: center;
+          font-weight: 1000;
+          line-height: 1.35;
+        }
+
+        .adFreeTopper span {
+          color: rgba(255,255,255,0.9);
+          font-weight: 900;
+        }
+
         .hero {
           display: grid;
           grid-template-columns: minmax(0, 1.06fr) minmax(360px, 0.94fr);
@@ -430,6 +460,7 @@ export default function HomePage() {
         .heroCard,
         .vaultPreview,
         .launchStrip,
+        .adFreeStrip,
         .whiteCard,
         .darkCard,
         .finalCta {
@@ -495,6 +526,12 @@ export default function HomePage() {
           background: rgba(15,23,42,0.62);
           border: 1px solid rgba(255,255,255,0.24);
           box-shadow: 0 10px 20px rgba(0,0,0,0.18);
+        }
+
+        .trustPill.adFree {
+          color: #fef3c7;
+          background: rgba(126,34,206,0.58);
+          border-color: rgba(253,224,71,0.38);
         }
 
         .heroActions {
@@ -760,6 +797,66 @@ export default function HomePage() {
           background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
         }
 
+        .adFreeStrip {
+          margin-bottom: 18px;
+          padding: 20px;
+          color: #111827;
+          background:
+            radial-gradient(circle at top right, rgba(168,85,247,0.20), transparent 34%),
+            radial-gradient(circle at bottom left, rgba(59,130,246,0.16), transparent 34%),
+            linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          border: 1px solid rgba(255,255,255,0.66);
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 16px;
+          align-items: center;
+        }
+
+        .adFreeBadge {
+          display: inline-flex;
+          align-items: center;
+          width: fit-content;
+          gap: 8px;
+          margin-bottom: 10px;
+          border-radius: 999px;
+          padding: 8px 12px;
+          color: #5b21b6;
+          background: #ede9fe;
+          border: 1px solid #ddd6fe;
+          font-size: 12px;
+          font-weight: 1000;
+        }
+
+        .adFreeTitle {
+          margin: 0;
+          color: #312e81;
+          font-size: clamp(1.75rem, 3.5vw, 2.65rem);
+          line-height: 0.98;
+          letter-spacing: -1px;
+          font-weight: 1000;
+        }
+
+        .adFreeText {
+          margin: 10px 0 0;
+          color: #475569;
+          line-height: 1.65;
+          font-size: 15px;
+          font-weight: 820;
+          max-width: 830px;
+        }
+
+        .adFreeIcon {
+          width: 96px;
+          height: 96px;
+          border-radius: 32px;
+          display: grid;
+          place-items: center;
+          font-size: 44px;
+          background: linear-gradient(135deg, #dbeafe, #f5d0fe, #fef3c7);
+          border: 1px solid #e9d5ff;
+          box-shadow: 0 16px 34px rgba(124,58,237,0.20);
+        }
+
         .launchStrip {
           margin-bottom: 18px;
           padding: 18px;
@@ -957,6 +1054,18 @@ export default function HomePage() {
           border-top: 1px solid #e5e7eb;
         }
 
+        .adminTip {
+          margin-bottom: 10px;
+          border-radius: 16px;
+          padding: 12px;
+          color: #3730a3;
+          background: #eef2ff;
+          border: 1px solid #c7d2fe;
+          font-size: 13px;
+          line-height: 1.45;
+          font-weight: 850;
+        }
+
         .field {
           width: 100%;
           border: 1px solid #d1d5db;
@@ -967,6 +1076,11 @@ export default function HomePage() {
           background: white;
           box-sizing: border-box;
           outline: none;
+        }
+
+        .field:focus {
+          border-color: #8b5cf6;
+          box-shadow: 0 0 0 4px rgba(139,92,246,0.12);
         }
 
         .textarea {
@@ -1206,6 +1320,19 @@ export default function HomePage() {
             padding-bottom: 92px;
           }
 
+          .adFreeTopper {
+            border-radius: 20px;
+            padding: 10px 12px;
+            font-size: 12px;
+            display: grid;
+            gap: 3px;
+          }
+
+          .adFreeTopper span {
+            display: block;
+            font-size: 11px;
+          }
+
           .hero,
           .splitGrid {
             grid-template-columns: 1fr;
@@ -1219,6 +1346,7 @@ export default function HomePage() {
           .heroCard,
           .vaultPreview,
           .launchStrip,
+          .adFreeStrip,
           .whiteCard,
           .darkCard,
           .finalCta {
@@ -1373,6 +1501,34 @@ export default function HomePage() {
             margin-bottom: 9px;
           }
 
+          .adFreeStrip {
+            grid-template-columns: 1fr;
+            padding: 16px;
+            gap: 10px;
+            margin-bottom: 12px;
+          }
+
+          .adFreeBadge {
+            padding: 7px 10px;
+            font-size: 11px;
+            margin-bottom: 8px;
+          }
+
+          .adFreeTitle {
+            font-size: clamp(1.55rem, 8vw, 2rem);
+            letter-spacing: -0.6px;
+          }
+
+          .adFreeText {
+            font-size: 13px;
+            line-height: 1.5;
+            margin-top: 8px;
+          }
+
+          .adFreeIcon {
+            display: none;
+          }
+
           .launchStrip {
             grid-template-columns: 1fr;
             padding: 14px;
@@ -1387,10 +1543,6 @@ export default function HomePage() {
           .launchText {
             font-size: 12.5px;
             line-height: 1.45;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
           }
 
           .launchButton {
@@ -1484,6 +1636,32 @@ export default function HomePage() {
             overflow-y: auto;
             font-size: 13px;
             line-height: 1.55;
+          }
+
+          .adminBox {
+            margin-top: 13px;
+            padding-top: 13px;
+          }
+
+          .adminTip {
+            font-size: 12px;
+            border-radius: 14px;
+            padding: 10px;
+          }
+
+          .field {
+            font-size: 14px;
+            padding: 11px 12px;
+            border-radius: 14px;
+          }
+
+          .textarea {
+            min-height: 160px;
+          }
+
+          .saveButton {
+            width: 100%;
+            min-height: 44px;
           }
 
           .miniList {
@@ -1645,6 +1823,10 @@ export default function HomePage() {
             padding: 6px 8px;
           }
 
+          .adFreeTopper {
+            font-size: 11px;
+          }
+
           .mobileSticky {
             grid-template-columns: 1fr;
           }
@@ -1652,6 +1834,11 @@ export default function HomePage() {
       `}</style>
 
       <div className="shell">
+        <div className="adFreeTopper">
+          🚫 No ads. Ever.
+          <span>Adorable Vault stays clean, calm, and collector-focused with a small fee instead of clutter.</span>
+        </div>
+
         <section className="hero">
           <div className="heroCard">
             <div className="badge">✨ Fan-made collector vault ✨</div>
@@ -1666,6 +1853,7 @@ export default function HomePage() {
             </div>
 
             <div className="trustRow">
+              <span className="trustPill adFree">No ads. Ever.</span>
               <span className="trustPill">Free up to 50 saved Doorables</span>
               <span className="trustPill">Preview before signup</span>
               <span className="trustPill">Unlimited from $3/month</span>
@@ -1796,6 +1984,19 @@ export default function HomePage() {
           </aside>
         </section>
 
+        <section className="adFreeStrip">
+          <div>
+            <div className="adFreeBadge">💜 Always Ad-Free</div>
+            <h2 className="adFreeTitle">No ads. Ever.</h2>
+            <p className="adFreeText">
+              Adorable Vault is built for collectors — not advertisers. Instead of stuffing the site
+              with banners, pop-ups, or distracting sponsored clutter, the small subscription fee helps
+              keep the vault clean, simple, and focused on the tools collectors actually want.
+            </p>
+          </div>
+          <div className="adFreeIcon" aria-hidden="true">🚫</div>
+        </section>
+
         <section className="launchStrip">
           <div>
             <div className="launchTitle">Launch special: Founding Collector bundle 💜</div>
@@ -1882,6 +2083,11 @@ export default function HomePage() {
                   Admin weekly update box
                 </div>
 
+                <div className="adminTip">
+                  Update this whenever you want a fresh homepage post. Edit the title and body, then tap save.
+                  It will update the public Vault News box without touching the rest of the page.
+                </div>
+
                 <input
                   className="field"
                   value={title}
@@ -1928,6 +2134,10 @@ export default function HomePage() {
                 <span>Track owned, needed, and extra Doorables in one place.</span>
               </div>
               <div className="miniListItem">
+                <span>🚫</span>
+                <span>No ad clutter, no pop-up chaos, and no distracting banners.</span>
+              </div>
+              <div className="miniListItem">
                 <span>🔎</span>
                 <span>Use search and filters during shopping, shows, and trades.</span>
               </div>
@@ -1950,7 +2160,8 @@ export default function HomePage() {
 
             <div className="sectionText">
               Free accounts can save up to 50 Doorables. Paid plans unlock unlimited tracking,
-              Marketplace, selling extras, messaging, and full collector features.
+              Marketplace, selling extras, messaging, and full collector features — while keeping
+              the site ad-free.
             </div>
           </div>
 

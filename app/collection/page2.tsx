@@ -17,6 +17,7 @@ type Card = {
   image: string;
   qty: number;
   note: string;
+  dontWant: boolean;
   rowId: string | null;
 };
 
@@ -85,10 +86,18 @@ function rarityTheme(rarity: string) {
   return { bg: "#f2f4f7", border: "#cbd5e1", text: "#111827", badgeBg: "#e5e7eb", badgeText: "#111827", glow: "rgba(148,163,184,0.16)" };
 }
 
-function collectionStatus(qty: number) {
+function collectionStatus(qty: number, dontWant = false) {
   if (qty > 1) return "Extra";
   if (qty > 0) return "Have";
+  if (dontWant) return "Skipped";
   return "Need";
+}
+
+function statusColor(status: string) {
+  if (status === "Need") return "#7c3aed";
+  if (status === "Extra") return "#2563eb";
+  if (status === "Skipped") return "#64748b";
+  return "#166534";
 }
 
 function renderStars(value: number) {
@@ -252,7 +261,7 @@ export default function Page() {
 
       const [doorablesResult, userDoorablesResult] = await Promise.all([
         supabase.from("doorables").select("id, name, series, rarity, subcategory, movie, image_url").range(0, 1999),
-        supabase.from("user_doorables").select("id, doorable_id, qty_owned, custom_tag").eq("user_id", user.id),
+        supabase.from("user_doorables").select("id, doorable_id, qty_owned, custom_tag, dont_want").eq("user_id", user.id),
       ]);
 
       if (doorablesResult.error) {
@@ -283,6 +292,7 @@ export default function Page() {
             image: String(d.image_url ?? ""),
             qty: Number(row?.qty_owned ?? 0),
             note: String(row?.custom_tag ?? ""),
+            dontWant: !!row?.dont_want,
             rowId: row?.id ? String(row.id) : null,
           };
         })
@@ -391,11 +401,12 @@ export default function Page() {
     }
   }
 
-  async function saveCard(card: Card, nextQty: number, nextNote: string) {
+  async function saveCard(card: Card, nextQty: number, nextNote: string, nextDontWant = card.dontWant) {
     try {
       const supabase = getSupabase();
       const qty = Math.max(0, Number(nextQty ?? card.qty ?? 0));
       const note = String(nextNote ?? card.note ?? "");
+      const dontWant = qty > 0 ? false : !!nextDontWant;
       const ownedCount = cards.filter((c) => c.qty > 0).length;
       const isAddingNewOwned = card.qty <= 0 && qty > 0;
 
@@ -414,27 +425,37 @@ export default function Page() {
         user_id: userId,
         doorable_id: card.id,
         qty_owned: qty,
-        wanted: qty <= 0,
+        wanted: qty <= 0 && !dontWant,
         custom_tag: note,
+        dont_want: dontWant,
       };
 
       if (card.rowId) {
         const { error: updateError } = await supabase.from("user_doorables").update(payload).eq("id", card.rowId);
         if (updateError) throw updateError;
-        setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, qty, note } : c)));
+        setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, qty, note, dontWant } : c)));
       } else {
         const { data, error: insertError } = await supabase.from("user_doorables").insert([payload]).select().single();
         if (insertError) throw insertError;
         const newRowId = data?.id ? String(data.id) : null;
-        setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, qty, note, rowId: newRowId } : c)));
+        setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, qty, note, dontWant, rowId: newRowId } : c)));
       }
 
-      setNotice(qty > 0 ? "Saved to your collection 💜" : "Removed from owned collection.");
+      if (dontWant) {
+        setNotice("Marked as skipped / don't want 💜");
+      } else {
+        setNotice(qty > 0 ? "Saved to your collection 💜" : "Moved back to Need.");
+      }
     } catch (err) {
       alert("Save failed: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setSavingId("");
     }
+  }
+
+  function toggleSkip(card: Card) {
+    const nextDontWant = !card.dontWant;
+    void saveCard(card, 0, card.note, nextDontWant);
   }
 
   async function handlePhotoSubmission(card: Card, file: File | null) {
@@ -666,7 +687,16 @@ export default function Page() {
       const matchesSubcategory = subcategoryFilter === "all" || card.subcategory === subcategoryFilter;
       const matchesRarity = rarityFilter === "all" || card.rarity === rarityFilter;
       const matchesMovie = movieFilter === "all" || card.movie === movieFilter;
-      const matchesCollection = collectionFilter === "all" ? true : collectionFilter === "have" ? card.qty > 0 : collectionFilter === "need" ? card.qty <= 0 : card.qty > 1;
+      const matchesCollection =
+        collectionFilter === "all"
+          ? true
+          : collectionFilter === "have"
+            ? card.qty > 0
+            : collectionFilter === "need"
+              ? card.qty <= 0 && !card.dontWant
+              : collectionFilter === "skipped"
+                ? card.qty <= 0 && card.dontWant
+                : card.qty > 1;
 
       return matchesSearch && matchesSeries && matchesSubcategory && matchesRarity && matchesMovie && matchesCollection;
     });
@@ -674,8 +704,10 @@ export default function Page() {
 
   const totalCount = cards.length;
   const ownedCount = cards.filter((c) => c.qty > 0).length;
-  const needCount = cards.filter((c) => c.qty <= 0).length;
-  const completion = totalCount ? Math.round((ownedCount / totalCount) * 100) : 0;
+  const skippedCount = cards.filter((c) => c.qty <= 0 && c.dontWant).length;
+  const needCount = cards.filter((c) => c.qty <= 0 && !c.dontWant).length;
+  const wantedTotalCount = Math.max(0, totalCount - skippedCount);
+  const completion = wantedTotalCount ? Math.round((ownedCount / wantedTotalCount) * 100) : 0;
   const extrasCount = cards.reduce((sum, card) => sum + Math.max(0, Number(card.qty || 0) - 1), 0);
   const freeSlotsLeft = Math.max(0, FREE_LIMIT - ownedCount);
   const freeLimitReached = !isSubscribed && ownedCount >= FREE_LIMIT;
@@ -686,6 +718,8 @@ export default function Page() {
   const seriesProgress = useMemo(() => {
     const grouped = new Map<string, { total: number; owned: number; subcategories: string[] }>();
     cards.forEach((card) => {
+      if (card.qty <= 0 && card.dontWant) return;
+
       const key = card.series || "Unknown Series";
       const current = grouped.get(key) || { total: 0, owned: 0, subcategories: [] };
       current.total += 1;
@@ -1053,7 +1087,7 @@ export default function Page() {
 
         .statsGrid {
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
+          grid-template-columns: repeat(5, minmax(0, 1fr));
           gap: 14px;
           margin-bottom: 18px;
         }
@@ -1382,7 +1416,7 @@ export default function Page() {
 
         .cardButtonRow {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 8px;
         }
 
@@ -1406,6 +1440,18 @@ export default function Page() {
           background: rgba(255,255,255,0.75);
           color: #111827;
           border: 1px solid rgba(15,23,42,0.14);
+        }
+
+        .skipButton {
+          background: #f1f5f9;
+          color: #475569;
+          border: 1px solid #cbd5e1;
+        }
+
+        .unskipButton {
+          background: #ecfdf5;
+          color: #047857;
+          border: 1px solid #a7f3d0;
         }
 
         .photoBox {
@@ -1508,6 +1554,12 @@ export default function Page() {
           gap: 7px;
           align-items: center;
           margin-top: 8px;
+        }
+
+        .listActionRow {
+          margin-top: 7px;
+          display: grid;
+          grid-template-columns: 1fr;
         }
 
         .listQtyControls {
@@ -2001,6 +2053,7 @@ export default function Page() {
             { label: "Owned", value: ownedCount, action: "have" },
             { label: "Still Need", value: needCount, action: "need" },
             { label: "Extras", value: extrasCount, action: "extra" },
+            { label: "Skipped", value: skippedCount, action: "skipped" },
           ].map((stat) => (
             <button
               key={stat.label}
@@ -2063,6 +2116,7 @@ export default function Page() {
               { value: "have", label: "Have" },
               { value: "need", label: "Need" },
               { value: "extra", label: "Extras" },
+              { value: "skipped", label: "Skipped" },
             ].map((option) => (
               <button key={option.value} type="button" className={`chipButton ${collectionFilter === option.value ? "active" : ""}`} onClick={() => setCollectionFilter(option.value)}>
                 {option.label}
@@ -2081,6 +2135,7 @@ export default function Page() {
                   { value: "have", label: "Have" },
                   { value: "need", label: "Need" },
                   { value: "extra", label: "+Extra" },
+                  { value: "skipped", label: "Skipped" },
                 ].map((option) => (
                   <button key={option.value} type="button" onClick={() => setCollectionFilter(option.value)} className={`chipButton ${collectionFilter === option.value ? "active" : ""}`}>
                     {option.label}
@@ -2141,7 +2196,7 @@ export default function Page() {
           {pagedCards.map((item, index) => {
             const rarity = rarityTheme(item.rarity);
             const subtleOverlay = item.qty > 0 ? "linear-gradient(rgba(34,197,94,0.08), rgba(34,197,94,0.08))" : "linear-gradient(rgba(168,85,247,0.08), rgba(168,85,247,0.08))";
-            const statusText = collectionStatus(item.qty);
+            const statusText = collectionStatus(item.qty, item.dontWant);
             const photoOpen = expandedPhotoCardId === item.id;
             const canAdd = isSubscribed || item.qty > 0 || ownedCount < FREE_LIMIT;
 
@@ -2161,9 +2216,9 @@ export default function Page() {
                       <div className="rarityBadge" style={{ background: rarity.badgeBg, color: rarity.badgeText }}>{item.rarity}</div>
                     </div>
 
-                    {!canAdd && <div className="limitBox" style={{ marginTop: 6 }}>Free limit reached. Upgrade to add more.</div>}
+                    {!canAdd && !item.dontWant && <div className="limitBox" style={{ marginTop: 6 }}>Free limit reached. Upgrade to add more.</div>}
 
-                    <div className="statusText" style={{ color: statusText === "Need" ? "#7c3aed" : statusText === "Extra" ? "#2563eb" : "#166534", marginTop: 6 }}>
+                    <div className="statusText" style={{ color: statusColor(statusText), marginTop: 6 }}>
                       {savingId === item.id ? "Saving..." : statusText}
                     </div>
 
@@ -2177,13 +2232,19 @@ export default function Page() {
                       <input value={item.note} onChange={(e) => setCards((prev) => prev.map((c) => c.id === item.id ? { ...c, note: e.target.value } : c))} placeholder="Note..." className="listNoteInput" />
                       <button type="button" onClick={() => void saveCard(item, item.qty, item.note)} disabled={savingId === item.id} className="smallButton saveButton">{savingId === item.id ? "Saving..." : "Save"}</button>
                     </div>
+
+                    <div className="listActionRow">
+                      <button type="button" onClick={() => toggleSkip(item)} disabled={savingId === item.id} className={`smallButton ${item.dontWant ? "unskipButton" : "skipButton"}`}>
+                        {item.dontWant ? "Unskip" : "Skip"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
             }
 
             return (
-              <div key={item.id} className="card" style={{ background: `${subtleOverlay}, ${rarity.bg}`, color: rarity.text, borderColor: rarity.border, boxShadow: `0 12px 28px rgba(0,0,0,0.14), 0 0 18px ${rarity.glow}` }}>
+              <div key={item.id} className="card" style={{ background: item.dontWant ? "linear-gradient(rgba(100,116,139,0.12), rgba(100,116,139,0.12)), #f1f5f9" : `${subtleOverlay}, ${rarity.bg}`, color: item.dontWant ? "#334155" : rarity.text, borderColor: item.dontWant ? "#94a3b8" : rarity.border, boxShadow: item.dontWant ? "0 10px 22px rgba(15,23,42,0.12)" : `0 12px 28px rgba(0,0,0,0.14), 0 0 18px ${rarity.glow}` }}>
                 <div className="cardImageBox">
                   {item.image ? <img src={item.image} alt={item.name} loading={index < 4 ? "eager" : "lazy"} decoding="async" /> : <div>No Image</div>}
                 </div>
@@ -2195,7 +2256,7 @@ export default function Page() {
 
                 <div className="rarityBadge" style={{ background: rarity.badgeBg, color: rarity.badgeText }}>{item.rarity}</div>
 
-                {!canAdd && <div className="limitBox">Free limit reached. Upgrade to add more.</div>}
+                {!canAdd && !item.dontWant && <div className="limitBox">Free limit reached. Upgrade to add more.</div>}
 
                 <div className="qtyRow">
                   <button type="button" onClick={() => void saveCard(item, item.qty - 1, item.note)} disabled={savingId === item.id} className="qtyButton">−</button>
@@ -2203,7 +2264,7 @@ export default function Page() {
                   <button type="button" onClick={() => void saveCard(item, item.qty + 1, item.note)} disabled={savingId === item.id || !canAdd} className="qtyButton" style={{ opacity: !canAdd ? 0.45 : 1, cursor: !canAdd ? "not-allowed" : "pointer" }}>+</button>
                 </div>
 
-                <div className="statusText" style={{ color: statusText === "Need" ? "#7c3aed" : statusText === "Extra" ? "#2563eb" : "#166534" }}>
+                <div className="statusText" style={{ color: statusColor(statusText) }}>
                   {savingId === item.id ? "Saving..." : statusText}
                 </div>
 
@@ -2216,6 +2277,7 @@ export default function Page() {
                 <div className="cardButtonRow">
                   <button type="button" onClick={() => void saveCard(item, item.qty, item.note)} disabled={savingId === item.id} className="smallButton saveButton">{savingId === item.id ? "Saving..." : "Save"}</button>
                   <button type="button" className="smallButton photoButton" onClick={() => setExpandedPhotoCardId(photoOpen ? "" : item.id)}>{photoOpen ? "Hide" : "Photo"}</button>
+                  <button type="button" onClick={() => toggleSkip(item)} disabled={savingId === item.id} className={`smallButton ${item.dontWant ? "unskipButton" : "skipButton"}`}>{item.dontWant ? "Unskip" : "Skip"}</button>
                 </div>
 
                 {photoOpen && (

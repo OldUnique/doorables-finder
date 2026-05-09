@@ -17,7 +17,6 @@ type Card = {
   image: string;
   qty: number;
   note: string;
-  dontWant: boolean;
   rowId: string | null;
 };
 
@@ -86,18 +85,10 @@ function rarityTheme(rarity: string) {
   return { bg: "#f2f4f7", border: "#cbd5e1", text: "#111827", badgeBg: "#e5e7eb", badgeText: "#111827", glow: "rgba(148,163,184,0.16)" };
 }
 
-function collectionStatus(qty: number, dontWant = false) {
+function collectionStatus(qty: number) {
   if (qty > 1) return "Extra";
   if (qty > 0) return "Have";
-  if (dontWant) return "Skipped";
   return "Need";
-}
-
-function statusColor(status: string) {
-  if (status === "Need") return "#7c3aed";
-  if (status === "Extra") return "#2563eb";
-  if (status === "Skipped") return "#64748b";
-  return "#166534";
 }
 
 function renderStars(value: number) {
@@ -135,6 +126,577 @@ function getCommunityTier(monthlyMessages: number, monthlyListings: number, mont
   if (score >= 3) return { label: "Community Spark", subtext: "Building momentum this month", accent: "linear-gradient(135deg,#14b8a6,#34d399)", score };
   return { label: "Quiet Gem", subtext: "Low-key month so far", accent: "linear-gradient(135deg,#64748b,#94a3b8)", score };
 }
+
+
+function LoggedOutCollectionLanding() {
+  return (
+    <main className="guestCollectionPage">
+      <style jsx>{`
+        .guestCollectionPage {
+          min-height: 100vh;
+          padding: 24px;
+          color: #ffffff;
+          background:
+            radial-gradient(circle at 16% 10%, rgba(236,72,153,0.26), transparent 28%),
+            radial-gradient(circle at 86% 8%, rgba(59,130,246,0.28), transparent 28%),
+            radial-gradient(circle at 62% 84%, rgba(168,85,247,0.28), transparent 32%),
+            linear-gradient(180deg, #050816 0%, #10173a 46%, #020617 100%);
+          overflow-x: hidden;
+        }
+
+        .guestShell {
+          max-width: 1160px;
+          margin: 0 auto;
+          display: grid;
+          gap: 16px;
+        }
+
+        .guestHero {
+          border-radius: 32px;
+          padding: 28px;
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
+            linear-gradient(135deg, rgba(30,41,59,0.92), rgba(88,28,135,0.86));
+          border: 1px solid rgba(255,255,255,0.16);
+          box-shadow: 0 24px 60px rgba(0,0,0,0.36);
+          display: grid;
+          grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+          gap: 18px;
+          align-items: center;
+        }
+
+        .guestBadge {
+          display: inline-flex;
+          width: fit-content;
+          align-items: center;
+          gap: 8px;
+          padding: 9px 13px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.16);
+          color: #fde68a;
+          font-weight: 1000;
+          font-size: 13px;
+          margin-bottom: 14px;
+        }
+
+        .guestTitle {
+          margin: 0;
+          font-size: clamp(2.2rem, 5.5vw, 4.2rem);
+          line-height: 0.96;
+          letter-spacing: -1.7px;
+          font-weight: 1000;
+        }
+
+        .guestText {
+          margin-top: 14px;
+          max-width: 710px;
+          color: rgba(255,255,255,0.90);
+          font-size: 17px;
+          line-height: 1.6;
+          font-weight: 760;
+        }
+
+        .guestPills {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 9px;
+          margin-top: 15px;
+        }
+
+        .guestPill {
+          border-radius: 999px;
+          padding: 8px 11px;
+          background: rgba(15,23,42,0.55);
+          border: 1px solid rgba(255,255,255,0.18);
+          color: rgba(255,255,255,0.94);
+          font-size: 12px;
+          font-weight: 1000;
+        }
+
+        .guestActions {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-top: 20px;
+        }
+
+        .guestButton,
+        .guestButton:visited {
+          min-height: 56px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          border-radius: 18px;
+          text-decoration: none !important;
+          font-weight: 1000;
+          color: #ffffff !important;
+          border: 1px solid rgba(255,255,255,0.22);
+          box-shadow: 0 14px 28px rgba(0,0,0,0.25);
+        }
+
+        .guestButton.primary {
+          background: linear-gradient(135deg, #ec4899, #7c3aed, #2563eb);
+        }
+
+        .guestButton.secondary {
+          background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+        }
+
+        .guestPreviewCard {
+          border-radius: 28px;
+          padding: 18px;
+          background:
+            radial-gradient(circle at top right, rgba(250,204,21,0.18), transparent 34%),
+            linear-gradient(135deg, rgba(15,23,42,0.72), rgba(79,70,229,0.55));
+          border: 1px solid rgba(255,255,255,0.15);
+          display: grid;
+          gap: 12px;
+        }
+
+        .mockSearch {
+          border-radius: 17px;
+          min-height: 48px;
+          padding: 12px 14px;
+          display: flex;
+          align-items: center;
+          color: rgba(255,255,255,0.78);
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.16);
+          font-weight: 900;
+        }
+
+        .guestStats {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 9px;
+        }
+
+        .guestStat {
+          border-radius: 18px;
+          min-height: 74px;
+          padding: 12px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.14);
+        }
+
+        .guestStat strong {
+          display: block;
+          font-size: 25px;
+          line-height: 1;
+          margin-bottom: 6px;
+        }
+
+        .guestStat span {
+          display: block;
+          color: rgba(255,255,255,0.76);
+          font-size: 11px;
+          font-weight: 900;
+          line-height: 1.25;
+        }
+
+        .mockList {
+          display: grid;
+          gap: 9px;
+        }
+
+        .mockRow {
+          display: grid;
+          grid-template-columns: 56px minmax(0, 1fr) auto;
+          gap: 10px;
+          align-items: center;
+          border-radius: 18px;
+          padding: 10px;
+          background: rgba(255,255,255,0.92);
+          color: #111827;
+          border: 1px solid rgba(255,255,255,0.22);
+        }
+
+        .mockThumb {
+          width: 56px;
+          height: 56px;
+          border-radius: 16px;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(135deg, #ede9fe, #bfdbfe);
+          font-size: 26px;
+        }
+
+        .mockName {
+          font-weight: 1000;
+          line-height: 1.1;
+          margin-bottom: 3px;
+        }
+
+        .mockMeta {
+          font-size: 12px;
+          color: #64748b;
+          font-weight: 850;
+        }
+
+        .mockQty {
+          min-width: 44px;
+          height: 44px;
+          border-radius: 14px;
+          display: grid;
+          place-items: center;
+          color: white;
+          background: #4f46e5;
+          font-weight: 1000;
+        }
+
+        .guestGrid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 14px;
+        }
+
+        .guestFeature,
+        .guestFeature:visited {
+          min-height: 200px;
+          border-radius: 24px;
+          padding: 18px;
+          color: #ffffff !important;
+          text-decoration: none !important;
+          background: rgba(15,23,42,0.78);
+          border: 1px solid rgba(255,255,255,0.12);
+          box-shadow: 0 16px 34px rgba(0,0,0,0.24);
+        }
+
+        .guestIcon {
+          width: 54px;
+          height: 54px;
+          border-radius: 18px;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(135deg, #fef3c7, #ede9fe);
+          color: #312e81;
+          font-size: 28px;
+          line-height: 1;
+          margin-bottom: 12px;
+        }
+
+        .guestFeatureTitle {
+          color: #fde68a;
+          font-size: 17px;
+          line-height: 1.12;
+          font-weight: 1000;
+          margin-bottom: 8px;
+        }
+
+        .guestFeatureText {
+          color: rgba(255,255,255,0.82);
+          line-height: 1.5;
+          font-size: 14px;
+          font-weight: 800;
+        }
+
+        .guestSoftCard {
+          border-radius: 28px;
+          padding: 22px;
+          color: #111827;
+          background:
+            radial-gradient(circle at top right, rgba(196,181,253,0.38), transparent 32%),
+            linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          border: 1px solid rgba(255,255,255,0.64);
+          box-shadow: 0 20px 44px rgba(0,0,0,0.26);
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 14px;
+          align-items: center;
+        }
+
+        .guestSoftTitle {
+          color: #312e81;
+          font-size: 22px;
+          line-height: 1.1;
+          font-weight: 1000;
+          margin-bottom: 6px;
+        }
+
+        .guestSoftText {
+          color: #475569;
+          line-height: 1.55;
+          font-size: 14px;
+          font-weight: 820;
+        }
+
+        @media (max-width: 980px) {
+          .guestCollectionPage {
+            padding: 12px;
+            padding-bottom: 88px;
+          }
+
+          .guestShell {
+            gap: 12px;
+          }
+
+          .guestHero {
+            grid-template-columns: 1fr;
+            border-radius: 24px;
+            padding: 18px;
+            gap: 14px;
+          }
+
+          .guestBadge {
+            padding: 7px 10px;
+            font-size: 12px;
+            margin-bottom: 11px;
+          }
+
+          .guestTitle {
+            font-size: clamp(1.85rem, 9.5vw, 2.75rem);
+            letter-spacing: -1.2px;
+          }
+
+          .guestText {
+            font-size: 14px;
+            line-height: 1.45;
+            margin-top: 12px;
+          }
+
+          .guestPills {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+          }
+
+          .guestPills::-webkit-scrollbar {
+            display: none;
+          }
+
+          .guestPill {
+            flex: 0 0 auto;
+            font-size: 11px;
+            padding: 7px 10px;
+          }
+
+          .guestActions {
+            grid-template-columns: 1fr 1fr;
+            gap: 9px;
+            margin-top: 14px;
+          }
+
+          .guestButton {
+            min-height: 50px;
+            border-radius: 16px;
+            font-size: 13px;
+            padding: 10px;
+          }
+
+          .guestPreviewCard {
+            border-radius: 22px;
+            padding: 13px;
+          }
+
+          .mockSearch {
+            min-height: 42px;
+            border-radius: 14px;
+            font-size: 12px;
+          }
+
+          .guestStats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+          }
+
+          .guestStat {
+            min-height: 58px;
+            padding: 10px;
+            text-align: center;
+          }
+
+          .guestStat strong {
+            font-size: 20px;
+          }
+
+          .guestGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+          }
+
+          .guestFeature {
+            min-height: 0;
+            aspect-ratio: 1 / 1;
+            border-radius: 20px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+          }
+
+          .guestIcon {
+            width: 46px;
+            height: 46px;
+            border-radius: 16px;
+            font-size: 24px;
+            margin-bottom: 8px;
+          }
+
+          .guestFeatureTitle {
+            font-size: 15px;
+            margin-bottom: 0;
+          }
+
+          .guestFeatureText {
+            display: none;
+          }
+
+          .guestSoftCard {
+            grid-template-columns: 1fr;
+            border-radius: 22px;
+            padding: 16px;
+          }
+
+          .guestSoftTitle {
+            font-size: 18px;
+          }
+
+          .guestSoftText {
+            font-size: 12.5px;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .guestActions {
+            grid-template-columns: 1fr;
+          }
+
+          .guestGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .guestFeatureTitle {
+            font-size: 13px;
+          }
+        }
+      `}</style>
+
+      <div className="guestShell">
+        <section className="guestHero">
+          <div>
+            <div className="guestBadge">✨ Preview before signing up ✨</div>
+            <h1 className="guestTitle">Track your Doorables collection without the chaos.</h1>
+            <p className="guestText">
+              Save what you own, mark what you still need, organize extras, and share your collector profile.
+              Free accounts can save up to 50 Doorables before upgrading.
+            </p>
+
+            <div className="guestPills">
+              <span className="guestPill">Free up to 50 saves</span>
+              <span className="guestPill">Mobile-friendly list view</span>
+              <span className="guestPill">Extras + wishlist tracking</span>
+              <span className="guestPill">Public profile sharing</span>
+            </div>
+
+            <div className="guestActions">
+              <Link href="/demo" className="guestButton primary">
+                👀 Preview First
+              </Link>
+              <Link href="/login" className="guestButton secondary">
+                💜 Start Free
+              </Link>
+            </div>
+          </div>
+
+          <div className="guestPreviewCard">
+            <div className="mockSearch">Search name, series, rarity, movie...</div>
+
+            <div className="guestStats">
+              <div className="guestStat">
+                <strong>50</strong>
+                <span>free saves</span>
+              </div>
+              <div className="guestStat">
+                <strong>Need</strong>
+                <span>wishlist</span>
+              </div>
+              <div className="guestStat">
+                <strong>Extras</strong>
+                <span>trade/sell</span>
+              </div>
+              <div className="guestStat">
+                <strong>Share</strong>
+                <span>profile</span>
+              </div>
+            </div>
+
+            <div className="mockList">
+              <div className="mockRow">
+                <div className="mockThumb">💜</div>
+                <div>
+                  <div className="mockName">Collection item</div>
+                  <div className="mockMeta">Series • Rarity • Movie</div>
+                </div>
+                <div className="mockQty">1</div>
+              </div>
+
+              <div className="mockRow">
+                <div className="mockThumb">💎</div>
+                <div>
+                  <div className="mockName">Wishlist item</div>
+                  <div className="mockMeta">Need it? Track it.</div>
+                </div>
+                <div className="mockQty">0</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="guestGrid">
+          <Link href="/demo" className="guestFeature">
+            <div>
+              <div className="guestIcon">👀</div>
+              <div className="guestFeatureTitle">Preview the vault</div>
+            </div>
+            <div className="guestFeatureText">See how the tracker works before making an account.</div>
+          </Link>
+
+          <Link href="/login" className="guestFeature">
+            <div>
+              <div className="guestIcon">💜</div>
+              <div className="guestFeatureTitle">Start free</div>
+            </div>
+            <div className="guestFeatureText">Create a free account and save up to 50 Doorables.</div>
+          </Link>
+
+          <Link href="/marketplace" className="guestFeature">
+            <div>
+              <div className="guestIcon">🛍️</div>
+              <div className="guestFeatureTitle">Browse marketplace</div>
+            </div>
+            <div className="guestFeatureText">Look for collector extras and see what others are listing.</div>
+          </Link>
+
+          <Link href="/feedback" className="guestFeature">
+            <div>
+              <div className="guestIcon">💬</div>
+              <div className="guestFeatureTitle">Send feedback</div>
+            </div>
+            <div className="guestFeatureText">Tell us what to fix, add, clarify, or improve next.</div>
+          </Link>
+        </section>
+
+        <section className="guestSoftCard">
+          <div>
+            <div className="guestSoftTitle">Why you saw this instead of a login wall</div>
+            <div className="guestSoftText">
+              The collection tracker saves your personal collection, so you will still need an account to use it.
+              But you can preview the experience first, browse public areas, and decide if it is useful before signing up.
+            </div>
+          </div>
+
+          <Link href="/demo" className="guestButton primary">
+            Open Demo
+          </Link>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 
 export default function Page() {
   const router = useRouter();
@@ -225,7 +787,10 @@ export default function Page() {
       const { data: authData, error: authError } = await supabase.auth.getUser();
       const user = authData.user;
       if (authError || !user) {
-        router.replace("/login");
+        setUserId("");
+        setUsername("");
+        setIsSubscribed(false);
+        setLoading(false);
         return;
       }
 
@@ -261,7 +826,7 @@ export default function Page() {
 
       const [doorablesResult, userDoorablesResult] = await Promise.all([
         supabase.from("doorables").select("id, name, series, rarity, subcategory, movie, image_url").range(0, 1999),
-        supabase.from("user_doorables").select("id, doorable_id, qty_owned, custom_tag, dont_want").eq("user_id", user.id),
+        supabase.from("user_doorables").select("id, doorable_id, qty_owned, custom_tag").eq("user_id", user.id),
       ]);
 
       if (doorablesResult.error) {
@@ -292,7 +857,6 @@ export default function Page() {
             image: String(d.image_url ?? ""),
             qty: Number(row?.qty_owned ?? 0),
             note: String(row?.custom_tag ?? ""),
-            dontWant: !!row?.dont_want,
             rowId: row?.id ? String(row.id) : null,
           };
         })
@@ -401,12 +965,11 @@ export default function Page() {
     }
   }
 
-  async function saveCard(card: Card, nextQty: number, nextNote: string, nextDontWant = card.dontWant) {
+  async function saveCard(card: Card, nextQty: number, nextNote: string) {
     try {
       const supabase = getSupabase();
       const qty = Math.max(0, Number(nextQty ?? card.qty ?? 0));
       const note = String(nextNote ?? card.note ?? "");
-      const dontWant = qty > 0 ? false : !!nextDontWant;
       const ownedCount = cards.filter((c) => c.qty > 0).length;
       const isAddingNewOwned = card.qty <= 0 && qty > 0;
 
@@ -425,37 +988,27 @@ export default function Page() {
         user_id: userId,
         doorable_id: card.id,
         qty_owned: qty,
-        wanted: qty <= 0 && !dontWant,
+        wanted: qty <= 0,
         custom_tag: note,
-        dont_want: dontWant,
       };
 
       if (card.rowId) {
         const { error: updateError } = await supabase.from("user_doorables").update(payload).eq("id", card.rowId);
         if (updateError) throw updateError;
-        setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, qty, note, dontWant } : c)));
+        setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, qty, note } : c)));
       } else {
         const { data, error: insertError } = await supabase.from("user_doorables").insert([payload]).select().single();
         if (insertError) throw insertError;
         const newRowId = data?.id ? String(data.id) : null;
-        setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, qty, note, dontWant, rowId: newRowId } : c)));
+        setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, qty, note, rowId: newRowId } : c)));
       }
 
-      if (dontWant) {
-        setNotice("Marked as skipped / don't want 💜");
-      } else {
-        setNotice(qty > 0 ? "Saved to your collection 💜" : "Moved back to Need.");
-      }
+      setNotice(qty > 0 ? "Saved to your collection 💜" : "Removed from owned collection.");
     } catch (err) {
       alert("Save failed: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setSavingId("");
     }
-  }
-
-  function toggleSkip(card: Card) {
-    const nextDontWant = !card.dontWant;
-    void saveCard(card, 0, card.note, nextDontWant);
   }
 
   async function handlePhotoSubmission(card: Card, file: File | null) {
@@ -687,16 +1240,7 @@ export default function Page() {
       const matchesSubcategory = subcategoryFilter === "all" || card.subcategory === subcategoryFilter;
       const matchesRarity = rarityFilter === "all" || card.rarity === rarityFilter;
       const matchesMovie = movieFilter === "all" || card.movie === movieFilter;
-      const matchesCollection =
-        collectionFilter === "all"
-          ? true
-          : collectionFilter === "have"
-            ? card.qty > 0
-            : collectionFilter === "need"
-              ? card.qty <= 0 && !card.dontWant
-              : collectionFilter === "skipped"
-                ? card.qty <= 0 && card.dontWant
-                : card.qty > 1;
+      const matchesCollection = collectionFilter === "all" ? true : collectionFilter === "have" ? card.qty > 0 : collectionFilter === "need" ? card.qty <= 0 : card.qty > 1;
 
       return matchesSearch && matchesSeries && matchesSubcategory && matchesRarity && matchesMovie && matchesCollection;
     });
@@ -704,10 +1248,8 @@ export default function Page() {
 
   const totalCount = cards.length;
   const ownedCount = cards.filter((c) => c.qty > 0).length;
-  const skippedCount = cards.filter((c) => c.qty <= 0 && c.dontWant).length;
-  const needCount = cards.filter((c) => c.qty <= 0 && !c.dontWant).length;
-  const wantedTotalCount = Math.max(0, totalCount - skippedCount);
-  const completion = wantedTotalCount ? Math.round((ownedCount / wantedTotalCount) * 100) : 0;
+  const needCount = cards.filter((c) => c.qty <= 0).length;
+  const completion = totalCount ? Math.round((ownedCount / totalCount) * 100) : 0;
   const extrasCount = cards.reduce((sum, card) => sum + Math.max(0, Number(card.qty || 0) - 1), 0);
   const freeSlotsLeft = Math.max(0, FREE_LIMIT - ownedCount);
   const freeLimitReached = !isSubscribed && ownedCount >= FREE_LIMIT;
@@ -718,8 +1260,6 @@ export default function Page() {
   const seriesProgress = useMemo(() => {
     const grouped = new Map<string, { total: number; owned: number; subcategories: string[] }>();
     cards.forEach((card) => {
-      if (card.qty <= 0 && card.dontWant) return;
-
       const key = card.series || "Unknown Series";
       const current = grouped.get(key) || { total: 0, owned: 0, subcategories: [] };
       current.total += 1;
@@ -792,6 +1332,10 @@ export default function Page() {
         </div>
       </div>
     );
+  }
+
+  if (!userId) {
+    return <LoggedOutCollectionLanding />;
   }
 
   if (error && !cards.length) {
@@ -1087,7 +1631,7 @@ export default function Page() {
 
         .statsGrid {
           display: grid;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 14px;
           margin-bottom: 18px;
         }
@@ -1416,7 +1960,7 @@ export default function Page() {
 
         .cardButtonRow {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: 1fr 1fr;
           gap: 8px;
         }
 
@@ -1440,18 +1984,6 @@ export default function Page() {
           background: rgba(255,255,255,0.75);
           color: #111827;
           border: 1px solid rgba(15,23,42,0.14);
-        }
-
-        .skipButton {
-          background: #f1f5f9;
-          color: #475569;
-          border: 1px solid #cbd5e1;
-        }
-
-        .unskipButton {
-          background: #ecfdf5;
-          color: #047857;
-          border: 1px solid #a7f3d0;
         }
 
         .photoBox {
@@ -1554,12 +2086,6 @@ export default function Page() {
           gap: 7px;
           align-items: center;
           margin-top: 8px;
-        }
-
-        .listActionRow {
-          margin-top: 7px;
-          display: grid;
-          grid-template-columns: 1fr;
         }
 
         .listQtyControls {
@@ -2053,7 +2579,6 @@ export default function Page() {
             { label: "Owned", value: ownedCount, action: "have" },
             { label: "Still Need", value: needCount, action: "need" },
             { label: "Extras", value: extrasCount, action: "extra" },
-            { label: "Skipped", value: skippedCount, action: "skipped" },
           ].map((stat) => (
             <button
               key={stat.label}
@@ -2116,7 +2641,6 @@ export default function Page() {
               { value: "have", label: "Have" },
               { value: "need", label: "Need" },
               { value: "extra", label: "Extras" },
-              { value: "skipped", label: "Skipped" },
             ].map((option) => (
               <button key={option.value} type="button" className={`chipButton ${collectionFilter === option.value ? "active" : ""}`} onClick={() => setCollectionFilter(option.value)}>
                 {option.label}
@@ -2135,7 +2659,6 @@ export default function Page() {
                   { value: "have", label: "Have" },
                   { value: "need", label: "Need" },
                   { value: "extra", label: "+Extra" },
-                  { value: "skipped", label: "Skipped" },
                 ].map((option) => (
                   <button key={option.value} type="button" onClick={() => setCollectionFilter(option.value)} className={`chipButton ${collectionFilter === option.value ? "active" : ""}`}>
                     {option.label}
@@ -2196,7 +2719,7 @@ export default function Page() {
           {pagedCards.map((item, index) => {
             const rarity = rarityTheme(item.rarity);
             const subtleOverlay = item.qty > 0 ? "linear-gradient(rgba(34,197,94,0.08), rgba(34,197,94,0.08))" : "linear-gradient(rgba(168,85,247,0.08), rgba(168,85,247,0.08))";
-            const statusText = collectionStatus(item.qty, item.dontWant);
+            const statusText = collectionStatus(item.qty);
             const photoOpen = expandedPhotoCardId === item.id;
             const canAdd = isSubscribed || item.qty > 0 || ownedCount < FREE_LIMIT;
 
@@ -2216,9 +2739,9 @@ export default function Page() {
                       <div className="rarityBadge" style={{ background: rarity.badgeBg, color: rarity.badgeText }}>{item.rarity}</div>
                     </div>
 
-                    {!canAdd && !item.dontWant && <div className="limitBox" style={{ marginTop: 6 }}>Free limit reached. Upgrade to add more.</div>}
+                    {!canAdd && <div className="limitBox" style={{ marginTop: 6 }}>Free limit reached. Upgrade to add more.</div>}
 
-                    <div className="statusText" style={{ color: statusColor(statusText), marginTop: 6 }}>
+                    <div className="statusText" style={{ color: statusText === "Need" ? "#7c3aed" : statusText === "Extra" ? "#2563eb" : "#166534", marginTop: 6 }}>
                       {savingId === item.id ? "Saving..." : statusText}
                     </div>
 
@@ -2232,19 +2755,13 @@ export default function Page() {
                       <input value={item.note} onChange={(e) => setCards((prev) => prev.map((c) => c.id === item.id ? { ...c, note: e.target.value } : c))} placeholder="Note..." className="listNoteInput" />
                       <button type="button" onClick={() => void saveCard(item, item.qty, item.note)} disabled={savingId === item.id} className="smallButton saveButton">{savingId === item.id ? "Saving..." : "Save"}</button>
                     </div>
-
-                    <div className="listActionRow">
-                      <button type="button" onClick={() => toggleSkip(item)} disabled={savingId === item.id} className={`smallButton ${item.dontWant ? "unskipButton" : "skipButton"}`}>
-                        {item.dontWant ? "Unskip" : "Skip"}
-                      </button>
-                    </div>
                   </div>
                 </div>
               );
             }
 
             return (
-              <div key={item.id} className="card" style={{ background: item.dontWant ? "linear-gradient(rgba(100,116,139,0.12), rgba(100,116,139,0.12)), #f1f5f9" : `${subtleOverlay}, ${rarity.bg}`, color: item.dontWant ? "#334155" : rarity.text, borderColor: item.dontWant ? "#94a3b8" : rarity.border, boxShadow: item.dontWant ? "0 10px 22px rgba(15,23,42,0.12)" : `0 12px 28px rgba(0,0,0,0.14), 0 0 18px ${rarity.glow}` }}>
+              <div key={item.id} className="card" style={{ background: `${subtleOverlay}, ${rarity.bg}`, color: rarity.text, borderColor: rarity.border, boxShadow: `0 12px 28px rgba(0,0,0,0.14), 0 0 18px ${rarity.glow}` }}>
                 <div className="cardImageBox">
                   {item.image ? <img src={item.image} alt={item.name} loading={index < 4 ? "eager" : "lazy"} decoding="async" /> : <div>No Image</div>}
                 </div>
@@ -2256,7 +2773,7 @@ export default function Page() {
 
                 <div className="rarityBadge" style={{ background: rarity.badgeBg, color: rarity.badgeText }}>{item.rarity}</div>
 
-                {!canAdd && !item.dontWant && <div className="limitBox">Free limit reached. Upgrade to add more.</div>}
+                {!canAdd && <div className="limitBox">Free limit reached. Upgrade to add more.</div>}
 
                 <div className="qtyRow">
                   <button type="button" onClick={() => void saveCard(item, item.qty - 1, item.note)} disabled={savingId === item.id} className="qtyButton">−</button>
@@ -2264,7 +2781,7 @@ export default function Page() {
                   <button type="button" onClick={() => void saveCard(item, item.qty + 1, item.note)} disabled={savingId === item.id || !canAdd} className="qtyButton" style={{ opacity: !canAdd ? 0.45 : 1, cursor: !canAdd ? "not-allowed" : "pointer" }}>+</button>
                 </div>
 
-                <div className="statusText" style={{ color: statusColor(statusText) }}>
+                <div className="statusText" style={{ color: statusText === "Need" ? "#7c3aed" : statusText === "Extra" ? "#2563eb" : "#166534" }}>
                   {savingId === item.id ? "Saving..." : statusText}
                 </div>
 
@@ -2277,7 +2794,6 @@ export default function Page() {
                 <div className="cardButtonRow">
                   <button type="button" onClick={() => void saveCard(item, item.qty, item.note)} disabled={savingId === item.id} className="smallButton saveButton">{savingId === item.id ? "Saving..." : "Save"}</button>
                   <button type="button" className="smallButton photoButton" onClick={() => setExpandedPhotoCardId(photoOpen ? "" : item.id)}>{photoOpen ? "Hide" : "Photo"}</button>
-                  <button type="button" onClick={() => toggleSkip(item)} disabled={savingId === item.id} className={`smallButton ${item.dontWant ? "unskipButton" : "skipButton"}`}>{item.dontWant ? "Unskip" : "Skip"}</button>
                 </div>
 
                 {photoOpen && (

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { CSSProperties, useState } from "react";
 
 const navItems = [
   { href: "/", label: "Home", icon: "🏠" },
@@ -20,432 +20,302 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+const styles: Record<string, CSSProperties> = {
+  header: {
+    position: "sticky",
+    top: 0,
+    zIndex: 1000,
+    color: "white",
+    background:
+      "radial-gradient(circle at 16% 0%, rgba(236, 72, 153, 0.24), transparent 34%), radial-gradient(circle at 84% 0%, rgba(59, 130, 246, 0.28), transparent 34%), linear-gradient(135deg, rgba(17, 24, 39, 0.96), rgba(49, 46, 129, 0.94))",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.14)",
+    boxShadow: "0 14px 34px rgba(0, 0, 0, 0.28)",
+    backdropFilter: "blur(18px)",
+  },
+  shell: {
+    maxWidth: 1500,
+    margin: "0 auto",
+    padding: "14px 24px",
+    display: "grid",
+    gridTemplateColumns: "auto minmax(0, 1fr) auto",
+    gap: 14,
+    alignItems: "center",
+  },
+  brand: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 11,
+    color: "white",
+    textDecoration: "none",
+    minWidth: 0,
+  },
+  brandIcon: {
+    width: 50,
+    height: 50,
+    flex: "0 0 auto",
+    borderRadius: 18,
+    display: "grid",
+    placeItems: "center",
+    fontSize: 25,
+    background:
+      "radial-gradient(circle at 30% 20%, #fef3c7, transparent 34%), linear-gradient(135deg, #ec4899, #7c3aed 52%, #2563eb)",
+    border: "1px solid rgba(255, 255, 255, 0.25)",
+    boxShadow: "0 14px 28px rgba(124, 58, 237, 0.36)",
+  },
+  brandText: {
+    display: "grid",
+    gap: 2,
+    minWidth: 0,
+  },
+  brandTitle: {
+    fontSize: 22,
+    fontWeight: 1000,
+    lineHeight: 1,
+    letterSpacing: -0.7,
+    color: "#ffffff",
+    whiteSpace: "nowrap",
+  },
+  brandSub: {
+    color: "rgba(255, 255, 255, 0.72)",
+    fontSize: 11,
+    fontWeight: 850,
+    letterSpacing: "0.04em",
+    textTransform: "lowercase",
+    whiteSpace: "nowrap",
+  },
+  desktopLinks: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  rightActions: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  navIcon: {
+    width: 25,
+    height: 25,
+    borderRadius: 999,
+    display: "grid",
+    placeItems: "center",
+    background: "rgba(255, 255, 255, 0.14)",
+    fontSize: 13,
+    flex: "0 0 auto",
+  },
+  menuButton: {
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 18,
+    padding: "12px 15px",
+    color: "white",
+    background: "rgba(255, 255, 255, 0.14)",
+    border: "1px solid rgba(255, 255, 255, 0.18)",
+    fontSize: 16,
+    fontWeight: 1000,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  mobilePanel: {
+    display: "grid",
+    gap: 9,
+    padding: "0 11px 12px",
+  },
+  mobileLinks: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 8,
+  },
+  mobileAccount: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 8,
+  },
+};
+
+function pillStyle(active = false, mobile = false): CSSProperties {
+  return {
+    minHeight: mobile ? 50 : 42,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: mobile ? "flex-start" : "center",
+    gap: 8,
+    padding: mobile ? "11px 12px" : "9px 12px",
+    borderRadius: mobile ? 17 : 999,
+    color: "white",
+    textDecoration: "none",
+    fontSize: mobile ? 14 : 13,
+    fontWeight: 950,
+    background: active
+      ? "radial-gradient(circle at top left, rgba(253, 230, 138, 0.24), transparent 42%), linear-gradient(135deg, rgba(124, 58, 237, 0.98), rgba(37, 99, 235, 0.78))"
+      : "rgba(255, 255, 255, 0.11)",
+    border: active
+      ? "1px solid rgba(253, 230, 138, 0.62)"
+      : "1px solid rgba(255, 255, 255, 0.16)",
+    boxShadow: active
+      ? "0 14px 28px rgba(124, 58, 237, 0.30)"
+      : "0 10px 22px rgba(0, 0, 0, 0.16)",
+    whiteSpace: "nowrap",
+    width: mobile ? "100%" : "auto",
+    boxSizing: "border-box",
+  };
+}
+
+function accountStyle(mobile = false): CSSProperties {
+  return {
+    minHeight: mobile ? 50 : 43,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: mobile ? "11px 12px" : "10px 14px",
+    borderRadius: mobile ? 17 : 999,
+    color: "white",
+    textDecoration: "none",
+    fontSize: 13,
+    fontWeight: 1000,
+    background: "linear-gradient(135deg, #ec4899, #7c3aed, #2563eb)",
+    border: "1px solid rgba(255, 255, 255, 0.22)",
+    boxShadow: "0 14px 26px rgba(124, 58, 237, 0.30)",
+    whiteSpace: "nowrap",
+    width: mobile ? "100%" : "auto",
+    boxSizing: "border-box",
+  };
+}
+
+function menuLineStyle(open: boolean, line: 1 | 2 | 3): CSSProperties {
+  const base: CSSProperties = {
+    width: 18,
+    height: 2,
+    borderRadius: 999,
+    background: "white",
+    display: "block",
+    transition: "transform 0.18s ease, opacity 0.18s ease",
+  };
+
+  if (!open) return base;
+  if (line === 1) return { ...base, transform: "translateY(6px) rotate(45deg)" };
+  if (line === 2) return { ...base, opacity: 0 };
+  return { ...base, transform: "translateY(-6px) rotate(-45deg)" };
+}
+
 export default function Nav() {
   const pathname = usePathname() || "/";
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const [isCompact, setIsCompact] = useState(false);
+
+  useState(() => {
+    if (typeof window === "undefined") return;
+    const check = () => setIsCompact(window.innerWidth <= 920);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  });
 
   function closeMenu() {
     setMenuOpen(false);
   }
 
+  const compactShell: CSSProperties = isCompact
+    ? { ...styles.shell, gridTemplateColumns: "minmax(0, 1fr) auto", padding: "10px 11px", gap: 10 }
+    : styles.shell;
+
   return (
-    <header className="vaultNav">
-      <style jsx>{`
-        .vaultNav {
-          position: sticky;
-          top: 0;
-          z-index: 1000;
-          color: white;
-          background:
-            radial-gradient(circle at 16% 0%, rgba(236, 72, 153, 0.24), transparent 34%),
-            radial-gradient(circle at 84% 0%, rgba(59, 130, 246, 0.28), transparent 34%),
-            linear-gradient(135deg, rgba(17, 24, 39, 0.94), rgba(49, 46, 129, 0.92));
-          border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-          box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
-          backdrop-filter: blur(18px);
-        }
-
-        .navShell {
-          max-width: 1500px;
-          margin: 0 auto;
-          padding: 14px 24px;
-          display: grid;
-          grid-template-columns: auto minmax(0, 1fr) auto;
-          gap: 14px;
-          align-items: center;
-        }
-
-        .brand,
-        .brand:visited {
-          display: inline-flex;
-          align-items: center;
-          gap: 11px;
-          color: white;
-          text-decoration: none;
-          min-width: 0;
-        }
-
-        .brandIcon {
-          width: 50px;
-          height: 50px;
-          flex: 0 0 auto;
-          border-radius: 18px;
-          display: grid;
-          place-items: center;
-          font-size: 25px;
-          background:
-            radial-gradient(circle at 30% 20%, #fef3c7, transparent 34%),
-            linear-gradient(135deg, #ec4899, #7c3aed 52%, #2563eb);
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          box-shadow: 0 14px 28px rgba(124, 58, 237, 0.36);
-        }
-
-        .brandText {
-          display: grid;
-          gap: 2px;
-          min-width: 0;
-        }
-
-        .brandTitle {
-          font-size: 22px;
-          font-weight: 1000;
-          line-height: 1;
-          letter-spacing: -0.7px;
-          background: linear-gradient(90deg, #ffffff, #fde68a, #f0abfc, #bfdbfe);
-          -webkit-background-clip: text;
-          color: transparent;
-          white-space: nowrap;
-        }
-
-        .brandSub {
-          color: rgba(255, 255, 255, 0.72);
-          font-size: 11px;
-          font-weight: 850;
-          letter-spacing: 0.04em;
-          text-transform: lowercase;
-          white-space: nowrap;
-        }
-
-        .desktopLinks {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .rightActions {
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
-          gap: 8px;
-        }
-
-        .navPill,
-        .navPill:visited,
-        .accountButton,
-        .accountButton:visited {
-          min-height: 40px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 7px;
-          border-radius: 999px;
-          color: white;
-          text-decoration: none;
-          font-weight: 950;
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          box-shadow: 0 10px 22px rgba(0, 0, 0, 0.15);
-          transition:
-            transform 0.16s ease,
-            background 0.16s ease,
-            border-color 0.16s ease,
-            box-shadow 0.16s ease;
-        }
-
-        .navPill,
-        .navPill:visited {
-          padding: 9px 12px;
-          font-size: 13px;
-          background: rgba(255, 255, 255, 0.10);
-        }
-
-        .navPill:hover,
-        .navPill.active {
-          transform: translateY(-1px);
-          background: rgba(255, 255, 255, 0.18);
-          border-color: rgba(253, 230, 138, 0.55);
-          box-shadow: 0 12px 26px rgba(124, 58, 237, 0.26);
-        }
-
-        .navPill.active {
-          color: #fff7ed;
-          background:
-            radial-gradient(circle at top left, rgba(253, 230, 138, 0.24), transparent 40%),
-            linear-gradient(135deg, rgba(124, 58, 237, 0.9), rgba(37, 99, 235, 0.72));
-        }
-
-        .navIcon {
-          width: 24px;
-          height: 24px;
-          border-radius: 999px;
-          display: grid;
-          place-items: center;
-          background: rgba(255, 255, 255, 0.14);
-          font-size: 13px;
-        }
-
-        .accountButton,
-        .accountButton:visited {
-          min-height: 42px;
-          padding: 10px 14px;
-          background: linear-gradient(135deg, #ec4899, #7c3aed, #2563eb);
-          border-color: rgba(255, 255, 255, 0.22);
-          box-shadow: 0 14px 26px rgba(124, 58, 237, 0.30);
-          white-space: nowrap;
-          font-size: 13px;
-        }
-
-        .menuButton {
-          display: none;
-          min-height: 48px;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          border-radius: 18px;
-          padding: 12px 15px;
-          color: white;
-          background: rgba(255, 255, 255, 0.14);
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          font-size: 16px;
-          font-weight: 1000;
-          cursor: pointer;
-          font-family: inherit;
-        }
-
-        .menuLines {
-          display: grid;
-          gap: 4px;
-        }
-
-        .menuLines span {
-          width: 18px;
-          height: 2px;
-          border-radius: 999px;
-          background: white;
-          display: block;
-          transition: transform 0.18s ease, opacity 0.18s ease;
-        }
-
-        .menuButton.open .menuLines span:nth-child(1) {
-          transform: translateY(6px) rotate(45deg);
-        }
-
-        .menuButton.open .menuLines span:nth-child(2) {
-          opacity: 0;
-        }
-
-        .menuButton.open .menuLines span:nth-child(3) {
-          transform: translateY(-6px) rotate(-45deg);
-        }
-
-        .mobilePanel {
-          display: none;
-        }
-
-        .navPill:focus-visible,
-        .accountButton:focus-visible,
-        .menuButton:focus-visible,
-        .brand:focus-visible {
-          outline: 3px solid rgba(253, 230, 138, 0.9);
-          outline-offset: 3px;
-        }
-
-        @media (max-width: 1180px) {
-          .navShell {
-            grid-template-columns: auto minmax(0, 1fr) auto;
-          }
-
-          .desktopLinks {
-            justify-content: flex-end;
-          }
-
-          .navPill {
-            padding: 9px 10px;
-          }
-
-          .rightActions {
-            display: none;
-          }
-        }
-
-        @media (max-width: 920px) {
-          .navShell {
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 10px;
-            padding: 10px 11px;
-          }
-
-          .brandIcon {
-            width: 48px;
-            height: 48px;
-            border-radius: 17px;
-          }
-
-          .brandTitle {
-            font-size: 20px;
-          }
-
-          .brandSub {
-            font-size: 10px;
-          }
-
-          .desktopLinks {
-            display: none;
-          }
-
-          .menuButton {
-            display: inline-flex;
-          }
-
-          .mobilePanel {
-            display: grid;
-            gap: 8px;
-            padding: 0 11px 12px;
-            max-height: 0;
-            overflow: hidden;
-            opacity: 0;
-            transform: translateY(-4px);
-            transition:
-              max-height 0.22s ease,
-              opacity 0.18s ease,
-              transform 0.18s ease,
-              padding-bottom 0.18s ease;
-          }
-
-          .mobilePanel.open {
-            max-height: 720px;
-            opacity: 1;
-            transform: translateY(0);
-            padding-bottom: 12px;
-          }
-
-          .mobileLinks {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 8px;
-          }
-
-          .mobileLinks .navPill,
-          .mobileLinks .navPill:visited {
-            min-height: 48px;
-            border-radius: 16px;
-            padding: 10px;
-            font-size: 13px;
-            justify-content: flex-start;
-          }
-
-          .mobileAccount {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-          }
-
-          .mobileAccount .accountButton {
-            border-radius: 16px;
-            min-height: 48px;
-          }
-
-          .navIcon {
-            width: 28px;
-            height: 28px;
-          }
-        }
-
-        @media (max-width: 430px) {
-          .brandTitle {
-            font-size: 18px;
-          }
-
-          .brandSub {
-            display: none;
-          }
-
-          .menuButton {
-            min-height: 46px;
-            padding: 11px 13px;
-          }
-
-          .mobileLinks,
-          .mobileAccount {
-            grid-template-columns: 1fr;
-          }
-
-          .mobileLinks .navPill,
-          .mobileLinks .navPill:visited {
-            min-height: 46px;
-          }
-        }
-      `}</style>
-
-      <div className="navShell">
-        <Link href="/" className="brand" aria-label="Adorable Vault home" onClick={closeMenu}>
-          <span className="brandIcon">💜</span>
-          <span className="brandText">
-            <span className="brandTitle">Adorable Vault</span>
-            <span className="brandSub">track • trade • showcase</span>
+    <header style={styles.header}>
+      <div style={compactShell}>
+        <Link href="/" style={styles.brand} aria-label="Adorable Vault home" onClick={closeMenu}>
+          <span style={isCompact ? { ...styles.brandIcon, width: 48, height: 48, borderRadius: 17 } : styles.brandIcon}>
+            💜
+          </span>
+          <span style={styles.brandText}>
+            <span style={isCompact ? { ...styles.brandTitle, fontSize: 20 } : styles.brandTitle}>
+              Adorable Vault
+            </span>
+            {!isCompact ? <span style={styles.brandSub}>track • trade • showcase</span> : null}
           </span>
         </Link>
 
-        <nav className="desktopLinks" aria-label="Main navigation">
-          {navItems.map((item) => {
-            const active = isActivePath(pathname, item.href);
+        {!isCompact ? (
+          <nav style={styles.desktopLinks} aria-label="Main navigation">
+            {navItems.map((item) => {
+              const active = isActivePath(pathname, item.href);
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`navPill ${active ? "active" : ""}`}
-                aria-current={active ? "page" : undefined}
-              >
-                <span className="navIcon">{item.icon}</span>
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  style={pillStyle(active)}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <span style={styles.navIcon}>{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        ) : null}
 
-        <div className="rightActions">
-          <Link href="/login" className="accountButton">
-            💜 Sign In
-          </Link>
-        </div>
-
-        <button
-          className={`menuButton ${menuOpen ? "open" : ""}`}
-          type="button"
-          aria-label={menuOpen ? "Close menu" : "Open menu"}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((prev) => !prev)}
-        >
-          <span>Menu</span>
-          <span className="menuLines" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </span>
-        </button>
+        {!isCompact ? (
+          <div style={styles.rightActions}>
+            <Link href="/login" style={accountStyle()}>
+              💜 Sign In
+            </Link>
+          </div>
+        ) : (
+          <button
+            style={{ ...styles.menuButton, display: "inline-flex" }}
+            type="button"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((prev) => !prev)}
+          >
+            <span>Menu</span>
+            <span style={{ display: "grid", gap: 4 }} aria-hidden="true">
+              <span style={menuLineStyle(menuOpen, 1)} />
+              <span style={menuLineStyle(menuOpen, 2)} />
+              <span style={menuLineStyle(menuOpen, 3)} />
+            </span>
+          </button>
+        )}
       </div>
 
-      <div className={`mobilePanel ${menuOpen ? "open" : ""}`}>
-        <nav className="mobileLinks" aria-label="Mobile navigation">
-          {navItems.map((item) => {
-            const active = isActivePath(pathname, item.href);
+      {isCompact && menuOpen ? (
+        <div style={styles.mobilePanel}>
+          <nav style={styles.mobileLinks} aria-label="Mobile navigation">
+            {navItems.map((item) => {
+              const active = isActivePath(pathname, item.href);
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`navPill ${active ? "active" : ""}`}
-                aria-current={active ? "page" : undefined}
-                onClick={closeMenu}
-              >
-                <span className="navIcon">{item.icon}</span>
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  style={pillStyle(active, true)}
+                  aria-current={active ? "page" : undefined}
+                  onClick={closeMenu}
+                >
+                  <span style={styles.navIcon}>{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
 
-        <div className="mobileAccount">
-          <Link href="/login" className="accountButton" onClick={closeMenu}>
-            💜 Sign In
-          </Link>
-          <Link href="/account" className="accountButton" onClick={closeMenu}>
-            ⚙️ Account
-          </Link>
+          <div style={styles.mobileAccount}>
+            <Link href="/login" style={accountStyle(true)} onClick={closeMenu}>
+              💜 Sign In
+            </Link>
+            <Link href="/account" style={accountStyle(true)} onClick={closeMenu}>
+              ⚙️ Account
+            </Link>
+          </div>
         </div>
-      </div>
+      ) : null}
     </header>
   );
 }

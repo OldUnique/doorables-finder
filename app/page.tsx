@@ -33,22 +33,35 @@ const ADMIN_EMAILS = [
 
 const FREE_LIMIT = 50;
 
-const DEFAULT_ANNOUNCEMENT_TITLE = "Vault Update: Mobile Glow-Up + Skip Button 💜";
+const DEFAULT_ANNOUNCEMENT_TITLE = "Vault Update: Mobile Glow-Up + Collector Tools 💜";
 
-const DEFAULT_ANNOUNCEMENT_BODY = `We’ve been busy polishing the vault! The collection page now has a cleaner mobile layout that makes browsing, tracking, and updating your Doorables much easier on your phone.
-
-We also added a new Skip option for collectors who don’t have a Doorable but aren’t actively hunting for it. That way your “Still Need” list can stay more accurate to what you actually want to collect.
+const DEFAULT_ANNOUNCEMENT_BODY = `Adorable Vault is getting cleaner, faster, and easier to use on your phone.
 
 Recent updates include:
-• cleaner mobile list view
-• better centered collection photos
+• cleaner mobile collection browsing
+• better card and list layouts
+• centered collection photos
 • desktop image hover zoom
-• improved card and list layouts
-• public profile/share improvements
-• smoother collection browsing
-• new Skip / Don’t Want tracking option
+• improved public profile sharing
+• smoother feedback tools
+• marketplace and selling features continuing to grow
 
-Thank you to everyone checking out the site, testing features, sharing feedback, and helping shape Adorable Vault into a better collector tool. More updates are coming soon 💜`;
+Thank you to every collector testing features, sending feedback, and helping shape this into a better collector tool. More updates are coming soon 💜`;
+
+function formatNumber(value: number) {
+  return value.toLocaleString();
+}
+
+function displayDate(value?: string | null) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export default function HomePage() {
   const [userEmail, setUserEmail] = useState("");
@@ -81,7 +94,7 @@ export default function HomePage() {
       "Adorable Vault | Doorables Collection Tracker, Checklist & Marketplace";
 
     const description =
-      "Adorable Vault helps Doorables collectors track owned figures, wishlist items, extras, series progress, and marketplace listings in one easy collector vault.";
+      "Adorable Vault helps Doorables collectors track owned figures, wishlist items, extras, series progress, public collector profiles, and marketplace listings in one clean, ad-free vault.";
 
     function setMeta(name: string, content: string) {
       let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
@@ -114,11 +127,10 @@ export default function HomePage() {
     }
 
     setCanonical("https://www.mydoorables.com/");
-
     setMeta("description", description);
     setMeta(
       "keywords",
-      "Doorables tracker, Disney Doorables tracker, Doorables collection tracker, Doorables checklist, Doorables wishlist, Doorables inventory, Doorables rarity tracker, Doorables marketplace, Doorables trading, Doorables extras, buy sell trade Doorables, Adorable Vault"
+      "Doorables tracker, Doorables collection tracker, Doorables checklist, Doorables wishlist, Doorables inventory, Doorables rarity tracker, Doorables marketplace, Doorables trading, Doorables extras, buy sell trade Doorables, Adorable Vault, MyDoorables"
     );
     setMeta("robots", "index, follow");
     setProperty("og:title", "Adorable Vault | Doorables Collection Tracker");
@@ -321,11 +333,12 @@ export default function HomePage() {
 
   const announcementText = body.trim() || DEFAULT_ANNOUNCEMENT_BODY;
   const announcementTitle = title.trim() || DEFAULT_ANNOUNCEMENT_TITLE;
+  const announcementDate = displayDate(announcement?.updated_at);
 
   const hasPersonalStats = stats.total > 0 && (stats.owned > 0 || stats.extras > 0);
-  const displayOwned = hasPersonalStats ? stats.owned : "50";
-  const displayNeeded = hasPersonalStats ? stats.needed.toLocaleString() : "Need";
-  const displayExtras = hasPersonalStats ? stats.extras : "Extras";
+  const displayOwned = hasPersonalStats ? formatNumber(stats.owned) : "50";
+  const displayNeeded = hasPersonalStats ? formatNumber(stats.needed) : "Need";
+  const displayExtras = hasPersonalStats ? formatNumber(stats.extras) : "Extras";
   const displayProgress = hasPersonalStats ? `${stats.progress}%` : "Free";
   const freeUsed = Math.min(stats.owned, FREE_LIMIT);
   const freePercent = Math.min(100, Math.round((freeUsed / FREE_LIMIT) * 100));
@@ -338,9 +351,9 @@ export default function HomePage() {
           min-height: 100vh;
           color: white;
           background:
-            radial-gradient(circle at 8% 4%, rgba(168, 85, 247, 0.44) 0%, transparent 28%),
-            radial-gradient(circle at 88% 8%, rgba(59, 130, 246, 0.32) 0%, transparent 26%),
-            radial-gradient(circle at 72% 96%, rgba(236, 72, 153, 0.26) 0%, transparent 28%),
+            radial-gradient(circle at 8% 4%, rgba(168, 85, 247, 0.42) 0%, transparent 28%),
+            radial-gradient(circle at 88% 8%, rgba(59, 130, 246, 0.30) 0%, transparent 26%),
+            radial-gradient(circle at 72% 96%, rgba(236, 72, 153, 0.24) 0%, transparent 28%),
             linear-gradient(180deg, #030712 0%, #080b1f 44%, #020617 100%);
           overflow-x: hidden;
         }
@@ -351,11 +364,11 @@ export default function HomePage() {
           inset: 0;
           pointer-events: none;
           background-image:
-            radial-gradient(2px 2px at 18% 22%, rgba(255,255,255,0.84) 35%, transparent 36%),
-            radial-gradient(1.5px 1.5px at 78% 16%, rgba(255,255,255,0.72) 35%, transparent 36%),
-            radial-gradient(1.8px 1.8px at 48% 72%, rgba(255,255,255,0.62) 35%, transparent 36%),
-            linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+            radial-gradient(2px 2px at 18% 22%, rgba(255,255,255,0.72) 35%, transparent 36%),
+            radial-gradient(1.5px 1.5px at 78% 16%, rgba(255,255,255,0.58) 35%, transparent 36%),
+            radial-gradient(1.8px 1.8px at 48% 72%, rgba(255,255,255,0.48) 35%, transparent 36%),
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
           background-size: auto, auto, auto, 46px 46px, 46px 46px;
           opacity: 0.7;
           mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 78%);
@@ -365,67 +378,36 @@ export default function HomePage() {
         .page a:visited,
         .page a:hover,
         .page a:active,
-        .actionCard,
-        .actionCard:visited,
-        .actionCard:hover,
-        .actionCard:active,
         .featureCard,
         .featureCard:visited,
         .featureCard:hover,
         .featureCard:active,
+        .actionCard,
+        .actionCard:visited,
+        .actionCard:hover,
+        .actionCard:active,
         .primaryButton,
-        .primaryButton:visited,
-        .primaryButton:hover,
-        .primaryButton:active,
         .secondaryButton,
-        .secondaryButton:visited,
-        .secondaryButton:hover,
-        .secondaryButton:active,
-        .mobileSticky a,
-        .mobileSticky a:visited,
-        .mobileSticky a:hover,
-        .mobileSticky a:active {
+        .launchButton,
+        .previewLink,
+        .mobileSticky a {
           color: inherit;
           text-decoration: none !important;
           text-decoration-line: none !important;
           -webkit-text-decoration-line: none !important;
           border-bottom: none !important;
-          box-shadow: none;
-        }
-
-        .page a *,
-        .page a:visited *,
-        .page a:hover *,
-        .page a:active *,
-        .actionCard *,
-        .featureCard *,
-        .mobileSticky a * {
-          text-decoration: none !important;
-          text-decoration-line: none !important;
-          -webkit-text-decoration-line: none !important;
-          border-bottom: none !important;
-        }
-
-        .actionIcon,
-        .featureIcon,
-        .mobileStickyIcon {
-          text-decoration: none !important;
-          text-decoration-line: none !important;
-          -webkit-text-decoration-line: none !important;
-          border-bottom: none !important;
-          line-height: 1;
         }
 
         .shell {
           position: relative;
           z-index: 1;
-          max-width: 1180px;
+          max-width: 1200px;
           margin: 0 auto;
           padding: 22px;
           padding-bottom: 110px;
         }
 
-        .adFreeTopper {
+        .topRibbon {
           margin-bottom: 14px;
           border-radius: 999px;
           padding: 11px 16px;
@@ -444,14 +426,14 @@ export default function HomePage() {
           line-height: 1.35;
         }
 
-        .adFreeTopper span {
+        .topRibbon span {
           color: rgba(255,255,255,0.9);
           font-weight: 900;
         }
 
         .hero {
           display: grid;
-          grid-template-columns: minmax(0, 1.06fr) minmax(360px, 0.94fr);
+          grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
           gap: 20px;
           align-items: stretch;
           margin-bottom: 18px;
@@ -459,11 +441,13 @@ export default function HomePage() {
 
         .heroCard,
         .vaultPreview,
-        .launchStrip,
-        .adFreeStrip,
         .whiteCard,
-        .darkCard,
-        .finalCta {
+        .featureCard,
+        .priceCard,
+        .finalCta,
+        .launchStrip,
+        .roadmapCard,
+        .testimonialCard {
           border-radius: 32px;
           border: 1px solid rgba(255,255,255,0.16);
           box-shadow: 0 26px 64px rgba(0,0,0,0.36);
@@ -473,6 +457,7 @@ export default function HomePage() {
           padding: 34px;
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 32%),
+            radial-gradient(circle at bottom left, rgba(236,72,153,0.18), transparent 38%),
             linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
           display: grid;
           align-content: center;
@@ -495,8 +480,8 @@ export default function HomePage() {
 
         .headline {
           margin: 0;
-          font-size: clamp(2.35rem, 5.6vw, 4.55rem);
-          line-height: 0.94;
+          font-size: clamp(2.35rem, 5.6vw, 4.75rem);
+          line-height: 0.93;
           letter-spacing: -2px;
           font-weight: 1000;
           text-wrap: balance;
@@ -528,7 +513,7 @@ export default function HomePage() {
           box-shadow: 0 10px 20px rgba(0,0,0,0.18);
         }
 
-        .trustPill.adFree {
+        .trustPill.gold {
           color: #fef3c7;
           background: rgba(126,34,206,0.58);
           border-color: rgba(253,224,71,0.38);
@@ -547,11 +532,10 @@ export default function HomePage() {
           grid-template-columns: 50px 1fr;
           gap: 12px;
           align-items: center;
-          min-height: 84px;
+          min-height: 88px;
           border-radius: 24px;
           padding: 14px;
           color: white !important;
-          text-decoration: none !important;
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.13), transparent 34%),
             linear-gradient(135deg, rgba(15,23,42,0.58), rgba(79,70,229,0.64));
@@ -583,7 +567,6 @@ export default function HomePage() {
           color: #312e81;
           background: linear-gradient(135deg, #ffffff, #fef3c7);
           box-shadow: 0 12px 24px rgba(255,255,255,0.12);
-          text-decoration: none !important;
         }
 
         .actionTitle {
@@ -591,7 +574,6 @@ export default function HomePage() {
           font-weight: 1000;
           line-height: 1.12;
           color: white;
-          text-decoration: none !important;
         }
 
         .actionSub {
@@ -601,7 +583,6 @@ export default function HomePage() {
           font-size: 12px;
           font-weight: 850;
           line-height: 1.28;
-          text-decoration: none !important;
         }
 
         .vaultPreview {
@@ -635,7 +616,6 @@ export default function HomePage() {
           background: linear-gradient(90deg, #ffffff, #fef3c7);
           border-radius: 999px;
           padding: 9px 12px;
-          text-decoration: none !important;
           font-size: 12px;
           font-weight: 1000;
           white-space: nowrap;
@@ -797,69 +777,9 @@ export default function HomePage() {
           background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
         }
 
-        .adFreeStrip {
-          margin-bottom: 18px;
-          padding: 20px;
-          color: #111827;
-          background:
-            radial-gradient(circle at top right, rgba(168,85,247,0.20), transparent 34%),
-            radial-gradient(circle at bottom left, rgba(59,130,246,0.16), transparent 34%),
-            linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
-          border: 1px solid rgba(255,255,255,0.66);
-          display: grid;
-          grid-template-columns: 1fr auto;
-          gap: 16px;
-          align-items: center;
-        }
-
-        .adFreeBadge {
-          display: inline-flex;
-          align-items: center;
-          width: fit-content;
-          gap: 8px;
-          margin-bottom: 10px;
-          border-radius: 999px;
-          padding: 8px 12px;
-          color: #5b21b6;
-          background: #ede9fe;
-          border: 1px solid #ddd6fe;
-          font-size: 12px;
-          font-weight: 1000;
-        }
-
-        .adFreeTitle {
-          margin: 0;
-          color: #312e81;
-          font-size: clamp(1.75rem, 3.5vw, 2.65rem);
-          line-height: 0.98;
-          letter-spacing: -1px;
-          font-weight: 1000;
-        }
-
-        .adFreeText {
-          margin: 10px 0 0;
-          color: #475569;
-          line-height: 1.65;
-          font-size: 15px;
-          font-weight: 820;
-          max-width: 830px;
-        }
-
-        .adFreeIcon {
-          width: 96px;
-          height: 96px;
-          border-radius: 32px;
-          display: grid;
-          place-items: center;
-          font-size: 44px;
-          background: linear-gradient(135deg, #dbeafe, #f5d0fe, #fef3c7);
-          border: 1px solid #e9d5ff;
-          box-shadow: 0 16px 34px rgba(124,58,237,0.20);
-        }
-
         .launchStrip {
           margin-bottom: 18px;
-          padding: 18px;
+          padding: 20px;
           color: #111827;
           background:
             radial-gradient(circle at top right, rgba(250,204,21,0.36), transparent 32%),
@@ -872,27 +792,43 @@ export default function HomePage() {
           align-items: center;
         }
 
+        .launchBadge {
+          display: inline-flex;
+          align-items: center;
+          width: fit-content;
+          gap: 8px;
+          margin-bottom: 9px;
+          border-radius: 999px;
+          padding: 7px 11px;
+          color: #5b21b6;
+          background: #ede9fe;
+          border: 1px solid #ddd6fe;
+          font-size: 12px;
+          font-weight: 1000;
+        }
+
         .launchTitle {
           color: #312e81;
-          font-size: 22px;
-          line-height: 1.1;
+          font-size: clamp(1.45rem, 3vw, 2.15rem);
+          line-height: 1.05;
           font-weight: 1000;
+          letter-spacing: -0.7px;
           margin-bottom: 5px;
         }
 
         .launchText {
           color: #475569;
-          line-height: 1.55;
+          line-height: 1.6;
           font-size: 14px;
-          font-weight: 800;
+          font-weight: 820;
+          max-width: 830px;
         }
 
         .launchButton,
         .launchButton:visited {
-          min-height: 50px;
+          min-height: 52px;
           border-radius: 999px;
           padding: 13px 17px;
-          text-decoration: none !important;
           color: white !important;
           background: linear-gradient(135deg, #ec4899, #8b5cf6);
           font-weight: 1000;
@@ -923,14 +859,14 @@ export default function HomePage() {
 
         .sectionTitle {
           margin: 0;
-          font-size: clamp(1.42rem, 3vw, 2.1rem);
+          font-size: clamp(1.42rem, 3vw, 2.25rem);
           line-height: 1.05;
           letter-spacing: -0.9px;
           font-weight: 1000;
         }
 
         .sectionText {
-          max-width: 680px;
+          max-width: 700px;
           color: rgba(255,255,255,0.82);
           line-height: 1.6;
           font-size: 14px;
@@ -945,20 +881,18 @@ export default function HomePage() {
 
         .featureCard,
         .featureCard:visited {
-          min-height: 214px;
-          border-radius: 24px;
+          min-height: 226px;
           padding: 18px;
           color: white !important;
-          text-decoration: none !important;
-          background: rgba(15,23,42,0.78);
-          border: 1px solid rgba(255,255,255,0.12);
-          box-shadow: 0 16px 34px rgba(0,0,0,0.24);
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.08), transparent 34%),
+            rgba(15,23,42,0.78);
           transition: transform 0.16s ease, border-color 0.16s ease;
         }
 
         .featureCard:hover {
           transform: translateY(-3px);
-          border-color: rgba(255,255,255,0.24);
+          border-color: rgba(255,255,255,0.28);
         }
 
         .featureIcon {
@@ -972,7 +906,6 @@ export default function HomePage() {
           color: #312e81;
           background: linear-gradient(135deg, #ede9fe, #bfdbfe);
           margin-bottom: 14px;
-          text-decoration: none !important;
         }
 
         .featureTitle {
@@ -981,7 +914,6 @@ export default function HomePage() {
           line-height: 1.1;
           font-weight: 1000;
           margin-bottom: 9px;
-          text-decoration: none !important;
         }
 
         .featureText {
@@ -990,14 +922,12 @@ export default function HomePage() {
           font-size: 14px;
           margin-bottom: 12px;
           font-weight: 800;
-          text-decoration: none !important;
         }
 
         .featureLink {
           color: #ffffff !important;
           font-weight: 1000;
           font-size: 13px;
-          text-decoration: none !important;
           display: inline-flex;
           padding: 8px 11px;
           border-radius: 999px;
@@ -1005,15 +935,61 @@ export default function HomePage() {
           border: 1px solid rgba(255,255,255,0.18);
         }
 
+        .workflowGrid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 14px;
+        }
+
+        .roadmapCard {
+          min-height: 180px;
+          padding: 20px;
+          color: #111827;
+          background:
+            radial-gradient(circle at top right, rgba(196,181,253,0.42), transparent 34%),
+            linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          border: 1px solid rgba(255,255,255,0.62);
+        }
+
+        .roadmapNumber {
+          width: 42px;
+          height: 42px;
+          border-radius: 16px;
+          display: grid;
+          place-items: center;
+          color: white;
+          background: linear-gradient(135deg, #ec4899, #7c3aed);
+          font-weight: 1000;
+          margin-bottom: 12px;
+          box-shadow: 0 12px 22px rgba(124,58,237,0.24);
+        }
+
+        .roadmapTitle {
+          color: #312e81;
+          font-size: 20px;
+          font-weight: 1000;
+          margin-bottom: 7px;
+          line-height: 1.08;
+        }
+
+        .roadmapText {
+          color: #475569;
+          line-height: 1.55;
+          font-size: 14px;
+          font-weight: 800;
+        }
+
         .splitGrid {
           display: grid;
-          grid-template-columns: 1.1fr 0.9fr;
+          grid-template-columns: 1.05fr 0.95fr;
           gap: 18px;
           align-items: stretch;
         }
 
         .whiteCard {
-          background: linear-gradient(180deg, #ffffff, #f8fafc);
+          background:
+            radial-gradient(circle at top right, rgba(196,181,253,0.22), transparent 34%),
+            linear-gradient(180deg, #ffffff, #f8fafc);
           color: #111827;
           border: 1px solid rgba(255,255,255,0.60);
           padding: 24px;
@@ -1133,17 +1109,14 @@ export default function HomePage() {
           position: relative;
           overflow: hidden;
           text-align: left;
-          border-radius: 28px;
           padding: 24px;
           color: white;
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.10), transparent 34%),
             rgba(15,23,42,0.78);
-          border: 1px solid rgba(255,255,255,0.16);
-          box-shadow: 0 16px 34px rgba(0,0,0,0.22);
           cursor: pointer;
           transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
-          min-height: 260px;
+          min-height: 270px;
         }
 
         .priceCard:hover {
@@ -1159,6 +1132,7 @@ export default function HomePage() {
 
         .priceCard.free {
           cursor: default;
+          display: block;
         }
 
         .priceCard.best {
@@ -1226,7 +1200,6 @@ export default function HomePage() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          text-decoration: none !important;
           font-weight: 1000;
           color: white !important;
           background: linear-gradient(135deg, #2563eb, #8b5cf6);
@@ -1261,7 +1234,6 @@ export default function HomePage() {
           border-radius: 999px;
           padding: 14px 20px;
           font-weight: 1000;
-          text-decoration: none !important;
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -1282,7 +1254,6 @@ export default function HomePage() {
           box-shadow: 0 16px 34px rgba(124,58,237,0.50) !important;
         }
 
-        .buttonRow,
         .ctaButtons {
           display: flex;
           gap: 11px;
@@ -1297,7 +1268,6 @@ export default function HomePage() {
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.13), transparent 32%),
             linear-gradient(135deg, rgba(79,70,229,0.88), rgba(147,51,234,0.86));
-          border: 1px solid rgba(255,255,255,0.16);
         }
 
         .mobileSticky {
@@ -1320,7 +1290,7 @@ export default function HomePage() {
             padding-bottom: 92px;
           }
 
-          .adFreeTopper {
+          .topRibbon {
             border-radius: 20px;
             padding: 10px 12px;
             font-size: 12px;
@@ -1328,7 +1298,7 @@ export default function HomePage() {
             gap: 3px;
           }
 
-          .adFreeTopper span {
+          .topRibbon span {
             display: block;
             font-size: 11px;
           }
@@ -1346,10 +1316,11 @@ export default function HomePage() {
           .heroCard,
           .vaultPreview,
           .launchStrip,
-          .adFreeStrip,
           .whiteCard,
-          .darkCard,
-          .finalCta {
+          .featureCard,
+          .priceCard,
+          .finalCta,
+          .roadmapCard {
             border-radius: 22px;
           }
 
@@ -1364,7 +1335,7 @@ export default function HomePage() {
           }
 
           .headline {
-            font-size: clamp(1.8rem, 9.6vw, 2.7rem);
+            font-size: clamp(1.85rem, 9.4vw, 2.75rem);
             line-height: 0.98;
             letter-spacing: -1.3px;
           }
@@ -1501,48 +1472,27 @@ export default function HomePage() {
             margin-bottom: 9px;
           }
 
-          .adFreeStrip {
+          .launchStrip {
             grid-template-columns: 1fr;
-            padding: 16px;
+            padding: 15px;
             gap: 10px;
             margin-bottom: 12px;
           }
 
-          .adFreeBadge {
+          .launchBadge {
             padding: 7px 10px;
             font-size: 11px;
             margin-bottom: 8px;
           }
 
-          .adFreeTitle {
-            font-size: clamp(1.55rem, 8vw, 2rem);
+          .launchTitle {
+            font-size: clamp(1.35rem, 7vw, 1.85rem);
             letter-spacing: -0.6px;
           }
 
-          .adFreeText {
+          .launchText {
             font-size: 13px;
             line-height: 1.5;
-            margin-top: 8px;
-          }
-
-          .adFreeIcon {
-            display: none;
-          }
-
-          .launchStrip {
-            grid-template-columns: 1fr;
-            padding: 14px;
-            gap: 10px;
-            margin-bottom: 12px;
-          }
-
-          .launchTitle {
-            font-size: 17px;
-          }
-
-          .launchText {
-            font-size: 12.5px;
-            line-height: 1.45;
           }
 
           .launchButton {
@@ -1570,7 +1520,7 @@ export default function HomePage() {
           }
 
           .sectionTitle {
-            font-size: clamp(1.25rem, 6vw, 1.55rem);
+            font-size: clamp(1.25rem, 6vw, 1.6rem);
             letter-spacing: -0.5px;
           }
 
@@ -1589,7 +1539,6 @@ export default function HomePage() {
             min-height: 0;
             aspect-ratio: 1 / 1;
             padding: 12px;
-            border-radius: 20px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -1617,6 +1566,34 @@ export default function HomePage() {
             padding: 7px 10px;
             font-size: 11px;
             align-self: flex-start;
+          }
+
+          .workflowGrid {
+            grid-template-columns: 1fr;
+            gap: 10px;
+          }
+
+          .roadmapCard {
+            min-height: 0;
+            padding: 14px;
+            display: grid;
+            grid-template-columns: 44px 1fr;
+            gap: 11px;
+            align-items: start;
+          }
+
+          .roadmapNumber {
+            margin-bottom: 0;
+          }
+
+          .roadmapTitle {
+            font-size: 16px;
+            margin-bottom: 5px;
+          }
+
+          .roadmapText {
+            font-size: 12.5px;
+            line-height: 1.45;
           }
 
           .splitGrid {
@@ -1693,7 +1670,6 @@ export default function HomePage() {
             flex: 0 0 82%;
             min-height: 0;
             padding: 17px;
-            border-radius: 22px;
             scroll-snap-align: start;
           }
 
@@ -1784,7 +1760,6 @@ export default function HomePage() {
             flex-basis: 88%;
           }
 
-          .buttonRow,
           .ctaButtons {
             display: grid;
             grid-template-columns: 1fr;
@@ -1823,7 +1798,7 @@ export default function HomePage() {
             padding: 6px 8px;
           }
 
-          .adFreeTopper {
+          .topRibbon {
             font-size: 11px;
           }
 
@@ -1834,7 +1809,7 @@ export default function HomePage() {
       `}</style>
 
       <div className="shell">
-        <div className="adFreeTopper">
+        <div className="topRibbon">
           🚫 No ads. Ever.
           <span>Adorable Vault stays clean, calm, and collector-focused with a small fee instead of clutter.</span>
         </div>
@@ -1844,32 +1819,33 @@ export default function HomePage() {
             <div className="badge">✨ Fan-made collector vault ✨</div>
 
             <h1 className="headline">
-              Your Doorables checklist, wishlist, and extras — all in one vault.
+              Know what you have. Find what you need. Trade your extras faster.
             </h1>
 
             <div className="heroText">
-              Welcome{username ? ` back, ${username}` : ""}! Adorable Vault helps collectors track
-              what they own, what they still need, and which extras are ready to sell or trade.
+              Welcome{username ? ` back, ${username}` : ""}! Adorable Vault is the collector hub for
+              tracking Doorables, building your wishlist, organizing duplicates, sharing your profile,
+              and keeping the buying/trading chaos under control.
             </div>
 
             <div className="trustRow">
-              <span className="trustPill adFree">No ads. Ever.</span>
-              <span className="trustPill">Free up to 50 saved Doorables</span>
-              <span className="trustPill">Preview before signup</span>
-              <span className="trustPill">Unlimited from $3/month</span>
+              <span className="trustPill gold">No ads. Ever.</span>
+              <span className="trustPill">Free up to 50 saves</span>
+              <span className="trustPill">Preview first</span>
+              <span className="trustPill">A–Z collection browsing</span>
               <span className="trustPill">Marketplace tools</span>
             </div>
 
             <div className="heroActions">
-              <Link href="/demo" className="actionCard" style={{ textDecoration: "none" }}>
+              <Link href="/demo" className="actionCard">
                 <span className="actionIcon">👀</span>
                 <span>
                   <span className="actionTitle">Preview the vault</span>
-                  <span className="actionSub">No signup needed — see how it works first.</span>
+                  <span className="actionSub">Try the collector flow before signing up.</span>
                 </span>
               </Link>
 
-              <Link href="/collection" className="actionCard alt" style={{ textDecoration: "none" }}>
+              <Link href="/collection" className="actionCard alt">
                 <span className="actionIcon">💜</span>
                 <span>
                   <span className="actionTitle">Start tracking free</span>
@@ -1919,13 +1895,13 @@ export default function HomePage() {
                 <div className="mockImage">💜</div>
                 <div className="mockCardTop">
                   <div>
-                    <div className="mockTitle">Sparkle Sample</div>
-                    <div className="mockSub">Series 12 • Pixel Perfect</div>
+                    <div className="mockTitle">Collection Item</div>
+                    <div className="mockSub">Series • Rarity • Movie</div>
                   </div>
-                  <div className="mockBadge">Special</div>
+                  <div className="mockBadge">Have</div>
                 </div>
                 <div className="mockChipRow">
-                  <span className="mockChip">Have</span>
+                  <span className="mockChip">Owned</span>
                   <span className="mockChip">Qty 1</span>
                   <span className="mockChip">Note saved</span>
                 </div>
@@ -1935,10 +1911,10 @@ export default function HomePage() {
                 <div className="mockImage">💎</div>
                 <div className="mockCardTop">
                   <div>
-                    <div className="mockTitle">Golden Sample</div>
-                    <div className="mockSub">Series 10 • Collector Peek</div>
+                    <div className="mockTitle">Wishlist Item</div>
+                    <div className="mockSub">Search • Filter • Track</div>
                   </div>
-                  <div className="mockBadge">Limited</div>
+                  <div className="mockBadge">Need</div>
                 </div>
                 <div className="mockChipRow">
                   <span className="mockChip">Need</span>
@@ -1984,84 +1960,118 @@ export default function HomePage() {
           </aside>
         </section>
 
-        <section className="adFreeStrip">
-          <div>
-            <div className="adFreeBadge">💜 Always Ad-Free</div>
-            <h2 className="adFreeTitle">No ads. Ever.</h2>
-            <p className="adFreeText">
-              Adorable Vault is built for collectors — not advertisers. Instead of stuffing the site
-              with banners, pop-ups, or distracting sponsored clutter, the small subscription fee helps
-              keep the vault clean, simple, and focused on the tools collectors actually want.
-            </p>
-          </div>
-          <div className="adFreeIcon" aria-hidden="true">🚫</div>
-        </section>
-
         <section className="launchStrip">
           <div>
-            <div className="launchTitle">Launch special: Founding Collector bundle 💜</div>
+            <div className="launchBadge">💜 Always Ad-Free</div>
+            <h2 className="launchTitle">Built for collectors, not advertisers.</h2>
             <div className="launchText">
-              Get one full year of Adorable Vault plus a limited edition keychain while supplies last.
-              Perfect for collectors who want to support the launch and get the full vault experience.
+              No banners, pop-ups, or sponsored clutter. The small subscription fee keeps Adorable Vault
+              clean and focused on the tools collectors actually use: tracking, wishlists, extras,
+              profile sharing, and marketplace connections.
             </div>
           </div>
 
           <Link href="/pricing" className="launchButton">
-            See Founding Bundle
+            See Plans
           </Link>
         </section>
 
         <section className="section">
           <div className="sectionHeader">
             <div>
-              <div className="eyebrow">How it helps</div>
+              <div className="eyebrow">Why collectors need it</div>
               <h2 className="sectionTitle">
-                Stop guessing. Start checking your collection faster.
+                Stop asking “Do I already have this one?”
               </h2>
             </div>
 
             <div className="sectionText">
-              Built for shopping, live sales, trades, blind openings, duplicate clean-up,
-              and the eternal question: “Do I already have this one?”
+              Built for live sales, store runs, trades, blind openings, duplicate clean-up,
+              and the collector panic of trying to remember 500 tiny figures from memory.
             </div>
           </div>
 
           <div className="featureGrid">
-            <Link href="/collection" className="featureCard" style={{ textDecoration: "none" }}>
+            <Link href="/collection" className="featureCard">
               <div className="featureIcon">💜</div>
-              <div className="featureTitle">Track your collection</div>
+              <div className="featureTitle">Track your vault</div>
               <div className="featureText">
-                Mark what you own, what you need, your extras, notes, rarity, movie, and series progress.
+                Mark owned, needed, extras, notes, rarity, movie, series, and progress in one place.
               </div>
               <div className="featureLink">Open tracker →</div>
             </Link>
 
-            <Link href="/demo" className="featureCard" style={{ textDecoration: "none" }}>
+            <Link href="/demo" className="featureCard">
               <div className="featureIcon">👀</div>
-              <div className="featureTitle">Preview before signup</div>
+              <div className="featureTitle">Preview first</div>
               <div className="featureText">
-                Show new collectors exactly how the vault works before they make an account.
+                See how the tracker works before signing up or saving your own collection.
               </div>
-              <div className="featureLink">View preview →</div>
+              <div className="featureLink">View demo →</div>
             </Link>
 
-            <Link href="/sell" className="featureCard" style={{ textDecoration: "none" }}>
+            <Link href="/sell" className="featureCard">
               <div className="featureIcon">🔁</div>
               <div className="featureTitle">Organize extras</div>
               <div className="featureText">
-                Turn duplicate Doorables into cleaner Marketplace listings with less manual chaos.
+                Turn duplicates into cleaner sell/trade opportunities without starting from scratch.
               </div>
               <div className="featureLink">List extras →</div>
             </Link>
 
-            <Link href="/marketplace" className="featureCard" style={{ textDecoration: "none" }}>
+            <Link href="/marketplace" className="featureCard">
               <div className="featureIcon">🛍️</div>
-              <div className="featureTitle">Browse Marketplace</div>
+              <div className="featureTitle">Browse marketplace</div>
               <div className="featureText">
-                Search collector listings and message sellers when you find something you need.
+                Find collector listings, check extras, and connect with other collectors directly.
               </div>
               <div className="featureLink">Browse listings →</div>
             </Link>
+          </div>
+        </section>
+
+        <section className="section">
+          <div className="sectionHeader">
+            <div>
+              <div className="eyebrow">How it works</div>
+              <h2 className="sectionTitle">A simple flow that actually makes sense.</h2>
+            </div>
+            <div className="sectionText">
+              Adorable Vault is made to feel quick on your phone and useful when you are actually shopping,
+              selling, or trading.
+            </div>
+          </div>
+
+          <div className="workflowGrid">
+            <div className="roadmapCard">
+              <div className="roadmapNumber">1</div>
+              <div>
+                <div className="roadmapTitle">Search fast</div>
+                <div className="roadmapText">
+                  Search by name, series, rarity, movie, or notes so you can find the right item quickly.
+                </div>
+              </div>
+            </div>
+
+            <div className="roadmapCard">
+              <div className="roadmapNumber">2</div>
+              <div>
+                <div className="roadmapTitle">Tap to track</div>
+                <div className="roadmapText">
+                  Mark Have, Need, or Extra without digging through a spreadsheet or photo album.
+                </div>
+              </div>
+            </div>
+
+            <div className="roadmapCard">
+              <div className="roadmapNumber">3</div>
+              <div>
+                <div className="roadmapTitle">Share or sell</div>
+                <div className="roadmapText">
+                  Use public profiles and marketplace tools to make your collection easier to share.
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -2072,7 +2082,8 @@ export default function HomePage() {
               {loading ? DEFAULT_ANNOUNCEMENT_TITLE : announcementTitle}
             </h2>
             <div className="sectionText">
-              Weekly updates, feature drops, secret codes, collector news, promos, and launch notes.
+              Updates, feature drops, collector notes, launch news, and what is being improved next.
+              {announcementDate ? ` Last updated ${announcementDate}.` : ""}
             </div>
 
             <div className="announcementBody">{announcementText}</div>
@@ -2080,12 +2091,12 @@ export default function HomePage() {
             {isAdmin && (
               <div className="adminBox">
                 <div style={{ fontWeight: 950, marginBottom: 8 }}>
-                  Admin weekly update box
+                  Admin homepage update box
                 </div>
 
                 <div className="adminTip">
                   Update this whenever you want a fresh homepage post. Edit the title and body, then tap save.
-                  It will update the public Vault News box without touching the rest of the page.
+                  It updates the public Vault News box without touching the rest of the page.
                 </div>
 
                 <input
@@ -2121,29 +2132,29 @@ export default function HomePage() {
           </div>
 
           <div className="whiteCard">
-            <div className="eyebrow">Why collectors use it</div>
-            <h2 className="sectionTitle">A real home base for the collection.</h2>
+            <div className="eyebrow">Collector promise</div>
+            <h2 className="sectionTitle">Clean, useful, and community-shaped.</h2>
             <div className="sectionText">
-              Adorable Vault keeps the collector workflow simple: save what you have, filter what you need,
-              track extras, and use the Marketplace when you are ready.
+              The goal is simple: make the best collector tool possible without making the site feel noisy,
+              spammy, or hard to use.
             </div>
 
             <div className="miniList">
               <div className="miniListItem">
                 <span>✅</span>
-                <span>Track owned, needed, and extra Doorables in one place.</span>
+                <span>Track owned, needed, and extra Doorables in one clean place.</span>
               </div>
               <div className="miniListItem">
                 <span>🚫</span>
                 <span>No ad clutter, no pop-up chaos, and no distracting banners.</span>
               </div>
               <div className="miniListItem">
-                <span>🔎</span>
-                <span>Use search and filters during shopping, shows, and trades.</span>
+                <span>📱</span>
+                <span>Designed to be usable on your phone during shopping, shows, and trades.</span>
               </div>
               <div className="miniListItem">
-                <span>💸</span>
-                <span>Upgrade when you want unlimited saves, selling tools, and messaging.</span>
+                <span>💬</span>
+                <span>Feedback helps shape what gets fixed, improved, and added next.</span>
               </div>
             </div>
           </div>
@@ -2160,7 +2171,7 @@ export default function HomePage() {
 
             <div className="sectionText">
               Free accounts can save up to 50 Doorables. Paid plans unlock unlimited tracking,
-              Marketplace, selling extras, messaging, and full collector features — while keeping
+              marketplace tools, selling extras, messaging, and full collector features — while keeping
               the site ad-free.
             </div>
           </div>
@@ -2271,10 +2282,10 @@ export default function HomePage() {
           </div>
 
           <div className="ctaButtons" style={{ justifyContent: "center" }}>
-            <Link href="/demo" className="primaryButton" style={{ textDecoration: "none" }}>
+            <Link href="/demo" className="primaryButton">
               Preview First 👀
             </Link>
-            <Link href="/collection" className="secondaryButton" style={{ textDecoration: "none" }}>
+            <Link href="/collection" className="secondaryButton">
               Start Free Tracking
             </Link>
           </div>
@@ -2282,13 +2293,11 @@ export default function HomePage() {
       </div>
 
       <div className="mobileSticky">
-        <Link href="/demo" className="primaryButton" style={{ textDecoration: "none" }}>
-          <span className="mobileStickyIcon" aria-hidden="true">👀</span>
-          <span>Preview</span>
+        <Link href="/demo" className="primaryButton">
+          👀 Preview
         </Link>
-        <Link href="/collection" className="secondaryButton" style={{ textDecoration: "none" }}>
-          <span className="mobileStickyIcon" aria-hidden="true">💜</span>
-          <span>Start Free</span>
+        <Link href="/collection" className="secondaryButton">
+          💜 Start Free
         </Link>
       </div>
     </main>

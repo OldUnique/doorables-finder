@@ -127,6 +127,577 @@ function getCommunityTier(monthlyMessages: number, monthlyListings: number, mont
   return { label: "Quiet Gem", subtext: "Low-key month so far", accent: "linear-gradient(135deg,#64748b,#94a3b8)", score };
 }
 
+
+function LoggedOutCollectionLanding() {
+  return (
+    <main className="guestCollectionPage">
+      <style jsx>{`
+        .guestCollectionPage {
+          min-height: 100vh;
+          padding: 24px;
+          color: #ffffff;
+          background:
+            radial-gradient(circle at 16% 10%, rgba(236,72,153,0.26), transparent 28%),
+            radial-gradient(circle at 86% 8%, rgba(59,130,246,0.28), transparent 28%),
+            radial-gradient(circle at 62% 84%, rgba(168,85,247,0.28), transparent 32%),
+            linear-gradient(180deg, #050816 0%, #10173a 46%, #020617 100%);
+          overflow-x: hidden;
+        }
+
+        .guestShell {
+          max-width: 1160px;
+          margin: 0 auto;
+          display: grid;
+          gap: 16px;
+        }
+
+        .guestHero {
+          border-radius: 32px;
+          padding: 28px;
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
+            linear-gradient(135deg, rgba(30,41,59,0.92), rgba(88,28,135,0.86));
+          border: 1px solid rgba(255,255,255,0.16);
+          box-shadow: 0 24px 60px rgba(0,0,0,0.36);
+          display: grid;
+          grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+          gap: 18px;
+          align-items: center;
+        }
+
+        .guestBadge {
+          display: inline-flex;
+          width: fit-content;
+          align-items: center;
+          gap: 8px;
+          padding: 9px 13px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.16);
+          color: #fde68a;
+          font-weight: 1000;
+          font-size: 13px;
+          margin-bottom: 14px;
+        }
+
+        .guestTitle {
+          margin: 0;
+          font-size: clamp(2.2rem, 5.5vw, 4.2rem);
+          line-height: 0.96;
+          letter-spacing: -1.7px;
+          font-weight: 1000;
+        }
+
+        .guestText {
+          margin-top: 14px;
+          max-width: 710px;
+          color: rgba(255,255,255,0.90);
+          font-size: 17px;
+          line-height: 1.6;
+          font-weight: 760;
+        }
+
+        .guestPills {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 9px;
+          margin-top: 15px;
+        }
+
+        .guestPill {
+          border-radius: 999px;
+          padding: 8px 11px;
+          background: rgba(15,23,42,0.55);
+          border: 1px solid rgba(255,255,255,0.18);
+          color: rgba(255,255,255,0.94);
+          font-size: 12px;
+          font-weight: 1000;
+        }
+
+        .guestActions {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-top: 20px;
+        }
+
+        .guestButton,
+        .guestButton:visited {
+          min-height: 56px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          border-radius: 18px;
+          text-decoration: none !important;
+          font-weight: 1000;
+          color: #ffffff !important;
+          border: 1px solid rgba(255,255,255,0.22);
+          box-shadow: 0 14px 28px rgba(0,0,0,0.25);
+        }
+
+        .guestButton.primary {
+          background: linear-gradient(135deg, #ec4899, #7c3aed, #2563eb);
+        }
+
+        .guestButton.secondary {
+          background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+        }
+
+        .guestPreviewCard {
+          border-radius: 28px;
+          padding: 18px;
+          background:
+            radial-gradient(circle at top right, rgba(250,204,21,0.18), transparent 34%),
+            linear-gradient(135deg, rgba(15,23,42,0.72), rgba(79,70,229,0.55));
+          border: 1px solid rgba(255,255,255,0.15);
+          display: grid;
+          gap: 12px;
+        }
+
+        .mockSearch {
+          border-radius: 17px;
+          min-height: 48px;
+          padding: 12px 14px;
+          display: flex;
+          align-items: center;
+          color: rgba(255,255,255,0.78);
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.16);
+          font-weight: 900;
+        }
+
+        .guestStats {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 9px;
+        }
+
+        .guestStat {
+          border-radius: 18px;
+          min-height: 74px;
+          padding: 12px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.14);
+        }
+
+        .guestStat strong {
+          display: block;
+          font-size: 25px;
+          line-height: 1;
+          margin-bottom: 6px;
+        }
+
+        .guestStat span {
+          display: block;
+          color: rgba(255,255,255,0.76);
+          font-size: 11px;
+          font-weight: 900;
+          line-height: 1.25;
+        }
+
+        .mockList {
+          display: grid;
+          gap: 9px;
+        }
+
+        .mockRow {
+          display: grid;
+          grid-template-columns: 56px minmax(0, 1fr) auto;
+          gap: 10px;
+          align-items: center;
+          border-radius: 18px;
+          padding: 10px;
+          background: rgba(255,255,255,0.92);
+          color: #111827;
+          border: 1px solid rgba(255,255,255,0.22);
+        }
+
+        .mockThumb {
+          width: 56px;
+          height: 56px;
+          border-radius: 16px;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(135deg, #ede9fe, #bfdbfe);
+          font-size: 26px;
+        }
+
+        .mockName {
+          font-weight: 1000;
+          line-height: 1.1;
+          margin-bottom: 3px;
+        }
+
+        .mockMeta {
+          font-size: 12px;
+          color: #64748b;
+          font-weight: 850;
+        }
+
+        .mockQty {
+          min-width: 44px;
+          height: 44px;
+          border-radius: 14px;
+          display: grid;
+          place-items: center;
+          color: white;
+          background: #4f46e5;
+          font-weight: 1000;
+        }
+
+        .guestGrid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 14px;
+        }
+
+        .guestFeature,
+        .guestFeature:visited {
+          min-height: 200px;
+          border-radius: 24px;
+          padding: 18px;
+          color: #ffffff !important;
+          text-decoration: none !important;
+          background: rgba(15,23,42,0.78);
+          border: 1px solid rgba(255,255,255,0.12);
+          box-shadow: 0 16px 34px rgba(0,0,0,0.24);
+        }
+
+        .guestIcon {
+          width: 54px;
+          height: 54px;
+          border-radius: 18px;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(135deg, #fef3c7, #ede9fe);
+          color: #312e81;
+          font-size: 28px;
+          line-height: 1;
+          margin-bottom: 12px;
+        }
+
+        .guestFeatureTitle {
+          color: #fde68a;
+          font-size: 17px;
+          line-height: 1.12;
+          font-weight: 1000;
+          margin-bottom: 8px;
+        }
+
+        .guestFeatureText {
+          color: rgba(255,255,255,0.82);
+          line-height: 1.5;
+          font-size: 14px;
+          font-weight: 800;
+        }
+
+        .guestSoftCard {
+          border-radius: 28px;
+          padding: 22px;
+          color: #111827;
+          background:
+            radial-gradient(circle at top right, rgba(196,181,253,0.38), transparent 32%),
+            linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          border: 1px solid rgba(255,255,255,0.64);
+          box-shadow: 0 20px 44px rgba(0,0,0,0.26);
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 14px;
+          align-items: center;
+        }
+
+        .guestSoftTitle {
+          color: #312e81;
+          font-size: 22px;
+          line-height: 1.1;
+          font-weight: 1000;
+          margin-bottom: 6px;
+        }
+
+        .guestSoftText {
+          color: #475569;
+          line-height: 1.55;
+          font-size: 14px;
+          font-weight: 820;
+        }
+
+        @media (max-width: 980px) {
+          .guestCollectionPage {
+            padding: 12px;
+            padding-bottom: 88px;
+          }
+
+          .guestShell {
+            gap: 12px;
+          }
+
+          .guestHero {
+            grid-template-columns: 1fr;
+            border-radius: 24px;
+            padding: 18px;
+            gap: 14px;
+          }
+
+          .guestBadge {
+            padding: 7px 10px;
+            font-size: 12px;
+            margin-bottom: 11px;
+          }
+
+          .guestTitle {
+            font-size: clamp(1.85rem, 9.5vw, 2.75rem);
+            letter-spacing: -1.2px;
+          }
+
+          .guestText {
+            font-size: 14px;
+            line-height: 1.45;
+            margin-top: 12px;
+          }
+
+          .guestPills {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+          }
+
+          .guestPills::-webkit-scrollbar {
+            display: none;
+          }
+
+          .guestPill {
+            flex: 0 0 auto;
+            font-size: 11px;
+            padding: 7px 10px;
+          }
+
+          .guestActions {
+            grid-template-columns: 1fr 1fr;
+            gap: 9px;
+            margin-top: 14px;
+          }
+
+          .guestButton {
+            min-height: 50px;
+            border-radius: 16px;
+            font-size: 13px;
+            padding: 10px;
+          }
+
+          .guestPreviewCard {
+            border-radius: 22px;
+            padding: 13px;
+          }
+
+          .mockSearch {
+            min-height: 42px;
+            border-radius: 14px;
+            font-size: 12px;
+          }
+
+          .guestStats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+          }
+
+          .guestStat {
+            min-height: 58px;
+            padding: 10px;
+            text-align: center;
+          }
+
+          .guestStat strong {
+            font-size: 20px;
+          }
+
+          .guestGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+          }
+
+          .guestFeature {
+            min-height: 0;
+            aspect-ratio: 1 / 1;
+            border-radius: 20px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+          }
+
+          .guestIcon {
+            width: 46px;
+            height: 46px;
+            border-radius: 16px;
+            font-size: 24px;
+            margin-bottom: 8px;
+          }
+
+          .guestFeatureTitle {
+            font-size: 15px;
+            margin-bottom: 0;
+          }
+
+          .guestFeatureText {
+            display: none;
+          }
+
+          .guestSoftCard {
+            grid-template-columns: 1fr;
+            border-radius: 22px;
+            padding: 16px;
+          }
+
+          .guestSoftTitle {
+            font-size: 18px;
+          }
+
+          .guestSoftText {
+            font-size: 12.5px;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .guestActions {
+            grid-template-columns: 1fr;
+          }
+
+          .guestGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .guestFeatureTitle {
+            font-size: 13px;
+          }
+        }
+      `}</style>
+
+      <div className="guestShell">
+        <section className="guestHero">
+          <div>
+            <div className="guestBadge">✨ Preview before signing up ✨</div>
+            <h1 className="guestTitle">Track your Doorables collection without the chaos.</h1>
+            <p className="guestText">
+              Save what you own, mark what you still need, organize extras, and share your collector profile.
+              Free accounts can save up to 50 Doorables before upgrading.
+            </p>
+
+            <div className="guestPills">
+              <span className="guestPill">Free up to 50 saves</span>
+              <span className="guestPill">Mobile-friendly list view</span>
+              <span className="guestPill">Extras + wishlist tracking</span>
+              <span className="guestPill">Public profile sharing</span>
+            </div>
+
+            <div className="guestActions">
+              <Link href="/demo" className="guestButton primary">
+                👀 Preview First
+              </Link>
+              <Link href="/login" className="guestButton secondary">
+                💜 Start Free
+              </Link>
+            </div>
+          </div>
+
+          <div className="guestPreviewCard">
+            <div className="mockSearch">Search name, series, rarity, movie...</div>
+
+            <div className="guestStats">
+              <div className="guestStat">
+                <strong>50</strong>
+                <span>free saves</span>
+              </div>
+              <div className="guestStat">
+                <strong>Need</strong>
+                <span>wishlist</span>
+              </div>
+              <div className="guestStat">
+                <strong>Extras</strong>
+                <span>trade/sell</span>
+              </div>
+              <div className="guestStat">
+                <strong>Share</strong>
+                <span>profile</span>
+              </div>
+            </div>
+
+            <div className="mockList">
+              <div className="mockRow">
+                <div className="mockThumb">💜</div>
+                <div>
+                  <div className="mockName">Collection item</div>
+                  <div className="mockMeta">Series • Rarity • Movie</div>
+                </div>
+                <div className="mockQty">1</div>
+              </div>
+
+              <div className="mockRow">
+                <div className="mockThumb">💎</div>
+                <div>
+                  <div className="mockName">Wishlist item</div>
+                  <div className="mockMeta">Need it? Track it.</div>
+                </div>
+                <div className="mockQty">0</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="guestGrid">
+          <Link href="/demo" className="guestFeature">
+            <div>
+              <div className="guestIcon">👀</div>
+              <div className="guestFeatureTitle">Preview the vault</div>
+            </div>
+            <div className="guestFeatureText">See how the tracker works before making an account.</div>
+          </Link>
+
+          <Link href="/login" className="guestFeature">
+            <div>
+              <div className="guestIcon">💜</div>
+              <div className="guestFeatureTitle">Start free</div>
+            </div>
+            <div className="guestFeatureText">Create a free account and save up to 50 Doorables.</div>
+          </Link>
+
+          <Link href="/marketplace" className="guestFeature">
+            <div>
+              <div className="guestIcon">🛍️</div>
+              <div className="guestFeatureTitle">Browse marketplace</div>
+            </div>
+            <div className="guestFeatureText">Look for collector extras and see what others are listing.</div>
+          </Link>
+
+          <Link href="/feedback" className="guestFeature">
+            <div>
+              <div className="guestIcon">💬</div>
+              <div className="guestFeatureTitle">Send feedback</div>
+            </div>
+            <div className="guestFeatureText">Tell us what to fix, add, clarify, or improve next.</div>
+          </Link>
+        </section>
+
+        <section className="guestSoftCard">
+          <div>
+            <div className="guestSoftTitle">Why you saw this instead of a login wall</div>
+            <div className="guestSoftText">
+              The collection tracker saves your personal collection, so you will still need an account to use it.
+              But you can preview the experience first, browse public areas, and decide if it is useful before signing up.
+            </div>
+          </div>
+
+          <Link href="/demo" className="guestButton primary">
+            Open Demo
+          </Link>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+
 export default function Page() {
   const router = useRouter();
 
@@ -216,7 +787,10 @@ export default function Page() {
       const { data: authData, error: authError } = await supabase.auth.getUser();
       const user = authData.user;
       if (authError || !user) {
-        router.replace("/login");
+        setUserId("");
+        setUsername("");
+        setIsSubscribed(false);
+        setLoading(false);
         return;
       }
 
@@ -760,6 +1334,10 @@ export default function Page() {
     );
   }
 
+  if (!userId) {
+    return <LoggedOutCollectionLanding />;
+  }
+
   if (error && !cards.length) {
     return (
       <div className="loadingPage">
@@ -1290,18 +1868,27 @@ export default function Page() {
 
         .cardImageBox {
           height: 180px;
-          background: rgba(255,255,255,0.92);
+          background: rgba(255,255,255,0.95);
           border-radius: 18px;
-          display: grid;
-          place-items: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           overflow: hidden;
-          padding: 14px;
+          padding: 10px;
+          position: relative;
         }
 
         .cardImageBox img {
           width: 100%;
           height: 100%;
+          max-width: 100%;
+          max-height: 100%;
           object-fit: contain;
+          object-position: center center;
+          display: block;
+          transform-origin: center center;
+          transition: transform 0.22s ease;
+          will-change: transform;
         }
 
         .cardName {
@@ -1436,15 +2023,32 @@ export default function Page() {
           border-radius: 14px;
           background: #f8fafc;
           border: 1px solid #e5e7eb;
-          display: grid;
-          place-items: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           overflow: hidden;
+          padding: 6px;
+          box-sizing: border-box;
         }
 
         .listThumb img {
           width: 100%;
           height: 100%;
+          max-width: 100%;
+          max-height: 100%;
           object-fit: contain;
+          object-position: center center;
+          display: block;
+          transform-origin: center center;
+          transition: transform 0.22s ease;
+          will-change: transform;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+          .cardImageBox:hover img,
+          .listThumb:hover img {
+            transform: scale(1.08);
+          }
         }
 
         .listTopRow {

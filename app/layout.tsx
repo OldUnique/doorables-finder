@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import AppHeader from "./components/AppHeader";
+import Nav from "../components/Nav";
 import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
@@ -231,7 +231,7 @@ export default function RootLayout({
         </a>
 
         <div className="siteFrame">
-          <AppHeader />
+          <Nav />
 
           <main id="main-content" className="siteMain">
             {children}

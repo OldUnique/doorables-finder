@@ -9,14 +9,16 @@ type FeedbackPost = {
   message: string;
   category: string | null;
   approved: boolean | null;
-  anonymous: boolean | null;
-  contact_me: boolean | null;
-  status_tag: string | null;
-  likes: number | null;
+  is_visible?: boolean | null;
+  anonymous?: boolean | null;
+  contact_me?: boolean | null;
+  status?: string | null;
+  status_tag?: string | null;
+  likes?: number | null;
   created_at: string | null;
-  user_id: string | null;
-  admin_reply: string | null;
-  resolved: boolean | null;
+  user_id?: string | null;
+  admin_reply?: string | null;
+  resolved?: boolean | null;
 };
 
 const ADMIN_EMAILS = [
@@ -55,8 +57,24 @@ function niceDate(value?: string | null) {
   });
 }
 
+function cleanTag(value?: string | null) {
+  return String(value || "new").trim().toLowerCase();
+}
+
+function getPostStatus(post: FeedbackPost) {
+  return cleanTag(post.status || post.status_tag || "new");
+}
+
+function isResolvedPost(post: FeedbackPost) {
+  return Boolean(post.resolved) || getPostStatus(post) === "resolved";
+}
+
+function isPubliclyVisible(post: FeedbackPost) {
+  return post.approved === true && post.is_visible !== false;
+}
+
 function getStatusMeta(status?: string | null) {
-  const tag = status || "new";
+  const tag = cleanTag(status);
 
   if (tag === "added") return { label: "Added", icon: "✨", className: "statusAdded" };
   if (tag === "planned") return { label: "Planned", icon: "🗓️", className: "statusPlanned" };
@@ -77,6 +95,15 @@ function getCategoryIcon(category?: string | null) {
 
 function isLikelyEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      window.setTimeout(() => reject(new Error(`${label} timed out. Please refresh and try again.`)), ms)
+    ),
+  ]);
 }
 
 export default function FeedbackPage() {
@@ -107,46 +134,88 @@ export default function FeedbackPage() {
 
   async function loadPosts() {
     setLoading(true);
+    setStatusMessage("");
 
-    const { data: authData } = await supabase.auth.getUser();
-    const user = authData.user;
-    const email = user?.email || "";
-    const admin = isAdminEmail(email);
+    try {
+      let userEmail = "";
+      let admin = false;
 
-    setAdminEmail(email);
-    setIsAdmin(admin);
+      // Do not let auth issues trap the whole public feedback wall in "Loading..."
+      try {
+        const { data: authData } = await withTimeout(
+          supabase.auth.getUser(),
+          2500,
+          "Admin/auth check"
+        );
 
-    if (user?.email && !replyEmail) {
-      setReplyEmail(user.email);
-    }
+        const user = authData.user;
+        userEmail = user?.email || "";
+        admin = isAdminEmail(userEmail);
 
-    const query = supabase
-      .from("feedback_posts")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    const { data, error } = admin ? await query : await query.eq("approved", true);
-
-    if (error) {
-      setStatusMessage("Could not load feedback: " + error.message);
-      setLoading(false);
-      return;
-    }
-
-    const nextPosts = (data || []) as FeedbackPost[];
-    setPosts(nextPosts);
-
-    setReplyDrafts((prev) => {
-      const next = { ...prev };
-      for (const post of nextPosts) {
-        if (next[post.id] === undefined) {
-          next[post.id] = post.admin_reply || "";
+        if (user?.email && !replyEmail) {
+          setReplyEmail(user.email);
         }
+      } catch {
+        userEmail = "";
+        admin = false;
       }
-      return next;
-    });
 
-    setLoading(false);
+      setAdminEmail(userEmail);
+      setIsAdmin(admin);
+
+      let query = supabase
+        .from("feedback_posts")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      // Public visitors should only see approved + visible posts.
+      // Admins can see everything.
+      if (!admin) {
+        query = query.eq("approved", true).eq("is_visible", true);
+      }
+
+      const { data, error } = await withTimeout(
+        query,
+        9000,
+        "Feedback load"
+      );
+
+      if (error) {
+        setStatusMessage("Could not load feedback: " + error.message);
+        setPosts([]);
+        return;
+      }
+
+      const nextPosts = ((data || []) as FeedbackPost[]).map((post) => ({
+        ...post,
+        status: post.status || post.status_tag || "new",
+        likes: Number(post.likes || 0),
+        anonymous: Boolean(post.anonymous),
+        contact_me: Boolean(post.contact_me),
+        resolved: Boolean(post.resolved) || cleanTag(post.status || post.status_tag) === "resolved",
+      }));
+
+      setPosts(nextPosts);
+
+      setReplyDrafts((prev) => {
+        const next = { ...prev };
+        for (const post of nextPosts) {
+          if (next[post.id] === undefined) {
+            next[post.id] = post.admin_reply || "";
+          }
+        }
+        return next;
+      });
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? "Could not load feedback: " + error.message
+          : "Could not load feedback. Please refresh and try again."
+      );
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -214,69 +283,89 @@ export default function FeedbackPage() {
     setSubmitting(true);
     setStatusMessage("");
 
-    const { data: authData } = await supabase.auth.getUser();
-    const user = authData.user;
-
-    const displayName = anonymous ? "Anonymous" : name.trim() || null;
-    const cleanMessage = message.trim();
-
-    const { error } = await supabase.from("feedback_posts").insert({
-      name: displayName,
-      message: cleanMessage,
-      category,
-      anonymous,
-      contact_me: contactMe,
-
-      // IMPORTANT:
-      // This is set to true so new feedback shows on the Feedback Wall right away.
-      // Admins can still hide a post later with the Hide button.
-      approved: true,
-
-      status_tag: "new",
-      likes: 0,
-      user_id: user?.id || null,
-      admin_reply: null,
-      resolved: false,
-    });
-
-    if (error) {
-      setStatusMessage("Could not post feedback: " + error.message);
-      setSubmitting(false);
-      return;
-    }
-
     try {
-      if (sendPrivateCopy || contactMe) {
-        await sendPrivateFeedbackEmail({
-          displayName: displayName || "Anonymous collector",
-          replyEmail: replyEmail.trim(),
-          category,
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData.user;
+
+      const displayName = anonymous ? "Anonymous" : name.trim() || null;
+      const cleanMessage = message.trim();
+
+      const insertPayload = {
+        name: displayName,
+        message: cleanMessage,
+        category,
+        approved: true,
+        is_visible: true,
+        anonymous,
+        contact_me: contactMe,
+        status: "new",
+        status_tag: "new",
+        likes: 0,
+        user_id: user?.id || null,
+        admin_reply: null,
+        resolved: false,
+      };
+
+      // Try the full insert first. If your table is missing optional columns,
+      // fall back to the core columns so feedback still posts.
+      const fullInsert = await supabase.from("feedback_posts").insert(insertPayload);
+
+      if (fullInsert.error) {
+        const fallbackInsert = await supabase.from("feedback_posts").insert({
+          name: displayName,
           message: cleanMessage,
+          category,
+          approved: true,
+          is_visible: true,
+          status: "new",
         });
+
+        if (fallbackInsert.error) {
+          throw fallbackInsert.error;
+        }
       }
 
-      setStatusMessage(
-        sendPrivateCopy || contactMe
-          ? "Thanks! Your feedback was posted to the Feedback Wall and sent to the Adorable Vault inbox 💜"
-          : "Thanks! Your feedback was posted to the Feedback Wall 💜"
-      );
-    } catch (emailError) {
-      setStatusMessage(
-        emailError instanceof Error
-          ? emailError.message
-          : "Feedback was posted, but the private email copy could not send."
-      );
-    }
+      try {
+        if (sendPrivateCopy || contactMe) {
+          await sendPrivateFeedbackEmail({
+            displayName: displayName || "Anonymous collector",
+            replyEmail: replyEmail.trim(),
+            category,
+            message: cleanMessage,
+          });
+        }
 
-    setMessage("");
-    setName("");
-    setCategory("Idea");
-    setAnonymous(false);
-    setContactMe(false);
-    setSendPrivateCopy(true);
-    if (!user?.email) setReplyEmail("");
-    setSubmitting(false);
-    await loadPosts();
+        setStatusMessage(
+          sendPrivateCopy || contactMe
+            ? "Thanks! Your feedback was posted to the Feedback Wall and sent to the Adorable Vault inbox 💜"
+            : "Thanks! Your feedback was posted to the Feedback Wall 💜"
+        );
+      } catch (emailError) {
+        setStatusMessage(
+          emailError instanceof Error
+            ? emailError.message
+            : "Feedback was posted, but the private email copy could not send."
+        );
+      }
+
+      setMessage("");
+      setName("");
+      setCategory("Idea");
+      setAnonymous(false);
+      setContactMe(false);
+      setSendPrivateCopy(true);
+      if (!user?.email) setReplyEmail("");
+
+      await loadPosts();
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? "Could not post feedback: " + error.message
+          : "Could not post feedback. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function handleLike(post: FeedbackPost) {
@@ -299,14 +388,15 @@ export default function FeedbackPage() {
 
   async function approvePost(post: FeedbackPost) {
     setBusyId(post.id);
+    setStatusMessage("");
 
     const { error } = await supabase
       .from("feedback_posts")
-      .update({ approved: true })
+      .update({ approved: true, is_visible: true })
       .eq("id", post.id);
 
     if (error) {
-      setStatusMessage("Could not approve post: " + error.message);
+      setStatusMessage("Could not show post: " + error.message);
       setBusyId(null);
       return;
     }
@@ -317,10 +407,11 @@ export default function FeedbackPage() {
 
   async function unapprovePost(post: FeedbackPost) {
     setBusyId(post.id);
+    setStatusMessage("");
 
     const { error } = await supabase
       .from("feedback_posts")
-      .update({ approved: false })
+      .update({ approved: false, is_visible: false })
       .eq("id", post.id);
 
     if (error) {
@@ -334,13 +425,18 @@ export default function FeedbackPage() {
   }
 
   async function changeStatus(post: FeedbackPost, statusTag: string) {
-    setBusyId(post.id);
+    const nextTag = statusTag.trim().toLowerCase();
+    const nextResolved = nextTag === "resolved";
 
+    setBusyId(post.id);
+    setStatusMessage("");
+
+    // Use the status column because that is the column already confirmed in your table.
     const { error } = await supabase
       .from("feedback_posts")
       .update({
-        status_tag: statusTag,
-        resolved: statusTag === "resolved",
+        status: nextTag,
+        resolved: nextResolved,
       })
       .eq("id", post.id);
 
@@ -350,18 +446,26 @@ export default function FeedbackPage() {
       return;
     }
 
+    if (nextResolved) {
+      setFilter("resolved");
+      setStatusMessage("Marked as resolved and moved to the Resolved filter ✅");
+    } else {
+      setStatusMessage(`Status changed to ${nextTag}.`);
+    }
+
     await loadPosts();
     setBusyId(null);
   }
 
   async function markResolved(post: FeedbackPost) {
     setBusyId(post.id);
+    setStatusMessage("");
 
     const { error } = await supabase
       .from("feedback_posts")
       .update({
         resolved: true,
-        status_tag: "resolved",
+        status: "resolved",
       })
       .eq("id", post.id);
 
@@ -371,12 +475,16 @@ export default function FeedbackPage() {
       return;
     }
 
+    setFilter("resolved");
+    setStatusMessage("Marked as resolved and moved to the Resolved filter ✅");
+
     await loadPosts();
     setBusyId(null);
   }
 
   async function saveReply(post: FeedbackPost) {
     setBusyId(post.id);
+    setStatusMessage("");
 
     const reply = (replyDrafts[post.id] || "").trim();
 
@@ -401,6 +509,7 @@ export default function FeedbackPage() {
     if (!ok) return;
 
     setBusyId(post.id);
+    setStatusMessage("");
 
     const { error } = await supabase.from("feedback_posts").delete().eq("id", post.id);
 
@@ -414,18 +523,18 @@ export default function FeedbackPage() {
     setBusyId(null);
   }
 
-  const approvedPosts = posts.filter((p) => isAdmin || p.approved);
+  const approvedPosts = isAdmin ? posts : posts.filter(isPubliclyVisible);
 
   const visiblePosts = approvedPosts.filter((post) => {
     if (filter === "all") return true;
-    if (filter === "pending") return isAdmin && !post.approved;
-    if (filter === "resolved") return !!post.resolved || post.status_tag === "resolved";
+    if (filter === "pending") return isAdmin && !isPubliclyVisible(post);
+    if (filter === "resolved") return isResolvedPost(post);
     return post.category === filter;
   });
 
-  const pendingCount = posts.filter((p) => !p.approved).length;
-  const plannedCount = approvedPosts.filter((p) => p.status_tag === "planned").length;
-  const addedCount = approvedPosts.filter((p) => p.status_tag === "added").length;
+  const pendingCount = posts.filter((p) => !isPubliclyVisible(p)).length;
+  const plannedCount = approvedPosts.filter((p) => getPostStatus(p) === "planned").length;
+  const addedCount = approvedPosts.filter((p) => getPostStatus(p) === "added").length;
 
   return (
     <main className="page">
@@ -465,74 +574,6 @@ export default function FeedbackPage() {
           padding: 22px;
           padding-top: 28px;
           padding-bottom: 84px;
-        }
-
-        .topNav {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 14px;
-          margin-bottom: 18px;
-        }
-
-        .brand {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          color: white;
-          text-decoration: none;
-          min-width: 0;
-        }
-
-        .brandIcon {
-          width: 58px;
-          height: 58px;
-          border-radius: 20px;
-          display: grid;
-          place-items: center;
-          font-size: 31px;
-          background: radial-gradient(circle at top left, #fef3c7, #a855f7 48%, #020617);
-          box-shadow: 0 18px 38px rgba(168, 85, 247, 0.42);
-          flex: 0 0 auto;
-        }
-
-        .brandTitle {
-          display: block;
-          font-size: clamp(1.45rem, 4vw, 2.15rem);
-          font-weight: 1000;
-          line-height: 0.95;
-          letter-spacing: -0.8px;
-          background: linear-gradient(90deg, #fef3c7, #f0abfc, #bfdbfe);
-          -webkit-background-clip: text;
-          color: transparent;
-        }
-
-        .brandSub {
-          display: block;
-          margin-top: 5px;
-          color: #d8b4fe;
-          font-weight: 950;
-          font-size: 14px;
-        }
-
-        .navActions {
-          display: flex;
-          gap: 10px;
-          align-items: center;
-          flex-wrap: wrap;
-          justify-content: flex-end;
-        }
-
-        .navPill,
-        .navPill:visited {
-          color: white;
-          text-decoration: none;
-          font-weight: 950;
-          padding: 11px 14px;
-          border-radius: 999px;
-          background: rgba(255,255,255,0.10);
-          border: 1px solid rgba(255,255,255,0.14);
-          box-shadow: 0 10px 24px rgba(0,0,0,0.15);
         }
 
         .hero {
@@ -1015,20 +1056,6 @@ export default function FeedbackPage() {
             padding-bottom: 60px;
           }
 
-          .topNav {
-            align-items: flex-start;
-          }
-
-          .brandIcon {
-            width: 54px;
-            height: 54px;
-            font-size: 29px;
-          }
-
-          .navPill:not(.homePill) {
-            display: none;
-          }
-
           .hero {
             grid-template-columns: 1fr;
             border-radius: 25px;
@@ -1118,7 +1145,9 @@ export default function FeedbackPage() {
             className={`statusBox ${
               statusMessage.toLowerCase().includes("thanks") ||
               statusMessage.toLowerCase().includes("saved") ||
-              statusMessage.toLowerCase().includes("cleared")
+              statusMessage.toLowerCase().includes("cleared") ||
+              statusMessage.toLowerCase().includes("marked as resolved") ||
+              statusMessage.toLowerCase().includes("status changed")
                 ? "successStatus"
                 : statusMessage.toLowerCase().includes("could not") ||
                     statusMessage.toLowerCase().includes("please") ||
@@ -1300,7 +1329,7 @@ export default function FeedbackPage() {
             ) : (
               <div className="postGrid">
                 {visiblePosts.map((post) => {
-                  const statusMeta = getStatusMeta(post.status_tag);
+                  const statusMeta = getStatusMeta(getPostStatus(post));
 
                   return (
                     <article key={post.id} className="postCard">
@@ -1325,8 +1354,8 @@ export default function FeedbackPage() {
                           ) : null}
 
                           {isAdmin ? (
-                            <span className={`badge ${post.approved ? "approvedBadge" : "pendingBadge"}`}>
-                              {post.approved ? "Visible" : "Hidden/Pending"}
+                            <span className={`badge ${isPubliclyVisible(post) ? "approvedBadge" : "pendingBadge"}`}>
+                              {isPubliclyVisible(post) ? "Visible" : "Hidden/Pending"}
                             </span>
                           ) : null}
                         </div>
@@ -1353,7 +1382,7 @@ export default function FeedbackPage() {
 
                         {isAdmin ? (
                           <>
-                            {!post.approved ? (
+                            {!isPubliclyVisible(post) ? (
                               <button
                                 onClick={() => void approvePost(post)}
                                 disabled={busyId === post.id}
@@ -1372,7 +1401,7 @@ export default function FeedbackPage() {
                             )}
 
                             <select
-                              value={post.status_tag || "new"}
+                              value={getPostStatus(post)}
                               onChange={(e) => void changeStatus(post, e.target.value)}
                               className="adminSelect"
                               disabled={busyId === post.id}

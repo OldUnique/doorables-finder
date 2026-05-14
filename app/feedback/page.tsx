@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { getSupabase } from "../../lib/supabase";
 
@@ -20,6 +21,19 @@ type FeedbackPost = {
   admin_reply?: string | null;
   resolved?: boolean | null;
 };
+
+type FilterKey =
+  | "all"
+  | "Idea"
+  | "Bug"
+  | "Feature Request"
+  | "Missing Doorable"
+  | "Marketplace Concern"
+  | "General Comment"
+  | "planned"
+  | "added"
+  | "resolved"
+  | "pending";
 
 const ADMIN_EMAILS = [
   "riffeljosh80@gmail.com",
@@ -45,6 +59,7 @@ function isAdminEmail(email?: string | null) {
 
 function niceDate(value?: string | null) {
   if (!value) return "Unknown";
+
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
 
@@ -76,10 +91,21 @@ function isPubliclyVisible(post: FeedbackPost) {
 function getStatusMeta(status?: string | null) {
   const tag = cleanTag(status);
 
-  if (tag === "added") return { label: "Added", icon: "✨", className: "statusAdded" };
-  if (tag === "planned") return { label: "Planned", icon: "🗓️", className: "statusPlanned" };
-  if (tag === "resolved") return { label: "Resolved", icon: "✅", className: "statusResolved" };
-  if (tag === "not right now") return { label: "Not right now", icon: "⏳", className: "statusPaused" };
+  if (tag === "added") {
+    return { label: "Added", icon: "✨", className: "statusAdded" };
+  }
+
+  if (tag === "planned") {
+    return { label: "Planned", icon: "🗓️", className: "statusPlanned" };
+  }
+
+  if (tag === "resolved") {
+    return { label: "Resolved", icon: "✅", className: "statusResolved" };
+  }
+
+  if (tag === "not right now") {
+    return { label: "Not right now", icon: "⏳", className: "statusPaused" };
+  }
 
   return { label: "New", icon: "🆕", className: "statusNew" };
 }
@@ -97,17 +123,30 @@ function isLikelyEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+function withTimeout<T>(
+  promise: PromiseLike<T>,
+  ms: number,
+  label: string
+): Promise<T> {
   return Promise.race([
-    promise,
+    Promise.resolve(promise),
     new Promise<T>((_, reject) =>
-      window.setTimeout(() => reject(new Error(`${label} timed out. Please refresh and try again.`)), ms)
+      setTimeout(() => reject(new Error(`${label} timed out. Please refresh and try again.`)), ms)
     ),
   ]);
 }
 
+function errorText(error: unknown) {
+  return error instanceof Error ? error.message : String(error || "");
+}
+
+function looksLikeMissingColumn(message: string, column: string) {
+  return message.toLowerCase().includes(column.toLowerCase());
+}
+
 export default function FeedbackPage() {
   const supabase = useMemo(() => getSupabase(), []);
+
   const [posts, setPosts] = useState<FeedbackPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -117,6 +156,7 @@ export default function FeedbackPage() {
   const [category, setCategory] = useState("Idea");
   const [anonymous, setAnonymous] = useState(false);
   const [contactMe, setContactMe] = useState(false);
+  const [postToWall, setPostToWall] = useState(true);
 
   // Sends a private copy to your email through /api/send-feedback.
   // The destination email stays hidden in Vercel's FEEDBACK_TO_EMAIL environment variable.
@@ -130,7 +170,8 @@ export default function FeedbackPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState<FilterKey>("all");
+  const [search, setSearch] = useState("");
 
   async function loadPosts() {
     setLoading(true);
@@ -140,7 +181,7 @@ export default function FeedbackPage() {
       let userEmail = "";
       let admin = false;
 
-      // Do not let auth issues trap the whole public feedback wall in "Loading..."
+      // Do not let auth issues trap the public feedback wall in "Loading..."
       try {
         const { data: authData } = await withTimeout(
           supabase.auth.getUser(),
@@ -163,30 +204,63 @@ export default function FeedbackPage() {
       setAdminEmail(userEmail);
       setIsAdmin(admin);
 
-      let query = supabase
-        .from("feedback_posts")
-        .select("*")
-        .order("created_at", { ascending: false });
+      let data: FeedbackPost[] | null = null;
+      let loadErrorMessage = "";
 
-      // Public visitors should only see approved + visible posts.
-      // Admins can see everything.
-      if (!admin) {
-        query = query.eq("approved", true).eq("is_visible", true);
+      if (admin) {
+        const result = await withTimeout(
+          supabase.from("feedback_posts").select("*").order("created_at", { ascending: false }),
+          9000,
+          "Feedback load"
+        );
+
+        if (result.error) {
+          loadErrorMessage = result.error.message;
+        } else {
+          data = (result.data || []) as FeedbackPost[];
+        }
+      } else {
+        const result = await withTimeout(
+          supabase
+            .from("feedback_posts")
+            .select("*")
+            .eq("approved", true)
+            .eq("is_visible", true)
+            .order("created_at", { ascending: false }),
+          9000,
+          "Feedback load"
+        );
+
+        if (result.error && looksLikeMissingColumn(result.error.message, "is_visible")) {
+          const fallback = await withTimeout(
+            supabase
+              .from("feedback_posts")
+              .select("*")
+              .eq("approved", true)
+              .order("created_at", { ascending: false }),
+            9000,
+            "Feedback load"
+          );
+
+          if (fallback.error) {
+            loadErrorMessage = fallback.error.message;
+          } else {
+            data = (fallback.data || []) as FeedbackPost[];
+          }
+        } else if (result.error) {
+          loadErrorMessage = result.error.message;
+        } else {
+          data = (result.data || []) as FeedbackPost[];
+        }
       }
 
-      const { data, error } = await withTimeout(
-        query,
-        9000,
-        "Feedback load"
-      );
-
-      if (error) {
-        setStatusMessage("Could not load feedback: " + error.message);
+      if (loadErrorMessage) {
+        setStatusMessage("Could not load feedback: " + loadErrorMessage);
         setPosts([]);
         return;
       }
 
-      const nextPosts = ((data || []) as FeedbackPost[]).map((post) => ({
+      const nextPosts = (data || []).map((post) => ({
         ...post,
         status: post.status || post.status_tag || "new",
         likes: Number(post.likes || 0),
@@ -250,7 +324,7 @@ export default function FeedbackPage() {
     const data = await res.json();
 
     if (!res.ok) {
-      throw new Error(data?.error || "Feedback was posted, but the private email copy could not send.");
+      throw new Error(data?.error || "Feedback was saved, but the private email copy could not send.");
     }
   }
 
@@ -294,8 +368,8 @@ export default function FeedbackPage() {
         name: displayName,
         message: cleanMessage,
         category,
-        approved: true,
-        is_visible: true,
+        approved: postToWall,
+        is_visible: postToWall,
         anonymous,
         contact_me: contactMe,
         status: "new",
@@ -315,8 +389,7 @@ export default function FeedbackPage() {
           name: displayName,
           message: cleanMessage,
           category,
-          approved: true,
-          is_visible: true,
+          approved: postToWall,
           status: "new",
         });
 
@@ -326,7 +399,7 @@ export default function FeedbackPage() {
       }
 
       try {
-        if (sendPrivateCopy || contactMe) {
+        if (sendPrivateCopy || contactMe || !postToWall) {
           await sendPrivateFeedbackEmail({
             displayName: displayName || "Anonymous collector",
             replyEmail: replyEmail.trim(),
@@ -336,15 +409,17 @@ export default function FeedbackPage() {
         }
 
         setStatusMessage(
-          sendPrivateCopy || contactMe
-            ? "Thanks! Your feedback was posted to the Feedback Wall and sent to the Adorable Vault inbox 💜"
-            : "Thanks! Your feedback was posted to the Feedback Wall 💜"
+          postToWall
+            ? sendPrivateCopy || contactMe
+              ? "Thanks! Your feedback was posted to the Feedback Wall and sent to the Adorable Vault inbox 💜"
+              : "Thanks! Your feedback was posted to the Feedback Wall 💜"
+            : "Thanks! Your feedback was sent privately to the Adorable Vault inbox 💜"
         );
       } catch (emailError) {
         setStatusMessage(
           emailError instanceof Error
             ? emailError.message
-            : "Feedback was posted, but the private email copy could not send."
+            : "Feedback was saved, but the private email copy could not send."
         );
       }
 
@@ -353,6 +428,7 @@ export default function FeedbackPage() {
       setCategory("Idea");
       setAnonymous(false);
       setContactMe(false);
+      setPostToWall(true);
       setSendPrivateCopy(true);
       if (!user?.email) setReplyEmail("");
 
@@ -390,13 +466,20 @@ export default function FeedbackPage() {
     setBusyId(post.id);
     setStatusMessage("");
 
-    const { error } = await supabase
+    let result = await supabase
       .from("feedback_posts")
       .update({ approved: true, is_visible: true })
       .eq("id", post.id);
 
-    if (error) {
-      setStatusMessage("Could not show post: " + error.message);
+    if (result.error && looksLikeMissingColumn(result.error.message, "is_visible")) {
+      result = await supabase
+        .from("feedback_posts")
+        .update({ approved: true })
+        .eq("id", post.id);
+    }
+
+    if (result.error) {
+      setStatusMessage("Could not show post: " + result.error.message);
       setBusyId(null);
       return;
     }
@@ -409,13 +492,20 @@ export default function FeedbackPage() {
     setBusyId(post.id);
     setStatusMessage("");
 
-    const { error } = await supabase
+    let result = await supabase
       .from("feedback_posts")
       .update({ approved: false, is_visible: false })
       .eq("id", post.id);
 
-    if (error) {
-      setStatusMessage("Could not hide post: " + error.message);
+    if (result.error && looksLikeMissingColumn(result.error.message, "is_visible")) {
+      result = await supabase
+        .from("feedback_posts")
+        .update({ approved: false })
+        .eq("id", post.id);
+    }
+
+    if (result.error) {
+      setStatusMessage("Could not hide post: " + result.error.message);
       setBusyId(null);
       return;
     }
@@ -431,17 +521,26 @@ export default function FeedbackPage() {
     setBusyId(post.id);
     setStatusMessage("");
 
-    // Use the status column because that is the column already confirmed in your table.
-    const { error } = await supabase
+    let result = await supabase
       .from("feedback_posts")
       .update({
         status: nextTag,
+        status_tag: nextTag,
         resolved: nextResolved,
       })
       .eq("id", post.id);
 
-    if (error) {
-      setStatusMessage("Could not update tag: " + error.message);
+    if (result.error) {
+      result = await supabase
+        .from("feedback_posts")
+        .update({
+          status: nextTag,
+        })
+        .eq("id", post.id);
+    }
+
+    if (result.error) {
+      setStatusMessage("Could not update tag: " + result.error.message);
       setBusyId(null);
       return;
     }
@@ -461,16 +560,26 @@ export default function FeedbackPage() {
     setBusyId(post.id);
     setStatusMessage("");
 
-    const { error } = await supabase
+    let result = await supabase
       .from("feedback_posts")
       .update({
         resolved: true,
         status: "resolved",
+        status_tag: "resolved",
       })
       .eq("id", post.id);
 
-    if (error) {
-      setStatusMessage("Could not mark resolved: " + error.message);
+    if (result.error) {
+      result = await supabase
+        .from("feedback_posts")
+        .update({
+          status: "resolved",
+        })
+        .eq("id", post.id);
+    }
+
+    if (result.error) {
+      setStatusMessage("Could not mark resolved: " + result.error.message);
       setBusyId(null);
       return;
     }
@@ -525,16 +634,56 @@ export default function FeedbackPage() {
 
   const approvedPosts = isAdmin ? posts : posts.filter(isPubliclyVisible);
 
-  const visiblePosts = approvedPosts.filter((post) => {
-    if (filter === "all") return true;
-    if (filter === "pending") return isAdmin && !isPubliclyVisible(post);
-    if (filter === "resolved") return isResolvedPost(post);
-    return post.category === filter;
-  });
-
   const pendingCount = posts.filter((p) => !isPubliclyVisible(p)).length;
   const plannedCount = approvedPosts.filter((p) => getPostStatus(p) === "planned").length;
   const addedCount = approvedPosts.filter((p) => getPostStatus(p) === "added").length;
+  const resolvedCount = approvedPosts.filter(isResolvedPost).length;
+  const categoryCounts = CATEGORIES.reduce<Record<string, number>>((acc, item) => {
+    acc[item] = approvedPosts.filter((post) => post.category === item).length;
+    return acc;
+  }, {});
+
+  const visiblePosts = approvedPosts.filter((post) => {
+    const q = search.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      [
+        post.name,
+        post.message,
+        post.category,
+        post.status,
+        post.status_tag,
+        post.admin_reply,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
+
+    if (!matchesSearch) return false;
+
+    if (filter === "all") return true;
+    if (filter === "pending") return isAdmin && !isPubliclyVisible(post);
+    if (filter === "resolved") return isResolvedPost(post);
+    if (filter === "planned") return getPostStatus(post) === "planned";
+    if (filter === "added") return getPostStatus(post) === "added";
+
+    return post.category === filter;
+  });
+
+  const statusTone =
+    statusMessage.toLowerCase().includes("thanks") ||
+    statusMessage.toLowerCase().includes("saved") ||
+    statusMessage.toLowerCase().includes("cleared") ||
+    statusMessage.toLowerCase().includes("marked as resolved") ||
+    statusMessage.toLowerCase().includes("status changed")
+      ? "successStatus"
+      : statusMessage.toLowerCase().includes("could not") ||
+          statusMessage.toLowerCase().includes("please") ||
+          statusMessage.toLowerCase().includes("spam") ||
+          statusMessage.toLowerCase().includes("failed")
+        ? "errorStatus"
+        : "";
 
   return (
     <main className="page">
@@ -569,11 +718,18 @@ export default function FeedbackPage() {
         .shell {
           position: relative;
           z-index: 1;
-          max-width: 1180px;
+          max-width: 1220px;
           margin: 0 auto;
           padding: 22px;
           padding-top: 28px;
-          padding-bottom: 84px;
+          padding-bottom: 90px;
+        }
+
+        .page a,
+        .page a:visited,
+        .page a:hover,
+        .page a:active {
+          text-decoration: none !important;
         }
 
         .hero {
@@ -600,6 +756,7 @@ export default function FeedbackPage() {
           border-radius: 999px;
           background: rgba(255,255,255,0.12);
           border: 1px solid rgba(255,255,255,0.15);
+          color: #fde68a;
           font-size: 13px;
           font-weight: 1000;
           margin-bottom: 12px;
@@ -611,6 +768,7 @@ export default function FeedbackPage() {
           line-height: 0.96;
           letter-spacing: -1.8px;
           font-weight: 1000;
+          text-wrap: balance;
         }
 
         .heroText {
@@ -618,14 +776,37 @@ export default function FeedbackPage() {
           color: rgba(255,255,255,0.88);
           font-size: 16px;
           line-height: 1.65;
-          max-width: 760px;
+          max-width: 780px;
+          font-weight: 780;
+        }
+
+        .heroActions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-top: 17px;
+        }
+
+        .miniLink,
+        .miniLink:visited {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 42px;
+          border-radius: 999px;
+          padding: 9px 13px;
+          color: #ffffff !important;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.16);
+          font-size: 12px;
+          font-weight: 1000;
         }
 
         .statsGrid {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 10px;
-          min-width: 310px;
+          min-width: 330px;
         }
 
         .statBubble {
@@ -654,7 +835,7 @@ export default function FeedbackPage() {
 
         .layout {
           display: grid;
-          grid-template-columns: 390px 1fr;
+          grid-template-columns: 400px 1fr;
           gap: 18px;
           align-items: start;
         }
@@ -673,13 +854,14 @@ export default function FeedbackPage() {
           font-size: 22px;
           font-weight: 1000;
           margin-bottom: 10px;
+          letter-spacing: -0.4px;
         }
 
         .muted {
           color: #64748b;
           line-height: 1.55;
           font-size: 14px;
-          font-weight: 750;
+          font-weight: 780;
         }
 
         .hiddenField {
@@ -729,10 +911,11 @@ export default function FeedbackPage() {
           background: white;
           color: #111827;
           outline: none;
+          font-family: inherit;
         }
 
         .textarea {
-          min-height: 135px;
+          min-height: 142px;
           resize: vertical;
         }
 
@@ -759,13 +942,18 @@ export default function FeedbackPage() {
         .checkLabel {
           display: flex;
           gap: 9px;
-          align-items: center;
+          align-items: flex-start;
           font-weight: 850;
           color: #334155;
           background: #f8fafc;
           border: 1px solid #e5e7eb;
           border-radius: 15px;
           padding: 11px;
+          line-height: 1.35;
+        }
+
+        .checkLabel input {
+          margin-top: 2px;
         }
 
         .buttonRow {
@@ -789,6 +977,12 @@ export default function FeedbackPage() {
           cursor: pointer;
           box-sizing: border-box;
           border: 1px solid transparent;
+          font-family: inherit;
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .bubbleButton:hover {
+          transform: translateY(-1px);
         }
 
         .primaryButton {
@@ -883,10 +1077,19 @@ export default function FeedbackPage() {
           margin-bottom: 18px;
         }
 
+        .filterTop {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 10px;
+          align-items: center;
+          margin-bottom: 12px;
+        }
+
         .filterRow {
           display: flex;
           gap: 9px;
           flex-wrap: wrap;
+          margin-top: 11px;
         }
 
         .filterButton {
@@ -898,12 +1101,14 @@ export default function FeedbackPage() {
           color: #3730a3;
           font-weight: 950;
           cursor: pointer;
+          font-family: inherit;
         }
 
         .filterButtonActive {
           background: linear-gradient(135deg, #60a5fa, #8b5cf6);
           color: white;
           border-color: transparent;
+          box-shadow: 0 12px 22px rgba(79,70,229,0.18);
         }
 
         .postGrid {
@@ -933,6 +1138,7 @@ export default function FeedbackPage() {
           font-weight: 1000;
           line-height: 1.1;
           margin-bottom: 4px;
+          color: #111827;
         }
 
         .postMeta {
@@ -1010,12 +1216,20 @@ export default function FeedbackPage() {
           border-color: #ddd6fe;
         }
 
+        .privateBadge {
+          background: #fce7f3;
+          color: #be185d;
+          border-color: #fbcfe8;
+        }
+
         .postMessage {
           font-size: 15px;
           line-height: 1.65;
           margin-bottom: 16px;
           white-space: pre-wrap;
           word-break: break-word;
+          color: #334155;
+          font-weight: 760;
         }
 
         .adminReply {
@@ -1024,6 +1238,7 @@ export default function FeedbackPage() {
           border: 1px solid #bfdbfe;
           border-radius: 18px;
           padding: 14px;
+          color: #1e3a8a;
         }
 
         .adminPanel {
@@ -1053,7 +1268,7 @@ export default function FeedbackPage() {
           .shell {
             padding: 14px;
             padding-top: 18px;
-            padding-bottom: 60px;
+            padding-bottom: 70px;
           }
 
           .hero {
@@ -1062,9 +1277,19 @@ export default function FeedbackPage() {
             padding: 21px;
           }
 
+          .heroTitle {
+            font-size: clamp(2rem, 11vw, 3rem);
+            letter-spacing: -1.3px;
+          }
+
+          .heroText {
+            font-size: 14px;
+            line-height: 1.52;
+          }
+
           .statsGrid {
             min-width: 0;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
 
           .layout {
@@ -1078,6 +1303,10 @@ export default function FeedbackPage() {
             padding: 18px;
           }
 
+          .filterTop {
+            grid-template-columns: 1fr;
+          }
+
           .filterRow,
           .buttonRow {
             display: grid;
@@ -1085,8 +1314,14 @@ export default function FeedbackPage() {
           }
 
           .bubbleButton,
-          .filterButton {
+          .filterButton,
+          .miniLink {
             width: 100%;
+          }
+
+          .heroActions {
+            display: grid;
+            grid-template-columns: 1fr;
           }
 
           .badgeRow {
@@ -1096,11 +1331,23 @@ export default function FeedbackPage() {
           .adminGrid {
             grid-template-columns: 1fr;
           }
+
+          .adminSelect {
+            max-width: none !important;
+          }
         }
 
         @media (max-width: 460px) {
           .statsGrid {
             grid-template-columns: 1fr;
+          }
+
+          .statBubble {
+            padding: 12px;
+          }
+
+          .sectionTitle {
+            font-size: 20px;
           }
         }
       `}</style>
@@ -1111,10 +1358,21 @@ export default function FeedbackPage() {
             <div className="heroBadge">💜 Help build the vault</div>
             <h1 className="heroTitle">Feedback Wall</h1>
             <div className="heroText">
-              Share bugs, ideas, missing Doorables, marketplace concerns, and requests.
-              Feedback helps make Adorable Vault cleaner, safer, and more useful for collectors.
-              New feedback posts to the wall right away, and admins can hide anything later if needed.
-              Private messages can also be sent to the Adorable Vault inbox without showing the email address on the site.
+              Share bugs, ideas, missing Doorables, marketplace concerns, and requests. Feedback helps make
+              Adorable Vault cleaner, safer, and more useful for collectors. You can post publicly to the wall,
+              send a private copy to the inbox, or ask to be contacted.
+            </div>
+
+            <div className="heroActions">
+              <Link href="/collection" className="miniLink">
+                💎 Collection
+              </Link>
+              <Link href="/marketplace" className="miniLink">
+                🛍️ Marketplace
+              </Link>
+              <Link href="/about" className="miniLink">
+                💜 About
+              </Link>
             </div>
 
             {isAdmin ? (
@@ -1137,39 +1395,26 @@ export default function FeedbackPage() {
               <div className="statNumber">{addedCount}</div>
               <div className="statLabel">added updates</div>
             </div>
+            <div className="statBubble">
+              <div className="statNumber">{resolvedCount}</div>
+              <div className="statLabel">resolved items</div>
+            </div>
           </div>
         </section>
 
-        {statusMessage ? (
-          <div
-            className={`statusBox ${
-              statusMessage.toLowerCase().includes("thanks") ||
-              statusMessage.toLowerCase().includes("saved") ||
-              statusMessage.toLowerCase().includes("cleared") ||
-              statusMessage.toLowerCase().includes("marked as resolved") ||
-              statusMessage.toLowerCase().includes("status changed")
-                ? "successStatus"
-                : statusMessage.toLowerCase().includes("could not") ||
-                    statusMessage.toLowerCase().includes("please") ||
-                    statusMessage.toLowerCase().includes("spam")
-                  ? "errorStatus"
-                  : ""
-            }`}
-          >
-            {statusMessage}
-          </div>
-        ) : null}
+        {statusMessage ? <div className={`statusBox ${statusTone}`}>{statusMessage}</div> : null}
 
         <div className="layout">
           <aside>
             <section className="card">
               <div className="sectionTitle">Leave feedback</div>
               <div className="muted" style={{ marginBottom: 14 }}>
-                Tell me what should be fixed, added, clarified, or improved. Feedback appears on the wall after submitting.
+                Tell me what should be fixed, added, clarified, or improved. Public feedback can help other collectors
+                see what is being requested and what is already planned.
               </div>
 
               <div className="privateNote">
-                🔒 The feedback inbox email stays hidden. This form sends messages behind the scenes.
+                🔒 The feedback inbox email stays hidden. Private copies send behind the scenes.
               </div>
 
               <div className="formGrid">
@@ -1220,7 +1465,7 @@ export default function FeedbackPage() {
                   </div>
                 </div>
 
-                {(contactMe || sendPrivateCopy) && (
+                {(contactMe || sendPrivateCopy || !postToWall) && (
                   <div>
                     <label className="fieldLabel">
                       Reply email {contactMe ? "" : "(optional)"}
@@ -1243,7 +1488,19 @@ export default function FeedbackPage() {
                       checked={anonymous}
                       onChange={(e) => setAnonymous(e.target.checked)}
                     />
-                    Post anonymously
+                    <span>Post anonymously</span>
+                  </label>
+
+                  <label className="checkLabel">
+                    <input
+                      type="checkbox"
+                      checked={postToWall}
+                      onChange={(e) => {
+                        setPostToWall(e.target.checked);
+                        if (!e.target.checked) setSendPrivateCopy(true);
+                      }}
+                    />
+                    <span>Show this on the public Feedback Wall</span>
                   </label>
 
                   <label className="checkLabel">
@@ -1255,7 +1512,7 @@ export default function FeedbackPage() {
                         if (e.target.checked) setSendPrivateCopy(true);
                       }}
                     />
-                    Contact me about this
+                    <span>Contact me about this</span>
                   </label>
 
                   <label className="checkLabel">
@@ -1264,7 +1521,7 @@ export default function FeedbackPage() {
                       checked={sendPrivateCopy}
                       onChange={(e) => setSendPrivateCopy(e.target.checked)}
                     />
-                    Also send this directly to the private Adorable Vault inbox
+                    <span>Also send this directly to the private Adorable Vault inbox</span>
                   </label>
                 </div>
 
@@ -1296,22 +1553,51 @@ export default function FeedbackPage() {
 
           <section>
             <div className="card filterCard">
-              <div className="sectionTitle">Browse feedback</div>
+              <div className="filterTop">
+                <div>
+                  <div className="sectionTitle" style={{ marginBottom: 4 }}>Browse feedback</div>
+                  <div className="muted">
+                    Showing {visiblePosts.length} of {approvedPosts.length}
+                    {search.trim() ? " matching search" : ""}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilter("all");
+                    setSearch("");
+                  }}
+                  className="bubbleButton softButton"
+                >
+                  Clear
+                </button>
+              </div>
+
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search feedback, replies, categories, or status..."
+                className="field"
+              />
+
               <div className="filterRow">
                 {[
                   { value: "all", label: "All" },
-                  { value: "Idea", label: "💡 Ideas" },
-                  { value: "Bug", label: "🐞 Bugs" },
-                  { value: "Feature Request", label: "🚀 Features" },
-                  { value: "Missing Doorable", label: "🔎 Missing" },
-                  { value: "Marketplace Concern", label: "⚠️ Marketplace" },
-                  { value: "resolved", label: "✅ Resolved" },
+                  { value: "Idea", label: `💡 Ideas (${categoryCounts["Idea"] || 0})` },
+                  { value: "Bug", label: `🐞 Bugs (${categoryCounts["Bug"] || 0})` },
+                  { value: "Feature Request", label: `🚀 Features (${categoryCounts["Feature Request"] || 0})` },
+                  { value: "Missing Doorable", label: `🔎 Missing (${categoryCounts["Missing Doorable"] || 0})` },
+                  { value: "Marketplace Concern", label: `⚠️ Marketplace (${categoryCounts["Marketplace Concern"] || 0})` },
+                  { value: "planned", label: `🗓️ Planned (${plannedCount})` },
+                  { value: "added", label: `✨ Added (${addedCount})` },
+                  { value: "resolved", label: `✅ Resolved (${resolvedCount})` },
                   ...(isAdmin ? [{ value: "pending", label: `⏳ Hidden/Pending (${pendingCount})` }] : []),
                 ].map((option) => (
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => setFilter(option.value)}
+                    onClick={() => setFilter(option.value as FilterKey)}
                     className={`filterButton ${filter === option.value ? "filterButtonActive" : ""}`}
                   >
                     {option.label}
@@ -1351,6 +1637,10 @@ export default function FeedbackPage() {
 
                           {post.contact_me ? (
                             <span className="badge contactBadge">Contact Me</span>
+                          ) : null}
+
+                          {!isPubliclyVisible(post) ? (
+                            <span className="badge privateBadge">Private/Hidden</span>
                           ) : null}
 
                           {isAdmin ? (

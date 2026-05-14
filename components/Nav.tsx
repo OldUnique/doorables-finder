@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CSSProperties, useState } from "react";
+import type { CSSProperties } from "react";
+import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/", label: "Home", icon: "🏠" },
@@ -166,20 +167,25 @@ function pillStyle(active = false, mobile = false): CSSProperties {
   };
 }
 
-function accountStyle(mobile = false): CSSProperties {
+function accountStyle(mobile = false, variant: "signin" | "account" = "signin"): CSSProperties {
+  const accountBackground =
+    variant === "account"
+      ? "linear-gradient(135deg, #4f46e5, #7c3aed)"
+      : "linear-gradient(135deg, #ec4899, #7c3aed, #2563eb)";
+
   return {
     minHeight: mobile ? 50 : 43,
     display: "inline-flex",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: mobile ? "flex-start" : "center",
     gap: 8,
     padding: mobile ? "11px 12px" : "10px 14px",
     borderRadius: mobile ? 17 : 999,
     color: "white",
     textDecoration: "none",
-    fontSize: 13,
+    fontSize: mobile ? 14 : 13,
     fontWeight: 1000,
-    background: "linear-gradient(135deg, #ec4899, #7c3aed, #2563eb)",
+    background: accountBackground,
     border: "1px solid rgba(255, 255, 255, 0.22)",
     boxShadow: "0 14px 26px rgba(124, 58, 237, 0.30)",
     whiteSpace: "nowrap",
@@ -207,30 +213,49 @@ function menuLineStyle(open: boolean, line: 1 | 2 | 3): CSSProperties {
 export default function Nav() {
   const pathname = usePathname() || "/";
   const [menuOpen, setMenuOpen] = useState(false);
-
   const [isCompact, setIsCompact] = useState(false);
 
-  useState(() => {
-    if (typeof window === "undefined") return;
-    const check = () => setIsCompact(window.innerWidth <= 920);
+  useEffect(() => {
+    const check = () => {
+      setIsCompact(window.innerWidth <= 920);
+    };
+
     check();
     window.addEventListener("resize", check);
+
     return () => window.removeEventListener("resize", check);
-  });
+  }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   function closeMenu() {
     setMenuOpen(false);
   }
 
   const compactShell: CSSProperties = isCompact
-    ? { ...styles.shell, gridTemplateColumns: "minmax(0, 1fr) auto", padding: "10px 11px", gap: 10 }
+    ? {
+        ...styles.shell,
+        gridTemplateColumns: "minmax(0, 1fr) auto",
+        padding: "10px 11px",
+        gap: 10,
+      }
     : styles.shell;
+
+  const signInHref = "/login";
 
   return (
     <header style={styles.header}>
       <div style={compactShell}>
         <Link href="/" style={styles.brand} aria-label="Adorable Vault home" onClick={closeMenu}>
-          <span style={isCompact ? { ...styles.brandIcon, width: 48, height: 48, borderRadius: 17 } : styles.brandIcon}>
+          <span
+            style={
+              isCompact
+                ? { ...styles.brandIcon, width: 48, height: 48, borderRadius: 17 }
+                : styles.brandIcon
+            }
+          >
             💜
           </span>
           <span style={styles.brandText}>
@@ -263,7 +288,7 @@ export default function Nav() {
 
         {!isCompact ? (
           <div style={styles.rightActions}>
-            <Link href="/login" style={accountStyle()}>
+            <Link href={signInHref} style={accountStyle(false, "signin")}>
               💜 Sign In
             </Link>
           </div>
@@ -307,10 +332,10 @@ export default function Nav() {
           </nav>
 
           <div style={styles.mobileAccount}>
-            <Link href="/login" style={accountStyle(true)} onClick={closeMenu}>
+            <Link href={signInHref} style={accountStyle(true, "signin")} onClick={closeMenu}>
               💜 Sign In
             </Link>
-            <Link href="/account" style={accountStyle(true)} onClick={closeMenu}>
+            <Link href="/account" style={accountStyle(true, "account")} onClick={closeMenu}>
               ⚙️ Account
             </Link>
           </div>

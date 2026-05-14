@@ -1,11 +1,12 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
 
-type PlanKey = "monthly" | "yearly";
+type PlanKey = "monthly" | "yearly" | "founding";
 
 function cleanReferralUsername(value: string) {
   return value
@@ -112,78 +113,10 @@ export default function PricingPage() {
         .shell {
           position: relative;
           z-index: 1;
-          max-width: 1180px;
+          max-width: 1240px;
           margin: 0 auto;
           padding: 22px;
           padding-bottom: 84px;
-        }
-
-        .topNav {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 14px;
-          margin-bottom: 18px;
-        }
-
-        .brand {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          color: white;
-          text-decoration: none;
-          min-width: 0;
-        }
-
-        .brandIcon {
-          width: 58px;
-          height: 58px;
-          border-radius: 20px;
-          display: grid;
-          place-items: center;
-          font-size: 31px;
-          background: radial-gradient(circle at top left, #fef3c7, #a855f7 48%, #020617);
-          box-shadow: 0 18px 38px rgba(168, 85, 247, 0.42);
-          flex: 0 0 auto;
-        }
-
-        .brandTitle {
-          display: block;
-          font-size: clamp(1.45rem, 4vw, 2.15rem);
-          font-weight: 1000;
-          line-height: 0.95;
-          letter-spacing: -0.8px;
-          background: linear-gradient(90deg, #fef3c7, #f0abfc, #bfdbfe);
-          -webkit-background-clip: text;
-          color: transparent;
-        }
-
-        .brandSub {
-          display: block;
-          margin-top: 5px;
-          color: #d8b4fe;
-          font-weight: 950;
-          font-size: 14px;
-        }
-
-        .navActions {
-          display: flex;
-          gap: 10px;
-          align-items: center;
-          flex-wrap: wrap;
-          justify-content: flex-end;
-        }
-
-        .navPill,
-        .navPill:visited {
-          color: white;
-          text-decoration: none;
-          font-weight: 950;
-          padding: 11px 14px;
-          border-radius: 999px;
-          background: rgba(255,255,255,0.10);
-          border: 1px solid rgba(255,255,255,0.14);
-          box-shadow: 0 10px 24px rgba(0,0,0,0.15);
         }
 
         .hero {
@@ -225,7 +158,7 @@ export default function PricingPage() {
           color: rgba(255,255,255,0.88);
           font-size: 17px;
           line-height: 1.65;
-          max-width: 770px;
+          max-width: 820px;
         }
 
         .valueStrip {
@@ -309,9 +242,9 @@ export default function PricingPage() {
 
         .planGrid {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 24px;
-          align-items: start;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 18px;
+          align-items: stretch;
           margin-top: 8px;
           margin-bottom: 24px;
         }
@@ -325,7 +258,7 @@ export default function PricingPage() {
             linear-gradient(180deg, #ffffff, #f8fafc);
           color: #0f172a;
           border-radius: 32px;
-          padding: 26px;
+          padding: 24px;
           box-shadow:
             0 20px 42px rgba(0,0,0,0.24),
             inset 0 1px 0 rgba(255,255,255,0.85);
@@ -343,26 +276,38 @@ export default function PricingPage() {
             inset 0 1px 0 rgba(255,255,255,0.90);
         }
 
-        .planCard.popular::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background: radial-gradient(circle at top right, rgba(245,158,11,0.18), transparent 34%);
-          pointer-events: none;
+        .planCard.founding {
+          background:
+            radial-gradient(circle at top right, rgba(244,114,182,0.32), transparent 36%),
+            radial-gradient(circle at bottom left, rgba(250,204,21,0.20), transparent 36%),
+            linear-gradient(180deg, #ffffff, #fdf2f8);
+          border: 3px solid #ec4899;
+          box-shadow:
+            0 24px 54px rgba(236,72,153,0.24),
+            0 20px 42px rgba(0,0,0,0.24),
+            inset 0 1px 0 rgba(255,255,255,0.90);
         }
 
-        .popularTag {
+        .popularTag,
+        .foundingTag {
           display: inline-flex;
           align-items: center;
           width: fit-content;
           margin-bottom: 12px;
-          background: linear-gradient(135deg, #f59e0b, #facc15);
           color: #111827;
           border-radius: 999px;
           padding: 7px 11px;
           font-size: 11px;
           font-weight: 1000;
           box-shadow: 0 12px 24px rgba(245,158,11,0.24);
+        }
+
+        .popularTag {
+          background: linear-gradient(135deg, #f59e0b, #facc15);
+        }
+
+        .foundingTag {
+          background: linear-gradient(135deg, #f472b6, #fde68a);
         }
 
         .planLabel {
@@ -386,8 +331,14 @@ export default function PricingPage() {
           border-color: #fde68a;
         }
 
+        .planLabel.pink {
+          background: #fce7f3;
+          color: #be185d;
+          border-color: #fbcfe8;
+        }
+
         .planTitle {
-          font-size: 29px;
+          font-size: 27px;
           font-weight: 1000;
           line-height: 1.05;
           margin: 0;
@@ -399,14 +350,14 @@ export default function PricingPage() {
         }
 
         .price {
-          font-size: 50px;
+          font-size: 48px;
           font-weight: 1000;
           letter-spacing: -1.8px;
           line-height: 1;
         }
 
         .period {
-          font-size: 21px;
+          font-size: 19px;
           font-weight: 850;
           color: #64748b;
           margin-left: 3px;
@@ -439,7 +390,7 @@ export default function PricingPage() {
 
         .button,
         .button:visited {
-          margin-top: 24px;
+          margin-top: auto;
           min-height: 52px;
           width: 100%;
           border: none;
@@ -473,6 +424,12 @@ export default function PricingPage() {
           background: linear-gradient(135deg, #f59e0b, #f97316);
           color: white;
           box-shadow: 0 14px 28px rgba(245,158,11,0.26);
+        }
+
+        .buttonFounding {
+          background: linear-gradient(135deg, #ec4899, #8b5cf6);
+          color: white;
+          box-shadow: 0 14px 30px rgba(236,72,153,0.32);
         }
 
         .button:disabled {
@@ -534,24 +491,16 @@ export default function PricingPage() {
           margin: 22px auto 0;
         }
 
+        @media (max-width: 1180px) {
+          .planGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
         @media (max-width: 980px) {
           .shell {
             padding: 14px;
             padding-bottom: 60px;
-          }
-
-          .topNav {
-            align-items: flex-start;
-          }
-
-          .brandIcon {
-            width: 54px;
-            height: 54px;
-            font-size: 29px;
-          }
-
-          .navPill:not(.homePill) {
-            display: none;
           }
 
           .hero {
@@ -596,31 +545,6 @@ export default function PricingPage() {
       `}</style>
 
       <div className="shell">
-        <nav className="topNav">
-          <Link href="/" className="brand">
-            <span className="brandIcon">💎</span>
-            <span>
-              <span className="brandTitle">Adorable Vault</span>
-              <span className="brandSub">track • trade • showcase</span>
-            </span>
-          </Link>
-
-          <div className="navActions">
-            <Link href="/" className="navPill homePill">
-              Home
-            </Link>
-            <Link href="/collection" className="navPill">
-              Collection
-            </Link>
-            <Link href="/about" className="navPill">
-              About
-            </Link>
-            <Link href="/login" className="navPill">
-              Login
-            </Link>
-          </div>
-        </nav>
-
         <section className="hero">
           <div className="badge">✨ Collector plans ✨</div>
 
@@ -646,8 +570,8 @@ export default function PricingPage() {
               <div className="valueLabel">yearly best value</div>
             </div>
             <div className="valueBubble">
-              <div className="valueNumber">💜</div>
-              <div className="valueLabel">built for collectors</div>
+              <div className="valueNumber">$20</div>
+              <div className="valueLabel">founding bundle + keychain</div>
             </div>
           </div>
         </section>
@@ -752,6 +676,33 @@ export default function PricingPage() {
               </button>
             }
           />
+
+          <PlanCard
+            label="Launch Bundle"
+            founding
+            title="Founding Collector 🎁"
+            price="$20"
+            period="/year"
+            description="A limited launch bundle for collectors who want yearly access plus a physical thank-you gift."
+            bullets={[
+              "1 full year of unlimited access",
+              "Limited edition Adorable Vault keychain",
+              "Marketplace and selling unlocked",
+              "Collector messages",
+              "Shipping address collected in Stripe",
+              "Available while supplies last",
+            ]}
+            buttonElement={
+              <button
+                type="button"
+                onClick={() => void handleCheckout("founding")}
+                disabled={loadingPlan !== null}
+                className="button buttonFounding"
+              >
+                {loadingPlan === "founding" ? "Opening Checkout..." : "Get Bundle + Keychain 💜"}
+              </button>
+            }
+          />
         </section>
 
         <section className="belowGrid">
@@ -791,8 +742,8 @@ export default function PricingPage() {
                 <span>Checkout is handled through Stripe. Adorable Vault does not store card details.</span>
               </div>
               <div className="miniItem">
-                <span>🧾</span>
-                <span>You can use monthly for flexibility or yearly for the best value.</span>
+                <span>🎁</span>
+                <span>The Founding Collector Bundle collects a shipping address in Stripe for keychain mailing.</span>
               </div>
             </div>
           </div>
@@ -801,6 +752,7 @@ export default function PricingPage() {
         <p className="finePrint">
           Adorable Vault is a fan-made collector tool and is not affiliated with, sponsored by, or endorsed
           by Disney or Just Play. Marketplace transactions are handled directly between buyers and sellers.
+          Keychain bundle is limited and available while supplies last.
         </p>
       </div>
     </main>
@@ -810,18 +762,28 @@ export default function PricingPage() {
 function PlanCard(props: {
   label: string;
   popular?: boolean;
+  founding?: boolean;
   title: string;
   price: string;
   period: string;
   description: string;
   bullets: string[];
-  buttonElement: React.ReactNode;
+  buttonElement: ReactNode;
 }) {
   return (
-    <section className={`planCard ${props.popular ? "popular" : ""}`}>
+    <section
+      className={`planCard ${props.popular ? "popular" : ""} ${
+        props.founding ? "founding" : ""
+      }`}
+    >
       {props.popular ? <div className="popularTag">MOST POPULAR</div> : null}
+      {props.founding ? <div className="foundingTag">LIMITED KEYCHAIN BUNDLE</div> : null}
 
-      <div className={`planLabel ${props.popular ? "gold" : ""}`}>
+      <div
+        className={`planLabel ${props.popular ? "gold" : ""} ${
+          props.founding ? "pink" : ""
+        }`}
+      >
         {props.label}
       </div>
 

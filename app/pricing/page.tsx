@@ -24,12 +24,12 @@ export default function PricingPage() {
   const [error, setError] = useState("");
   const [referralUsername, setReferralUsername] = useState("");
 
+  const cleanReferral = cleanReferralUsername(referralUsername);
+
   const handleCheckout = async (plan: PlanKey) => {
     try {
       setError("");
       setLoadingPlan(plan);
-
-      const cleanReferral = cleanReferralUsername(referralUsername);
 
       const {
         data: { user },
@@ -100,14 +100,29 @@ export default function PricingPage() {
           inset: 0;
           pointer-events: none;
           background-image:
-            radial-gradient(2px 2px at 18% 22%, rgba(255,255,255,0.78) 35%, transparent 36%),
-            radial-gradient(1.5px 1.5px at 78% 16%, rgba(255,255,255,0.65) 35%, transparent 36%),
-            radial-gradient(1.8px 1.8px at 48% 72%, rgba(255,255,255,0.58) 35%, transparent 36%),
+            radial-gradient(2px 2px at 18% 22%, rgba(255,255,255,0.74) 35%, transparent 36%),
+            radial-gradient(1.5px 1.5px at 78% 16%, rgba(255,255,255,0.58) 35%, transparent 36%),
+            radial-gradient(1.8px 1.8px at 48% 72%, rgba(255,255,255,0.48) 35%, transparent 36%),
             linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
             linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
           background-size: auto, auto, auto, 46px 46px, 46px 46px;
           opacity: 0.7;
           mask-image: linear-gradient(to bottom, rgba(0,0,0,0.92), transparent 80%);
+        }
+
+        .page a,
+        .page a:visited,
+        .page a:hover,
+        .page a:active,
+        .button,
+        .button:visited,
+        .primaryButton,
+        .secondaryButton {
+          color: inherit;
+          text-decoration: none !important;
+          text-decoration-line: none !important;
+          -webkit-text-decoration-line: none !important;
+          border-bottom: none !important;
         }
 
         .shell {
@@ -116,16 +131,17 @@ export default function PricingPage() {
           max-width: 1240px;
           margin: 0 auto;
           padding: 22px;
-          padding-bottom: 84px;
+          padding-bottom: 108px;
         }
 
         .hero {
           text-align: center;
           border-radius: 34px;
           padding: 34px 26px;
-          margin-bottom: 20px;
+          margin-bottom: 18px;
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 34%),
+            radial-gradient(circle at bottom left, rgba(236,72,153,0.18), transparent 38%),
             linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
           border: 1px solid rgba(255,255,255,0.16);
           box-shadow: 0 26px 64px rgba(0,0,0,0.36);
@@ -139,6 +155,7 @@ export default function PricingPage() {
           border-radius: 999px;
           background: rgba(255,255,255,0.12);
           border: 1px solid rgba(255,255,255,0.15);
+          color: #fde68a;
           font-size: 13px;
           font-weight: 1000;
           margin-bottom: 16px;
@@ -146,19 +163,55 @@ export default function PricingPage() {
 
         .headline {
           margin: 0;
-          font-size: clamp(2.15rem, 6vw, 4rem);
-          line-height: 0.97;
-          letter-spacing: -1.8px;
+          font-size: clamp(2.2rem, 6vw, 4.35rem);
+          line-height: 0.95;
+          letter-spacing: -1.9px;
           font-weight: 1000;
           text-wrap: balance;
         }
 
         .heroText {
           margin: 16px auto 0;
-          color: rgba(255,255,255,0.88);
+          color: rgba(255,255,255,0.90);
           font-size: 17px;
           line-height: 1.65;
-          max-width: 820px;
+          max-width: 850px;
+        }
+
+        .heroActions {
+          display: flex;
+          justify-content: center;
+          gap: 11px;
+          flex-wrap: wrap;
+          margin-top: 22px;
+        }
+
+        .primaryButton,
+        .secondaryButton,
+        .primaryButton:visited,
+        .secondaryButton:visited {
+          min-height: 52px;
+          border-radius: 999px;
+          padding: 14px 20px;
+          font-weight: 1000;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+
+        .primaryButton {
+          color: #312e81 !important;
+          background: linear-gradient(90deg, #ffffff, #fef3c7);
+          border: 1px solid rgba(255,255,255,0.55);
+          box-shadow: 0 18px 40px rgba(255,255,255,0.22);
+        }
+
+        .secondaryButton {
+          color: white !important;
+          background: linear-gradient(90deg, #4f46e5, #a855f7);
+          border: 1px solid rgba(255,255,255,0.45);
+          box-shadow: 0 16px 34px rgba(124,58,237,0.50);
         }
 
         .valueStrip {
@@ -191,10 +244,45 @@ export default function PricingPage() {
           line-height: 1.35;
         }
 
+        .conversionStrip {
+          margin-bottom: 18px;
+          border-radius: 28px;
+          padding: 18px;
+          color: #111827;
+          background:
+            radial-gradient(circle at top right, rgba(250,204,21,0.30), transparent 34%),
+            radial-gradient(circle at bottom left, rgba(236,72,153,0.18), transparent 34%),
+            linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          border: 1px solid rgba(255,255,255,0.62);
+          box-shadow: 0 20px 44px rgba(0,0,0,0.24);
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 16px;
+          align-items: center;
+        }
+
+        .conversionTitle {
+          color: #312e81;
+          font-size: clamp(1.4rem, 3vw, 2rem);
+          line-height: 1.06;
+          font-weight: 1000;
+          letter-spacing: -0.6px;
+          margin-bottom: 6px;
+        }
+
+        .mutedText {
+          color: #475569;
+          line-height: 1.6;
+          font-size: 15px;
+          font-weight: 780;
+        }
+
         .referralCard,
         .infoCard,
         .faqCard {
-          background: linear-gradient(180deg, #ffffff, #f8fafc);
+          background:
+            radial-gradient(circle at top right, rgba(196,181,253,0.22), transparent 34%),
+            linear-gradient(180deg, #ffffff, #f8fafc);
           color: #111827;
           border-radius: 26px;
           padding: 22px;
@@ -210,22 +298,19 @@ export default function PricingPage() {
           align-items: center;
         }
 
-        .referralTitle {
+        .referralTitle,
+        .infoTitle {
           font-size: 23px;
           font-weight: 1000;
           margin-bottom: 6px;
           color: #312e81;
-        }
-
-        .mutedText {
-          color: #475569;
-          line-height: 1.6;
-          font-size: 15px;
+          letter-spacing: -0.4px;
         }
 
         .field {
           width: 100%;
-          padding: 14px 16px;
+          min-height: 50px;
+          padding: 0 16px;
           border-radius: 15px;
           border: 1px solid #d1d5db;
           font-size: 16px;
@@ -238,6 +323,13 @@ export default function PricingPage() {
         .field:focus {
           border-color: #8b5cf6;
           box-shadow: 0 0 0 4px rgba(139,92,246,0.12);
+        }
+
+        .cleanPreview {
+          color: #64748b;
+          font-size: 13px;
+          margin-top: 7px;
+          font-weight: 850;
         }
 
         .planGrid {
@@ -266,6 +358,14 @@ export default function PricingPage() {
           overflow: hidden;
           min-height: 0;
           height: auto;
+          transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+        }
+
+        .planCard:hover {
+          transform: translateY(-3px);
+          box-shadow:
+            0 26px 58px rgba(0,0,0,0.30),
+            inset 0 1px 0 rgba(255,255,255,0.90);
         }
 
         .planCard.popular {
@@ -342,6 +442,7 @@ export default function PricingPage() {
           font-weight: 1000;
           line-height: 1.05;
           margin: 0;
+          letter-spacing: -0.7px;
         }
 
         .priceRow {
@@ -368,12 +469,25 @@ export default function PricingPage() {
           line-height: 1.55;
           font-size: 14px;
           margin: 0;
+          font-weight: 780;
+        }
+
+        .dealNote {
+          margin-top: 10px;
+          border-radius: 14px;
+          padding: 9px 10px;
+          color: #92400e;
+          background: #fef3c7;
+          border: 1px solid #fde68a;
+          font-size: 12px;
+          line-height: 1.35;
+          font-weight: 950;
         }
 
         .featureList {
           display: grid;
           gap: 10px;
-          margin: 22px 0 0;
+          margin: 22px 0 18px;
           padding: 0;
           list-style: none;
         }
@@ -399,13 +513,13 @@ export default function PricingPage() {
           font-size: 15px;
           font-weight: 1000;
           cursor: pointer;
-          text-decoration: none;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           box-sizing: border-box;
           color: white;
           box-shadow: 0 14px 28px rgba(79,70,229,0.22);
+          font-family: inherit;
         }
 
         .buttonFree,
@@ -437,18 +551,42 @@ export default function PricingPage() {
           cursor: not-allowed;
         }
 
+        .compareCard {
+          margin-bottom: 18px;
+          border-radius: 28px;
+          padding: 20px;
+          color: #111827;
+          background:
+            radial-gradient(circle at top right, rgba(196,181,253,0.20), transparent 34%),
+            linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          border: 1px solid rgba(255,255,255,0.62);
+          box-shadow: 0 20px 44px rgba(0,0,0,0.24);
+        }
+
+        .compareGrid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-top: 14px;
+        }
+
+        .compareBox {
+          border-radius: 20px;
+          padding: 15px;
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+        }
+
+        .compareBox.best {
+          background: linear-gradient(135deg, #fef3c7, #fce7f3);
+          border-color: #f9a8d4;
+        }
+
         .belowGrid {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 18px;
           margin-top: 18px;
-        }
-
-        .infoTitle {
-          font-size: 22px;
-          font-weight: 1000;
-          color: #312e81;
-          margin-bottom: 10px;
         }
 
         .miniList {
@@ -487,8 +625,12 @@ export default function PricingPage() {
           color: rgba(255,255,255,0.72);
           font-size: 13px;
           line-height: 1.55;
-          max-width: 850px;
+          max-width: 900px;
           margin: 22px auto 0;
+        }
+
+        .mobileSticky {
+          display: none;
         }
 
         @media (max-width: 1180px) {
@@ -499,47 +641,233 @@ export default function PricingPage() {
 
         @media (max-width: 980px) {
           .shell {
-            padding: 14px;
-            padding-bottom: 60px;
+            padding: 12px;
+            padding-bottom: 92px;
           }
 
           .hero {
-            border-radius: 26px;
-            padding: 24px 18px;
+            border-radius: 24px;
+            padding: 22px 16px;
+            margin-bottom: 12px;
+          }
+
+          .badge {
+            padding: 7px 10px;
+            font-size: 12px;
+            margin-bottom: 11px;
+          }
+
+          .headline {
+            font-size: clamp(1.85rem, 9.4vw, 2.8rem);
+            line-height: 0.98;
+            letter-spacing: -1.3px;
+          }
+
+          .heroText {
+            font-size: 14px;
+            line-height: 1.48;
+            margin-top: 12px;
+          }
+
+          .heroActions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-top: 14px;
           }
 
           .valueStrip {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            margin: 12px 0;
+          }
+
+          .valueBubble {
+            padding: 11px;
+            border-radius: 17px;
+          }
+
+          .valueNumber {
+            font-size: 22px;
+          }
+
+          .valueLabel {
+            font-size: 11px;
+          }
+
+          .conversionStrip {
+            grid-template-columns: 1fr;
+            padding: 15px;
+            border-radius: 22px;
+            margin-bottom: 12px;
+          }
+
+          .conversionTitle {
+            font-size: clamp(1.25rem, 6vw, 1.6rem);
+          }
+
+          .mutedText {
+            font-size: 13px;
+            line-height: 1.5;
           }
 
           .referralCard {
             grid-template-columns: 1fr;
             border-radius: 22px;
-            padding: 18px;
+            padding: 15px;
+            margin-bottom: 12px;
+          }
+
+          .referralTitle,
+          .infoTitle {
+            font-size: 19px;
+          }
+
+          .field {
+            min-height: 48px;
+            font-size: 15px;
           }
 
           .planGrid,
-          .belowGrid {
+          .belowGrid,
+          .compareGrid {
             grid-template-columns: 1fr;
+            gap: 12px;
+          }
+
+          .planGrid {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            gap: 12px;
+            padding-bottom: 6px;
+            scrollbar-width: none;
+            margin-bottom: 14px;
+          }
+
+          .planGrid::-webkit-scrollbar {
+            display: none;
           }
 
           .planCard {
+            flex: 0 0 84%;
             border-radius: 24px;
-            padding: 20px;
+            padding: 18px;
+            scroll-snap-align: start;
           }
 
-          .planCard.popular {
-            transform: none;
+          .planTitle {
+            font-size: 23px;
+          }
+
+          .price {
+            font-size: 38px;
+          }
+
+          .period {
+            font-size: 15px;
+          }
+
+          .description,
+          .featureList li {
+            font-size: 12.5px;
+          }
+
+          .featureList {
+            gap: 8px;
+            margin-top: 15px;
+          }
+
+          .button {
+            min-height: 46px;
+            font-size: 13px;
+          }
+
+          .compareCard,
+          .infoCard,
+          .faqCard {
+            border-radius: 22px;
+            padding: 15px;
+          }
+
+          .miniItem {
+            grid-template-columns: 28px 1fr;
+            padding: 10px;
+            border-radius: 14px;
+            font-size: 12.5px;
+          }
+
+          .finePrint {
+            margin-bottom: 70px;
+          }
+
+          .mobileSticky {
+            position: fixed;
+            z-index: 60;
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 18px;
+            background: rgba(15,23,42,0.9);
+            border: 1px solid rgba(255,255,255,0.14);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 18px 40px rgba(0,0,0,0.36);
+          }
+
+          .mobileSticky a,
+          .mobileSticky button {
+            min-height: 42px;
+            border-radius: 15px;
+            padding: 10px 12px;
+            font-size: 12.5px;
+            color: #ffffff !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.38);
+            font-weight: 1000;
+            font-family: inherit;
+            cursor: pointer;
+          }
+
+          .mobileSticky .stickyBest {
+            background: linear-gradient(135deg, #f59e0b, #f97316);
+            box-shadow: 0 12px 28px rgba(249,115,22,0.34);
+          }
+
+          .mobileSticky .stickyFree {
+            background: linear-gradient(135deg, #ec4899, #7c3aed, #2563eb);
+            box-shadow: 0 12px 28px rgba(124,58,237,0.44);
           }
         }
 
-        @media (max-width: 440px) {
+        @media (max-width: 520px) {
+          .valueStrip {
+            grid-template-columns: 1fr 1fr;
+          }
+
+          .planCard {
+            flex-basis: 88%;
+          }
+
+          .mobileSticky {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 390px) {
           .valueStrip {
             grid-template-columns: 1fr;
           }
 
+          .planCard {
+            flex-basis: 92%;
+          }
+
           .price {
-            font-size: 44px;
+            font-size: 34px;
           }
         }
       `}</style>
@@ -548,13 +876,22 @@ export default function PricingPage() {
         <section className="hero">
           <div className="badge">✨ Collector plans ✨</div>
 
-          <h1 className="headline">Start free, upgrade when your vault needs more room.</h1>
+          <h1 className="headline">Start free. Upgrade when your collection outgrows chaos.</h1>
 
           <p className="heroText">
-            Free accounts can save up to <strong>50 Doorables</strong>. Upgrade to unlock unlimited
-            collection tracking, Marketplace access, selling tools, messages, public collector features,
-            and the full Adorable Vault experience.
+            Try Adorable Vault with up to <strong>50 saved Doorables</strong>. When you are ready,
+            unlock unlimited tracking, Marketplace access, selling tools, collector messages, public profiles,
+            and the full ad-free vault experience.
           </p>
+
+          <div className="heroActions">
+            <Link href="/demo" className="primaryButton">
+              Preview First 👀
+            </Link>
+            <Link href="/login?next=/collection" className="secondaryButton">
+              Start Free Tracking 💜
+            </Link>
+          </div>
 
           <div className="valueStrip">
             <div className="valueBubble">
@@ -567,20 +904,40 @@ export default function PricingPage() {
             </div>
             <div className="valueBubble">
               <div className="valueNumber">$15</div>
-              <div className="valueLabel">yearly best value</div>
+              <div className="valueLabel">best yearly value</div>
             </div>
             <div className="valueBubble">
-              <div className="valueNumber">$20</div>
-              <div className="valueLabel">founding bundle + keychain</div>
+              <div className="valueNumber">0 ads</div>
+              <div className="valueLabel">clean collector experience</div>
             </div>
           </div>
+        </section>
+
+        <section className="conversionStrip">
+          <div>
+            <div className="conversionTitle">Best value: $15/year keeps the whole vault unlocked.</div>
+            <div className="mutedText">
+              Monthly is flexible, but yearly is the collector-friendly deal: unlimited tracking,
+              marketplace tools, messaging, profile sharing, and selling extras for about $1.25/month.
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void handleCheckout("yearly")}
+            disabled={loadingPlan !== null}
+            className="button buttonYearly"
+            style={{ maxWidth: 260 }}
+          >
+            {loadingPlan === "yearly" ? "Opening..." : "Get Yearly 🚀"}
+          </button>
         </section>
 
         <section className="referralCard">
           <div>
             <div className="referralTitle">Referral username 💜</div>
             <div className="mutedText">
-              If someone referred you, enter their username before checkout. After 10 paid referrals,
+              If another collector sent you here, enter their username before checkout. After 10 paid referrals,
               they earn a free month. You can enter it with or without the @ symbol.
             </div>
           </div>
@@ -593,9 +950,9 @@ export default function PricingPage() {
               className="field"
               autoComplete="off"
             />
-            {cleanReferralUsername(referralUsername) ? (
-              <div style={{ color: "#64748b", fontSize: 13, marginTop: 7, fontWeight: 800 }}>
-                Saving referral as: @{cleanReferralUsername(referralUsername)}
+            {cleanReferral ? (
+              <div className="cleanPreview">
+                Saving referral as: @{cleanReferral}
               </div>
             ) : null}
           </div>
@@ -609,10 +966,10 @@ export default function PricingPage() {
             title="Starter Vault 💜"
             price="$0"
             period=""
-            description="Perfect for trying the tracker and organizing a smaller collection."
+            description="Perfect for trying the tracker and organizing a smaller starter collection."
             bullets={[
               "Save up to 50 Doorables",
-              "Track have, need, and extras",
+              "Track Have, Need, and Extras",
               "Use collection search and filters",
               "See series progress",
               "Upgrade only when you are ready",
@@ -629,7 +986,8 @@ export default function PricingPage() {
             title="Monthly 💎"
             price="$3"
             period="/month"
-            description="Unlock the full collector experience without a big commitment."
+            description="Unlock everything without a big commitment. Great for testing the full vault."
+            dealNote="Recurring monthly subscription. Renews until canceled."
             bullets={[
               "Unlimited collection saves",
               "Marketplace browsing",
@@ -656,7 +1014,8 @@ export default function PricingPage() {
             title="Yearly 🔥"
             price="$15"
             period="/year"
-            description="The best deal for collectors who want everything unlocked all year."
+            description="The best deal for collectors who want the full vault open all year."
+            dealNote="Only about $1.25/month when paid yearly. Renews yearly until canceled."
             bullets={[
               "Lowest overall cost",
               "Unlimited collection saves",
@@ -684,6 +1043,7 @@ export default function PricingPage() {
             price="$20"
             period="/year"
             description="A limited launch bundle for collectors who want yearly access plus a physical thank-you gift."
+            dealNote="Includes one year of access plus a fan-made keychain while supplies last. Renews yearly until canceled."
             bullets={[
               "1 full year of unlimited access",
               "Limited edition Adorable Vault keychain",
@@ -705,12 +1065,35 @@ export default function PricingPage() {
           />
         </section>
 
+        <section className="compareCard">
+          <div className="infoTitle">Which plan should I pick?</div>
+          <div className="mutedText">
+            Most collectors should start free or choose yearly. Monthly is great for trying full access,
+            but yearly gives the best value if Adorable Vault becomes your main collector hub.
+          </div>
+
+          <div className="compareGrid">
+            <div className="compareBox">
+              <div className="infoTitle" style={{ fontSize: 18 }}>Start Free</div>
+              <div className="mutedText">
+                Choose this if you are curious, want to test the tracker, or only need up to 50 saves right now.
+              </div>
+            </div>
+            <div className="compareBox best">
+              <div className="infoTitle" style={{ fontSize: 18 }}>Go Yearly</div>
+              <div className="mutedText">
+                Choose this if you collect regularly, sell/trade extras, or want unlimited tracking all year.
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="belowGrid">
           <div className="infoCard">
             <div className="infoTitle">Why upgrade?</div>
             <div className="mutedText">
-              Full Access is for collectors who want to use Adorable Vault as their main collection hub —
-              not just a small checklist.
+              Full Access is for collectors who want Adorable Vault as their main collection home base —
+              not just a tiny starter checklist.
             </div>
 
             <div className="miniList">
@@ -725,6 +1108,10 @@ export default function PricingPage() {
               <div className="miniItem">
                 <span>💬</span>
                 <span>Message sellers and collectors directly through the site.</span>
+              </div>
+              <div className="miniItem">
+                <span>🚫</span>
+                <span>Support a clean, ad-free collector tool instead of banner clutter.</span>
               </div>
             </div>
           </div>
@@ -745,15 +1132,33 @@ export default function PricingPage() {
                 <span>🎁</span>
                 <span>The Founding Collector Bundle collects a shipping address in Stripe for keychain mailing.</span>
               </div>
+              <div className="miniItem">
+                <span>🔁</span>
+                <span>Paid plans are recurring subscriptions and renew until canceled.</span>
+              </div>
             </div>
           </div>
         </section>
 
         <p className="finePrint">
           Adorable Vault is a fan-made collector tool and is not affiliated with, sponsored by, or endorsed
-          by Disney or Just Play. Marketplace transactions are handled directly between buyers and sellers.
-          Keychain bundle is limited and available while supplies last.
+          by Disney or Just Play. Paid plans are recurring subscriptions that renew until canceled. Checkout is handled through Stripe.
+          Marketplace transactions are handled directly between buyers and sellers. Keychain bundle is limited and available while supplies last.
         </p>
+      </div>
+
+      <div className="mobileSticky">
+        <Link href="/login?next=/collection" className="stickyFree">
+          💜 Start Free
+        </Link>
+        <button
+          type="button"
+          className="stickyBest"
+          onClick={() => void handleCheckout("yearly")}
+          disabled={loadingPlan !== null}
+        >
+          {loadingPlan === "yearly" ? "Opening..." : "🔥 Best Deal"}
+        </button>
       </div>
     </main>
   );
@@ -767,6 +1172,7 @@ function PlanCard(props: {
   price: string;
   period: string;
   description: string;
+  dealNote?: string;
   bullets: string[];
   buttonElement: ReactNode;
 }) {
@@ -795,6 +1201,8 @@ function PlanCard(props: {
       </div>
 
       <p className="description">{props.description}</p>
+
+      {props.dealNote ? <div className="dealNote">{props.dealNote}</div> : null}
 
       <ul className="featureList">
         {props.bullets.map((bullet) => (

@@ -31,8 +31,6 @@ const DESCRIPTION_TEMPLATES = [
   "Bundle deals welcome.",
 ];
 
-const BEST_OFFER_NOTE = "Price note: Or best offer.";
-
 async function compressImage(file: File): Promise<File> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -132,7 +130,6 @@ export default function SellPage() {
   const [username, setUsername] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [orBestOffer, setOrBestOffer] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
 
   const [shippingEnabled, setShippingEnabled] = useState(false);
@@ -239,18 +236,9 @@ export default function SellPage() {
 
     const listing = data as MarketplaceListing;
 
-    const loadedDescription = String(listing.description ?? "");
-    const hasBestOfferNote = loadedDescription
-      .toLowerCase()
-      .includes(BEST_OFFER_NOTE.toLowerCase());
-    const displayDescription = loadedDescription
-      .replace(/\n?\n?Price note: Or best offer\./i, "")
-      .trim();
-
     setEditingId(String(listing.id));
     setTitle(String(listing.title ?? ""));
-    setDescription(displayDescription);
-    setOrBestOffer(hasBestOfferNote);
+    setDescription(String(listing.description ?? ""));
     setPrice(listing.price === null || listing.price === undefined ? "" : String(listing.price));
     setImageUrl(String(listing.image_url ?? ""));
     setSeller(String(listing.seller_name ?? fallbackSeller ?? ""));
@@ -400,14 +388,9 @@ export default function SellPage() {
       const numericShippingPrice =
         shippingPrice.trim() === "" ? null : Number(shippingPrice.trim());
 
-      const cleanDescription = description.trim();
-      const finalDescription = orBestOffer
-        ? [cleanDescription, BEST_OFFER_NOTE].filter(Boolean).join("\n\n")
-        : cleanDescription;
-
       const payload = {
         title: title.trim(),
-        description: finalDescription || null,
+        description: description.trim() || null,
         price: numericPrice,
         image_url: imageUrl.trim() || null,
         seller_name: seller.trim() || username || user.email || null,
@@ -806,33 +789,6 @@ export default function SellPage() {
         .textarea:focus {
           border-color: #8b5cf6;
           box-shadow: 0 0 0 4px rgba(139,92,246,0.12);
-        }
-
-        .priceOfferRow {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) auto;
-          gap: 8px;
-          align-items: stretch;
-        }
-
-        .offerButton {
-          min-height: 50px;
-          border-radius: 15px;
-          border: 1px solid #c7d2fe;
-          background: #eef2ff;
-          color: #3730a3;
-          font-weight: 1000;
-          padding: 12px 14px;
-          cursor: pointer;
-          white-space: nowrap;
-          font-family: inherit;
-        }
-
-        .offerButtonActive {
-          background: linear-gradient(135deg, #60a5fa, #8b5cf6);
-          color: white;
-          border-color: transparent;
-          box-shadow: 0 12px 22px rgba(79,70,229,0.20);
         }
 
         .textarea {
@@ -1306,8 +1262,7 @@ export default function SellPage() {
 
           .twoColumn,
           .toggleWrap,
-          .statusGrid,
-          .priceOfferRow {
+          .statusGrid {
             grid-template-columns: 1fr;
           }
 
@@ -1471,27 +1426,15 @@ export default function SellPage() {
                     <span>Price</span>
                     <span className="required">Required</span>
                   </label>
-                  <div className="priceOfferRow">
-                    <input
-                      className="field"
-                      placeholder="Example: 5 or 5.00"
-                      inputMode="decimal"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className={`offerButton ${orBestOffer ? "offerButtonActive" : ""}`}
-                      onClick={() => setOrBestOffer((prev) => !prev)}
-                      aria-pressed={orBestOffer}
-                    >
-                      {orBestOffer ? "✓ Or Best Offer" : "Or Best Offer"}
-                    </button>
-                  </div>
+                  <input
+                    className="field"
+                    placeholder="Example: 5 or 5.00"
+                    inputMode="decimal"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                  />
                   <div className="noteBox">
-                    {numericPrice !== null
-                      ? `Price preview: ${formatMoney(price)}${orBestOffer ? " or best offer" : ""}`
-                      : "Enter the price buyers should expect to pay."}
+                    {numericPrice !== null ? `Price preview: ${formatMoney(price)}` : "Add the exact price buyers should expect."}
                   </div>
                 </div>
               </div>
@@ -1692,14 +1635,10 @@ export default function SellPage() {
                 {title.trim() || "Your listing title"}
               </div>
 
-              <div className="listingPreviewPrice">
-                {formatMoney(price)}{orBestOffer ? " or best offer" : ""}
-              </div>
+              <div className="listingPreviewPrice">{formatMoney(price)}</div>
 
               <div className="pillRow">
                 <span className="pill">{getStatusText(listingStatus)}</span>
-
-                {orBestOffer && <span className="pill">🤝 Or best offer</span>}
 
                 {shippingEnabled && (
                   <span className="pill">
@@ -1771,7 +1710,7 @@ export default function SellPage() {
             </div>
             <div className="extrasSellItem">
               <span className="extrasSellIcon">💜</span>
-              <span>Price each extra clearly, and turn on Or Best Offer when you are open to offers.</span>
+              <span>Price each extra clearly so collectors know what to expect before they message you.</span>
             </div>
           </div>
 

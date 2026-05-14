@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { getSupabase } from "../../lib/supabase";
 
 type AuthMode = "signin" | "signup" | "reset";
@@ -21,7 +21,49 @@ function isLikelyEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
+function LoginFallback() {
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        padding: 24,
+        color: "white",
+        background:
+          "radial-gradient(circle at top, #312e81 0%, #0f172a 46%, #020617 100%)",
+      }}
+    >
+      <div
+        style={{
+          width: "min(520px, 100%)",
+          borderRadius: 28,
+          padding: 28,
+          textAlign: "center",
+          background: "rgba(255,255,255,0.10)",
+          border: "1px solid rgba(255,255,255,0.16)",
+          boxShadow: "0 24px 60px rgba(0,0,0,0.35)",
+        }}
+      >
+        <div style={{ fontSize: 38, marginBottom: 10 }}>💜</div>
+        <h1 style={{ margin: 0, fontSize: 28 }}>Loading login...</h1>
+        <p style={{ color: "rgba(255,255,255,0.78)", fontWeight: 800 }}>
+          Getting your vault door ready.
+        </p>
+      </div>
+    </main>
+  );
+}
+
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginFallback />}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = useMemo(() => getSupabase(), []);
@@ -97,7 +139,8 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://www.mydoorables.com";
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "https://www.mydoorables.com";
 
     const { error } = await supabase.auth.signUp({
       email: email.trim(),
@@ -113,7 +156,9 @@ export default function LoginPage() {
       return;
     }
 
-    setMessage("Account started! Check your email to confirm your account, then come back and sign in 💜");
+    setMessage(
+      "Account started! Check your email to confirm your account, then come back and sign in 💜"
+    );
     setLoading(false);
   }
 
@@ -127,7 +172,8 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://www.mydoorables.com";
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "https://www.mydoorables.com";
 
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: `${origin}/reset-password`,
@@ -426,6 +472,7 @@ export default function LoginPage() {
           justify-content: center;
           gap: 8px;
           box-sizing: border-box;
+          text-align: center;
         }
 
         .primaryButton {
@@ -719,7 +766,7 @@ export default function LoginPage() {
             </div>
 
             <div className="finePrint">
-              This page no longer auto-redirects away from login. If you are already signed in,
+              This page does not auto-redirect away from login. If you are already signed in,
               you can continue to your vault or sign out and use another account.
             </div>
           </div>

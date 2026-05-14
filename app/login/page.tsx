@@ -1,411 +1,193 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { getSupabase } from "../../lib/supabase";
 
-type AuthUserLike = {
-  id: string;
-  email?: string | null;
-  user_metadata?: Record<string, any> | null;
-};
+type AuthMode = "signin" | "signup" | "reset";
 
-type UsernameStatus = "idle" | "checking" | "available" | "taken";
+function cleanNext(value: string | null) {
+  const next = String(value || "").trim();
 
-function sanitizeUsernameInput(value: string) {
-  return value.replace(/[^a-zA-Z0-9_]/g, "");
-}
-
-function normalizeUsernameForStorage(value: string) {
-  return sanitizeUsernameInput(value).toLowerCase();
-}
-
-function getSafeNextPath() {
-  if (typeof window === "undefined") return "/";
-
-  const params = new URLSearchParams(window.location.search);
-  const next = params.get("next") || "";
-
-  if (!next || !next.startsWith("/") || next.startsWith("//")) {
-    return "/";
-  }
+  // Only allow internal relative paths so nobody can use the login page
+  // to redirect collectors to an outside site.
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return "/collection";
 
   return next;
 }
 
-function getPasswordStrength(password: string) {
-  let score = 0;
-
-  if (password.length >= 8) score += 1;
-  if (password.length >= 12) score += 1;
-  if (/[A-Z]/.test(password)) score += 1;
-  if (/[a-z]/.test(password)) score += 1;
-  if (/\d/.test(password)) score += 1;
-  if (/[^A-Za-z0-9]/.test(password)) score += 1;
-
-  if (!password) return { label: "", color: "#cbd5e1", width: "0%" };
-  if (score <= 2) return { label: "Weak", color: "#ef4444", width: "33%" };
-  if (score <= 4) return { label: "Medium", color: "#f59e0b", width: "66%" };
-  return { label: "Strong", color: "#22c55e", width: "100%" };
+function isLikelyEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
 export default function LoginPage() {
-  const supabase = useMemo(() => getSupabase(), []);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const supabase = useMemo(() => getSupabase(), []);
+  const nextPath = cleanNext(searchParams.get("next"));
 
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<AuthMode>("signin");
   const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
-
-  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
-  const [usernameHelp, setUsernameHelp] = useState("");
+  const [checkingUser, setCheckingUser] = useState(true);
+  const [currentEmail, setCurrentEmail] = useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const checkUser = async () => {
+    document.title = "Sign In | Adorable Vault";
+
+    async function checkCurrentUser() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (user) {
-        router.replace(getSafeNextPath());
-        return;
-      }
+      setCurrentEmail(user?.email || "");
+      setCheckingUser(false);
+    }
 
-      setCheckingSession(false);
-    };
+    void checkCurrentUser();
+  }, [supabase]);
 
-    void checkUser();
-  }, [router, supabase]);
+  async function handleSignIn() {
+    setMessage("");
 
-  useEffect(() => {
-    if (mode !== "signup") return;
-
-    const trimmed = username.trim();
-    const normalized = normalizeUsernameForStorage(trimmed);
-
-    if (!trimmed) {
-      setUsernameStatus("idle");
-      setUsernameHelp("Letters, numbers, and underscores only.");
+    if (!isLikelyEmail(email)) {
+      setMessage("Please enter a valid email address.");
       return;
     }
 
-    if (normalized.length < 3) {
-      setUsernameStatus("idle");
-      setUsernameHelp("Use at least 3 characters.");
+    if (!password.trim()) {
+      setMessage("Please enter your password.");
       return;
     }
 
-    let cancelled = false;
-    setUsernameStatus("checking");
-    setUsernameHelp("Checking username...");
+    setLoading(true);
 
-    const timer = setTimeout(async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select("id")
-        .eq("username", normalized)
-        .maybeSingle();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
 
-      if (cancelled) return;
-
-      if (error) {
-        setUsernameStatus("idle");
-        setUsernameHelp("Could not check username right now.");
-        return;
-      }
-
-      if (data) {
-        setUsernameStatus("taken");
-        setUsernameHelp("That username is already taken.");
-      } else {
-        setUsernameStatus("available");
-        setUsernameHelp("That username is available.");
-      }
-    }, 350);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [username, mode, supabase]);
-
-  async function ensureUserProfile(user: AuthUserLike, desiredUsername?: string) {
-    const { data: existing, error: readError } = await supabase
-      .from("users")
-      .select("id, username")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (readError) {
-      setMessage(readError.message);
-      return false;
+    if (error) {
+      setMessage(error.message);
+      setLoading(false);
+      return;
     }
 
-    const metadataUsername =
-      typeof user.user_metadata?.username === "string"
-        ? normalizeUsernameForStorage(user.user_metadata.username)
-        : "";
+    setMessage("Signed in! Opening your vault 💜");
+    router.push(nextPath);
+    router.refresh();
+  }
 
-    const cleanUsername = normalizeUsernameForStorage(
-      desiredUsername || metadataUsername || ""
-    );
+  async function handleSignUp() {
+    setMessage("");
 
-    if (!existing) {
-      const payload = {
-        id: user.id,
-        email: user.email ?? null,
-        username: cleanUsername || null,
-        is_subscribed: false,
-      };
-
-      const { error: insertError } = await supabase.from("users").insert(payload);
-      if (insertError) {
-        setMessage(insertError.message);
-        return false;
-      }
-      return true;
+    if (!isLikelyEmail(email)) {
+      setMessage("Please enter a valid email address.");
+      return;
     }
 
-    if (!existing.username && cleanUsername) {
-      const { error: updateError } = await supabase
-        .from("users")
-        .update({ username: cleanUsername })
-        .eq("id", user.id);
-
-      if (updateError) {
-        setMessage(updateError.message);
-        return false;
-      }
+    if (password.trim().length < 6) {
+      setMessage("Please use a password with at least 6 characters.");
+      return;
     }
 
-    return true;
+    setLoading(true);
+
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://www.mydoorables.com";
+
+    const { error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        emailRedirectTo: `${origin}/login?next=${encodeURIComponent(nextPath)}`,
+      },
+    });
+
+    if (error) {
+      setMessage(error.message);
+      setLoading(false);
+      return;
+    }
+
+    setMessage("Account started! Check your email to confirm your account, then come back and sign in 💜");
+    setLoading(false);
+  }
+
+  async function handleResetPassword() {
+    setMessage("");
+
+    if (!isLikelyEmail(email)) {
+      setMessage("Enter your email first so I know where to send the reset link.");
+      return;
+    }
+
+    setLoading(true);
+
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://www.mydoorables.com";
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${origin}/reset-password`,
+    });
+
+    if (error) {
+      setMessage(error.message);
+      setLoading(false);
+      return;
+    }
+
+    setMessage("Password reset email sent. Check your inbox 💜");
+    setLoading(false);
+  }
+
+  async function handleSignOut() {
+    setLoading(true);
+    setMessage("");
+
+    await supabase.auth.signOut();
+
+    // Clear helpful local UI flags from checkout. Real subscription access
+    // is still controlled by Supabase/Stripe webhook values.
+    localStorage.removeItem("doorables_subscribed");
+    localStorage.removeItem("adorable_vault_last_checkout_plan");
+    localStorage.removeItem("adorable_vault_last_checkout_session");
+
+    setCurrentEmail("");
+    setLoading(false);
+    setMessage("Signed out. You can sign in with another account now.");
+    router.refresh();
   }
 
   async function handleSubmit() {
-    try {
-      setLoading(true);
-      setMessage("");
-
-      if (!email.trim()) {
-        setMessage("Please enter your email.");
-        setLoading(false);
-        return;
-      }
-
-      if (!password.trim()) {
-        setMessage("Please enter your password.");
-        setLoading(false);
-        return;
-      }
-
-      if (mode === "signup") {
-        const cleanUsernameForStorage = normalizeUsernameForStorage(username);
-
-        if (!cleanUsernameForStorage) {
-          setMessage("Please choose a username using letters, numbers, or underscores.");
-          setLoading(false);
-          return;
-        }
-
-        if (cleanUsernameForStorage.length < 3) {
-          setMessage("Username must be at least 3 characters.");
-          setLoading(false);
-          return;
-        }
-
-        if (usernameStatus === "taken") {
-          setMessage("That username is already taken.");
-          setLoading(false);
-          return;
-        }
-
-        if (password.length < 8) {
-          setMessage("Please choose a password with at least 8 characters.");
-          setLoading(false);
-          return;
-        }
-
-        const { data: usernameTaken, error: usernameCheckError } = await supabase
-          .from("users")
-          .select("id")
-          .eq("username", cleanUsernameForStorage)
-          .maybeSingle();
-
-        if (usernameCheckError) {
-          setMessage(usernameCheckError.message);
-          setLoading(false);
-          return;
-        }
-
-        if (usernameTaken) {
-          setMessage("That username is already taken.");
-          setLoading(false);
-          return;
-        }
-
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            data: {
-              username: cleanUsernameForStorage,
-              display_username: sanitizeUsernameInput(username),
-            },
-          },
-        });
-
-        if (error) {
-          setMessage(error.message);
-          setLoading(false);
-          return;
-        }
-
-        if (data.session && data.user) {
-          const ok = await ensureUserProfile(
-            {
-              id: data.user.id,
-              email: data.user.email,
-              user_metadata: data.user.user_metadata,
-            },
-            cleanUsernameForStorage
-          );
-
-          if (!ok) {
-            setLoading(false);
-            return;
-          }
-
-          setLoading(false);
-          router.push(getSafeNextPath());
-          return;
-        }
-
-        setMessage("Account created! Check your email if confirmation is required, then sign in.");
-        setMode("signin");
-        setPassword("");
-        setShowPassword(false);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-
-      if (error) {
-        setMessage(error.message);
-        setLoading(false);
-        return;
-      }
-
-      if (data.user) {
-        const ok = await ensureUserProfile({
-          id: data.user.id,
-          email: data.user.email,
-          user_metadata: data.user.user_metadata,
-        });
-
-        if (!ok) {
-          setLoading(false);
-          return;
-        }
-      }
-
-      setLoading(false);
-      router.push(getSafeNextPath());
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not continue.");
-      setLoading(false);
+    if (mode === "signin") {
+      await handleSignIn();
+      return;
     }
-  }
 
-  async function handleForgotPassword() {
-    try {
-      setMessage("");
-
-      if (!email.trim()) {
-        setMessage("Enter your email first.");
-        return;
-      }
-
-      const redirectTo =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/reset-password`
-          : "https://www.mydoorables.com/reset-password";
-
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo,
-      });
-
-      if (error) {
-        setMessage(error.message);
-        return;
-      }
-
-      setMessage("Password reset email sent. Check your inbox.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not send reset email.");
+    if (mode === "signup") {
+      await handleSignUp();
+      return;
     }
+
+    await handleResetPassword();
   }
 
-  const passwordStrength = getPasswordStrength(password);
+  const title =
+    mode === "signup"
+      ? "Create your vault account"
+      : mode === "reset"
+        ? "Reset your password"
+        : "Sign in to your vault";
 
-  const usernameHelpColor =
-    usernameStatus === "available"
-      ? "#166534"
-      : usernameStatus === "taken"
-        ? "#b91c1c"
-        : usernameStatus === "checking"
-          ? "#4338ca"
-          : "#6b7280";
-
-  const messageIsSuccess =
-    message.toLowerCase().includes("created") ||
-    message.toLowerCase().includes("sent") ||
-    message.toLowerCase().includes("check your email");
-
-  if (checkingSession) {
-    return (
-      <main className="page">
-        <style jsx>{`
-          .page {
-            min-height: 100vh;
-            display: grid;
-            place-items: center;
-            padding: 22px;
-            color: white;
-            background:
-              radial-gradient(circle at 10% 10%, rgba(168,85,247,0.35) 0%, transparent 28%),
-              radial-gradient(circle at 90% 12%, rgba(59,130,246,0.26) 0%, transparent 26%),
-              linear-gradient(180deg, #030712 0%, #111827 48%, #020617 100%);
-          }
-
-          .loadingCard {
-            width: min(520px, 100%);
-            border-radius: 28px;
-            padding: 28px;
-            text-align: center;
-            background: rgba(255,255,255,0.10);
-            border: 1px solid rgba(255,255,255,0.16);
-            box-shadow: 0 24px 60px rgba(0,0,0,0.35);
-          }
-        `}</style>
-
-        <div className="loadingCard">
-          <div style={{ fontSize: 34, marginBottom: 10 }}>💜</div>
-          <div style={{ fontWeight: 1000, fontSize: 22 }}>Checking your vault...</div>
-        </div>
-      </main>
-    );
-  }
+  const subtitle =
+    mode === "signup"
+      ? "Start free, save up to 50 Doorables, and upgrade only when your collection needs more room."
+      : mode === "reset"
+        ? "Enter your email and we’ll send a reset link so you can get back into your collection."
+        : "Welcome back! Sign in to track your Doorables, wishlist, extras, Marketplace messages, and collector profile.";
 
   return (
     <main className="page">
@@ -414,10 +196,10 @@ export default function LoginPage() {
           min-height: 100vh;
           color: white;
           background:
-            radial-gradient(circle at 8% 4%, rgba(168, 85, 247, 0.42) 0%, transparent 28%),
-            radial-gradient(circle at 88% 10%, rgba(59, 130, 246, 0.30) 0%, transparent 27%),
-            radial-gradient(circle at 70% 94%, rgba(236, 72, 153, 0.22) 0%, transparent 30%),
-            linear-gradient(180deg, #030712 0%, #080b1f 45%, #020617 100%);
+            radial-gradient(circle at 8% 4%, rgba(168, 85, 247, 0.44) 0%, transparent 28%),
+            radial-gradient(circle at 88% 8%, rgba(59, 130, 246, 0.32) 0%, transparent 26%),
+            radial-gradient(circle at 72% 96%, rgba(236, 72, 153, 0.26) 0%, transparent 28%),
+            linear-gradient(180deg, #030712 0%, #080b1f 44%, #020617 100%);
           overflow-x: hidden;
         }
 
@@ -427,115 +209,81 @@ export default function LoginPage() {
           inset: 0;
           pointer-events: none;
           background-image:
-            radial-gradient(2px 2px at 18% 22%, rgba(255,255,255,0.78) 35%, transparent 36%),
-            radial-gradient(1.5px 1.5px at 78% 16%, rgba(255,255,255,0.65) 35%, transparent 36%),
-            radial-gradient(1.8px 1.8px at 48% 72%, rgba(255,255,255,0.58) 35%, transparent 36%),
-            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            radial-gradient(2px 2px at 18% 22%, rgba(255,255,255,0.84) 35%, transparent 36%),
+            radial-gradient(1.5px 1.5px at 78% 16%, rgba(255,255,255,0.72) 35%, transparent 36%),
+            radial-gradient(1.8px 1.8px at 48% 72%, rgba(255,255,255,0.62) 35%, transparent 36%),
+            linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
           background-size: auto, auto, auto, 46px 46px, 46px 46px;
-          opacity: 0.7;
-          mask-image: linear-gradient(to bottom, rgba(0,0,0,0.92), transparent 80%);
+          opacity: 0.72;
+          mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 78%);
+        }
+
+        .page a,
+        .page a:visited,
+        .page a:hover,
+        .page a:active {
+          color: inherit;
+          text-decoration: none !important;
+          text-decoration-line: none !important;
+          -webkit-text-decoration-line: none !important;
         }
 
         .shell {
           position: relative;
           z-index: 1;
-          max-width: 1180px;
+          width: min(1120px, 100%);
           margin: 0 auto;
-          padding: 22px;
-          padding-bottom: 80px;
-        }
-
-        .topNav {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 14px;
-          margin-bottom: 18px;
-        }
-
-        .brand {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          color: white;
-          text-decoration: none;
-          min-width: 0;
-        }
-
-        .brandIcon {
-          width: 58px;
-          height: 58px;
-          border-radius: 20px;
+          min-height: calc(100vh - 1px);
           display: grid;
-          place-items: center;
-          font-size: 31px;
-          background: radial-gradient(circle at top left, #fef3c7, #a855f7 48%, #020617);
-          box-shadow: 0 18px 38px rgba(168, 85, 247, 0.42);
-          flex: 0 0 auto;
-        }
-
-        .brandTitle {
-          display: block;
-          font-size: clamp(1.45rem, 4vw, 2.15rem);
-          font-weight: 1000;
-          line-height: 0.95;
-          letter-spacing: -0.8px;
-          background: linear-gradient(90deg, #fef3c7, #f0abfc, #bfdbfe);
-          -webkit-background-clip: text;
-          color: transparent;
-        }
-
-        .brandSub {
-          display: block;
-          margin-top: 5px;
-          color: #d8b4fe;
-          font-weight: 950;
-          font-size: 14px;
-        }
-
-        .navActions {
-          display: flex;
-          gap: 10px;
           align-items: center;
-          flex-wrap: wrap;
-          justify-content: flex-end;
-        }
-
-        .navPill,
-        .navPill:visited {
-          color: white;
-          text-decoration: none;
-          font-weight: 950;
-          padding: 11px 14px;
-          border-radius: 999px;
-          background: rgba(255,255,255,0.10);
-          border: 1px solid rgba(255,255,255,0.14);
-          box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+          padding: 24px;
+          box-sizing: border-box;
         }
 
         .layout {
           display: grid;
-          grid-template-columns: 0.98fr 1.02fr;
+          grid-template-columns: minmax(0, 0.98fr) minmax(360px, 0.82fr);
           gap: 20px;
           align-items: stretch;
         }
 
-        .heroPanel,
-        .authCard {
-          border-radius: 32px;
+        .heroCard,
+        .formCard {
+          border-radius: 34px;
           border: 1px solid rgba(255,255,255,0.16);
-          box-shadow: 0 26px 64px rgba(0,0,0,0.36);
+          box-shadow: 0 28px 76px rgba(0,0,0,0.42);
         }
 
-        .heroPanel {
-          padding: 28px;
+        .heroCard {
+          padding: 32px;
           background:
-            radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
-            linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
+            radial-gradient(circle at top right, rgba(255,255,255,0.15), transparent 32%),
+            linear-gradient(135deg, rgba(30,41,59,0.94), rgba(88,28,135,0.86));
           display: grid;
           align-content: center;
-          gap: 17px;
+        }
+
+        .formCard {
+          padding: 22px;
+          color: #111827;
+          background:
+            radial-gradient(circle at top right, rgba(196,181,253,0.35), transparent 34%),
+            linear-gradient(180deg, #ffffff, #f8fafc);
+          border-color: rgba(255,255,255,0.66);
+        }
+
+        .brandIcon {
+          width: 74px;
+          height: 74px;
+          border-radius: 26px;
+          display: grid;
+          place-items: center;
+          font-size: 38px;
+          margin-bottom: 18px;
+          background: linear-gradient(135deg, #fef3c7, #f5d0fe, #bfdbfe);
+          color: #312e81;
+          box-shadow: 0 18px 42px rgba(255,255,255,0.15);
         }
 
         .badge {
@@ -547,178 +295,115 @@ export default function LoginPage() {
           border-radius: 999px;
           background: rgba(255,255,255,0.12);
           border: 1px solid rgba(255,255,255,0.15);
+          color: #fde68a;
           font-size: 13px;
           font-weight: 1000;
+          margin-bottom: 16px;
         }
 
         .headline {
           margin: 0;
-          font-size: clamp(2.15rem, 5.6vw, 4.1rem);
-          line-height: 0.94;
-          letter-spacing: -2px;
+          font-size: clamp(2.15rem, 5.6vw, 4.3rem);
+          line-height: 0.95;
+          letter-spacing: -1.9px;
           font-weight: 1000;
           text-wrap: balance;
         }
 
         .heroText {
+          margin-top: 16px;
           color: rgba(255,255,255,0.90);
-          font-size: 16px;
+          font-size: 17px;
           line-height: 1.65;
-          max-width: 720px;
         }
 
-        .benefitGrid {
+        .trustGrid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 10px;
-          margin-top: 4px;
+          margin-top: 20px;
         }
 
-        .benefit {
-          border-radius: 19px;
-          padding: 13px;
-          background: rgba(15,23,42,0.55);
-          border: 1px solid rgba(255,255,255,0.14);
-          box-shadow: 0 14px 28px rgba(0,0,0,0.20);
-        }
-
-        .benefitIcon {
-          font-size: 22px;
-          margin-bottom: 6px;
-        }
-
-        .benefitTitle {
-          color: #fde68a;
-          font-weight: 1000;
-          line-height: 1.15;
-          margin-bottom: 4px;
-        }
-
-        .benefitText {
-          color: rgba(255,255,255,0.78);
-          line-height: 1.4;
-          font-size: 12.5px;
-          font-weight: 750;
-        }
-
-        .sampleCard {
-          margin-top: 3px;
-          border-radius: 24px;
-          padding: 15px;
-          background: rgba(255,255,255,0.10);
-          border: 1px solid rgba(255,255,255,0.16);
-        }
-
-        .sampleTop {
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-          align-items: center;
-          margin-bottom: 12px;
-        }
-
-        .sampleDoorable {
-          display: grid;
-          grid-template-columns: 68px 1fr;
-          gap: 12px;
-          align-items: center;
+        .trustItem {
           border-radius: 18px;
           padding: 12px;
-          background: rgba(255,255,255,0.92);
-          color: #111827;
+          background: rgba(255,255,255,0.10);
+          border: 1px solid rgba(255,255,255,0.14);
+          color: rgba(255,255,255,0.88);
+          font-size: 13px;
+          line-height: 1.4;
+          font-weight: 850;
         }
 
-        .sampleImage {
-          width: 68px;
-          height: 68px;
-          border-radius: 18px;
+        .formTitle {
+          color: #312e81;
+          font-size: clamp(1.7rem, 4vw, 2.35rem);
+          line-height: 1;
+          letter-spacing: -1px;
+          font-weight: 1000;
+          margin-bottom: 8px;
+        }
+
+        .formText {
+          color: #475569;
+          line-height: 1.55;
+          font-size: 14px;
+          font-weight: 820;
+          margin-bottom: 16px;
+        }
+
+        .modeTabs {
           display: grid;
-          place-items: center;
-          background: linear-gradient(135deg, #ede9fe, #bfdbfe);
-          font-size: 30px;
-        }
-
-        .sampleProgress {
-          height: 9px;
-          border-radius: 999px;
-          background: rgba(255,255,255,0.18);
-          overflow: hidden;
-          margin-top: 12px;
-        }
-
-        .sampleFill {
-          height: 100%;
-          width: 62%;
-          border-radius: inherit;
-          background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
-        }
-
-        .authCard {
-          background: linear-gradient(180deg, #ffffff, #f8fafc);
-          color: #111827;
-          padding: 22px;
-        }
-
-        .modeSwitch {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 8px;
           padding: 6px;
-          border-radius: 17px;
+          border-radius: 18px;
           background: #eef2ff;
           border: 1px solid #c7d2fe;
           margin-bottom: 16px;
         }
 
-        .modeButton {
-          min-height: 46px;
-          padding: 10px 14px;
-          border-radius: 13px;
+        .tabButton {
+          min-height: 42px;
           border: none;
-          cursor: pointer;
-          font-weight: 950;
-          background: transparent;
+          border-radius: 13px;
+          padding: 9px;
           color: #3730a3;
-        }
-
-        .modeButtonActive {
-          background: linear-gradient(135deg, #4f46e5, #7c3aed);
-          color: white;
-          box-shadow: 0 10px 18px rgba(79,70,229,0.22);
-        }
-
-        .formTitle {
-          font-size: clamp(1.7rem, 4vw, 2.35rem);
+          background: transparent;
+          font-family: inherit;
           font-weight: 1000;
-          letter-spacing: -1px;
-          line-height: 1;
-          margin-bottom: 7px;
+          cursor: pointer;
         }
 
-        .formSub {
-          color: #64748b;
-          line-height: 1.5;
-          font-weight: 750;
-          margin-bottom: 16px;
+        .tabButton.active {
+          color: white;
+          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          box-shadow: 0 10px 20px rgba(79,70,229,0.20);
         }
 
-        .fieldLabel {
+        .formGrid {
+          display: grid;
+          gap: 12px;
+        }
+
+        .label {
           display: block;
+          color: #334155;
           font-size: 13px;
           font-weight: 950;
-          color: #334155;
           margin-bottom: 6px;
         }
 
         .field {
           width: 100%;
-          padding: 14px;
-          border-radius: 15px;
+          min-height: 50px;
+          border-radius: 16px;
           border: 1px solid #d1d5db;
+          padding: 13px 14px;
+          color: #111827;
+          background: white;
           box-sizing: border-box;
           font-size: 15px;
-          background: white;
-          color: #111827;
           outline: none;
         }
 
@@ -728,450 +413,317 @@ export default function LoginPage() {
         }
 
         .primaryButton,
-        .secondaryButton,
-        .primaryButton:visited,
-        .secondaryButton:visited {
-          min-height: 50px;
-          padding: 12px 16px;
+        .secondaryButton {
+          min-height: 52px;
           border-radius: 999px;
-          text-decoration: none;
+          padding: 14px 18px;
+          border: none;
+          font-family: inherit;
           font-weight: 1000;
           cursor: pointer;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          border: none;
           box-sizing: border-box;
         }
 
-        .primaryButton,
-        .primaryButton:visited {
-          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+        .primaryButton {
+          width: 100%;
           color: white;
-          box-shadow: 0 14px 26px rgba(79,70,229,0.26);
+          background: linear-gradient(135deg, #ec4899, #7c3aed, #2563eb);
+          box-shadow: 0 14px 30px rgba(124,58,237,0.26);
         }
 
-        .secondaryButton,
-        .secondaryButton:visited {
-          border: 1px solid #c7d2fe;
-          background: #eef2ff;
+        .secondaryButton {
           color: #3730a3;
+          background: #eef2ff;
+          border: 1px solid #c7d2fe;
         }
 
-        .togglePasswordButton {
-          position: absolute;
-          right: 8px;
-          top: 50%;
-          transform: translateY(-50%);
-          border: 1px solid #d1d5db;
-          background: #f8fafc;
-          color: #111827;
-          border-radius: 999px;
-          padding: 8px 10px;
-          font-weight: 850;
-          cursor: pointer;
+        .primaryButton:disabled,
+        .secondaryButton:disabled {
+          opacity: 0.62;
+          cursor: wait;
         }
 
         .messageBox {
-          margin-top: 4px;
-          font-size: 14px;
-          border-radius: 16px;
-          padding: 12px 13px;
-          font-weight: 850;
+          border-radius: 18px;
+          padding: 13px;
           line-height: 1.45;
-        }
-
-        .successBox {
-          color: #166534;
-          background: #ecfdf5;
-          border: 1px solid #bbf7d0;
-        }
-
-        .errorBox {
-          color: #b91c1c;
-          background: #fff1f2;
-          border: 1px solid #fecdd3;
-        }
-
-        .trustStrip {
-          margin-top: 16px;
-          display: grid;
-          gap: 9px;
-        }
-
-        .trustItem {
-          display: grid;
-          grid-template-columns: 30px 1fr;
-          gap: 8px;
-          align-items: start;
-          padding: 11px;
-          border-radius: 16px;
+          font-size: 13px;
+          font-weight: 900;
+          margin-bottom: 14px;
+          color: #334155;
           background: #f8fafc;
           border: 1px solid #e5e7eb;
-          color: #475569;
-          font-weight: 800;
-          line-height: 1.4;
-          font-size: 13px;
         }
 
-        @media (max-width: 960px) {
+        .signedInBox {
+          border-radius: 20px;
+          padding: 14px;
+          color: #065f46;
+          background: #ecfdf5;
+          border: 1px solid #bbf7d0;
+          margin-bottom: 14px;
+          line-height: 1.45;
+          font-size: 13px;
+          font-weight: 900;
+        }
+
+        .signedInActions {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 9px;
+          margin-top: 12px;
+        }
+
+        .helperLinks {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 14px;
+          color: #4f46e5;
+          font-size: 13px;
+          font-weight: 950;
+        }
+
+        .finePrint {
+          margin-top: 14px;
+          color: #64748b;
+          font-size: 12px;
+          line-height: 1.45;
+          font-weight: 750;
+        }
+
+        @media (max-width: 920px) {
           .shell {
-            padding: 14px;
-            padding-bottom: 58px;
-          }
-
-          .topNav {
-            align-items: flex-start;
-          }
-
-          .brandIcon {
-            width: 54px;
-            height: 54px;
-            font-size: 29px;
-          }
-
-          .navPill:not(.homePill) {
-            display: none;
+            padding: 12px;
+            align-items: start;
           }
 
           .layout {
             grid-template-columns: 1fr;
+            gap: 12px;
           }
 
-          .heroPanel,
-          .authCard {
-            border-radius: 25px;
+          .heroCard,
+          .formCard {
+            border-radius: 24px;
           }
 
-          .heroPanel {
-            padding: 21px;
-          }
-
-          .headline {
-            font-size: clamp(2rem, 11vw, 3.05rem);
-          }
-
-          .benefitGrid {
-            grid-template-columns: 1fr;
-          }
-
-          .authCard {
+          .heroCard {
             padding: 18px;
           }
 
-          .primaryButton,
-          .secondaryButton {
-            width: 100%;
+          .formCard {
+            padding: 16px;
           }
-        }
 
-        @media (max-width: 440px) {
-          .sampleDoorable {
+          .brandIcon {
+            width: 58px;
+            height: 58px;
+            border-radius: 20px;
+            font-size: 30px;
+            margin-bottom: 12px;
+          }
+
+          .badge {
+            padding: 7px 10px;
+            font-size: 12px;
+            margin-bottom: 10px;
+          }
+
+          .headline {
+            font-size: clamp(1.9rem, 9vw, 2.7rem);
+            line-height: 0.98;
+            letter-spacing: -1.2px;
+          }
+
+          .heroText {
+            font-size: 14px;
+            line-height: 1.48;
+            margin-top: 12px;
+          }
+
+          .trustGrid {
             grid-template-columns: 1fr;
-            text-align: center;
+            gap: 8px;
+            margin-top: 12px;
           }
 
-          .sampleImage {
-            margin: 0 auto;
+          .trustItem {
+            padding: 10px;
+            border-radius: 15px;
+            font-size: 12.5px;
+          }
+
+          .modeTabs {
+            grid-template-columns: 1fr;
+          }
+
+          .signedInActions {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
 
       <div className="shell">
-        <nav className="topNav">
-          <Link href="/" className="brand">
-            <span className="brandIcon">💎</span>
-            <span>
-              <span className="brandTitle">Adorable Vault</span>
-              <span className="brandSub">track • trade • showcase</span>
-            </span>
-          </Link>
-
-          <div className="navActions">
-            <Link href="/" className="navPill homePill">
-              Home
-            </Link>
-            <Link href="/pricing" className="navPill">
-              Plans
-            </Link>
-            <Link href="/about" className="navPill">
-              About
-            </Link>
-          </div>
-        </nav>
-
-        <div className="layout">
-          <section className="heroPanel">
-            <div className="badge">
-              ✨ Free collector vault • save up to 50 Doorables ✨
-            </div>
-
-            <h1 className="headline">
-              Your Doorables checklist, wishlist, and extras tracker in one place.
-            </h1>
-
+        <section className="layout">
+          <div className="heroCard">
+            <div className="brandIcon">💜</div>
+            <div className="badge">Adorable Vault collector login</div>
+            <h1 className="headline">Get back into your Doorables vault.</h1>
             <div className="heroText">
-              Sign in or create a free vault to track what you own, find what you still need,
-              organize duplicates, and unlock marketplace tools when you are ready.
+              Sign in to keep tracking your collection, wishlist, extras, marketplace listings, messages,
+              and public collector profile — all without the chaos.
             </div>
 
-            <div className="benefitGrid">
-              <div className="benefit">
-                <div className="benefitIcon">📦</div>
-                <div className="benefitTitle">Track collection</div>
-                <div className="benefitText">Owned, needed, notes, rarity, movies, series, and extras.</div>
-              </div>
-
-              <div className="benefit">
-                <div className="benefitIcon">🔎</div>
-                <div className="benefitTitle">Search fast</div>
-                <div className="benefitText">Check your vault from your phone while shopping or watching lives.</div>
-              </div>
-
-              <div className="benefit">
-                <div className="benefitIcon">🛍️</div>
-                <div className="benefitTitle">Marketplace</div>
-                <div className="benefitText">Browse, list extras, and message collectors with full access.</div>
-              </div>
-
-              <div className="benefit">
-                <div className="benefitIcon">💜</div>
-                <div className="benefitTitle">Fan-made</div>
-                <div className="benefitText">Built for collectors who want less chaos and more checklist magic.</div>
-              </div>
+            <div className="trustGrid">
+              <div className="trustItem">🚫 No ads. Ever. Just collector tools.</div>
+              <div className="trustItem">💜 Free accounts can save up to 50 Doorables.</div>
+              <div className="trustItem">🛍️ Marketplace and selling unlock with Full Access.</div>
+              <div className="trustItem">🔐 Checkout and account access stay separate and secure.</div>
             </div>
+          </div>
 
-            <div className="sampleCard">
-              <div className="sampleTop">
-                <div>
-                  <div style={{ color: "#fde68a", fontWeight: 1000, fontSize: 13 }}>
-                    SAMPLE COLLECTION CARD
-                  </div>
-                  <div style={{ fontWeight: 1000, fontSize: 20, marginTop: 3 }}>
-                    See how tracking feels
-                  </div>
-                </div>
-                <div style={{ fontWeight: 1000, color: "#d8b4fe" }}>62%</div>
-              </div>
+          <div className="formCard">
+            <div className="formTitle">{title}</div>
+            <div className="formText">{subtitle}</div>
 
-              <div className="sampleDoorable">
-                <div className="sampleImage">💎</div>
-                <div>
-                  <div style={{ fontWeight: 1000, fontSize: 17 }}>
-                    Mystery Doorable
-                  </div>
-                  <div style={{ color: "#64748b", fontSize: 13, fontWeight: 800, marginTop: 3 }}>
-                    Series Tracker • Rare • Wishlist
-                  </div>
-                  <div style={{ marginTop: 8, display: "flex", gap: 7, flexWrap: "wrap" }}>
-                    <span style={{ borderRadius: 999, padding: "5px 8px", background: "#dcfce7", color: "#166534", fontWeight: 900, fontSize: 12 }}>
-                      Have: 1
-                    </span>
-                    <span style={{ borderRadius: 999, padding: "5px 8px", background: "#eef2ff", color: "#3730a3", fontWeight: 900, fontSize: 12 }}>
-                      Need more
-                    </span>
-                  </div>
+            {checkingUser ? (
+              <div className="messageBox">Checking your current session...</div>
+            ) : currentEmail ? (
+              <div className="signedInBox">
+                You are currently signed in as <strong>{currentEmail}</strong>.
+                <div className="signedInActions">
+                  <Link href={nextPath} className="primaryButton">
+                    Continue to Vault
+                  </Link>
+                  <button
+                    type="button"
+                    className="secondaryButton"
+                    onClick={() => void handleSignOut()}
+                    disabled={loading}
+                  >
+                    Sign Out
+                  </button>
                 </div>
               </div>
+            ) : null}
 
-              <div className="sampleProgress">
-                <div className="sampleFill" />
-              </div>
-            </div>
-          </section>
-
-          <section className="authCard">
-            <div className="modeSwitch">
+            <div className="modeTabs" aria-label="Login options">
               <button
                 type="button"
+                className={`tabButton ${mode === "signin" ? "active" : ""}`}
                 onClick={() => {
                   setMode("signin");
                   setMessage("");
                 }}
-                className={`modeButton ${mode === "signin" ? "modeButtonActive" : ""}`}
               >
                 Sign In
               </button>
               <button
                 type="button"
+                className={`tabButton ${mode === "signup" ? "active" : ""}`}
                 onClick={() => {
                   setMode("signup");
                   setMessage("");
                 }}
-                className={`modeButton ${mode === "signup" ? "modeButtonActive" : ""}`}
               >
-                Sign Up Free
+                Create
+              </button>
+              <button
+                type="button"
+                className={`tabButton ${mode === "reset" ? "active" : ""}`}
+                onClick={() => {
+                  setMode("reset");
+                  setMessage("");
+                }}
+              >
+                Reset
               </button>
             </div>
 
-            <div className="formTitle">
-              {mode === "signin" ? "Welcome back 💜" : "Create your free vault ✨"}
-            </div>
-            <div className="formSub">
-              {mode === "signin"
-                ? "Sign in to open your collection, messages, marketplace tools, and saved progress."
-                : "Start free with up to 50 saved Doorables. Upgrade later only when you are ready."}
-            </div>
+            {message ? <div className="messageBox">{message}</div> : null}
 
-            <div style={{ display: "grid", gap: 13 }}>
+            <div className="formGrid">
               <div>
-                <label className="fieldLabel">Email</label>
+                <label className="label">Email</label>
                 <input
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
                   className="field"
                   type="email"
                   autoComplete="email"
+                  placeholder="you@example.com"
                 />
               </div>
 
-              {mode === "signup" && (
+              {mode !== "reset" ? (
                 <div>
-                  <label className="fieldLabel">Username</label>
+                  <label className="label">Password</label>
                   <input
-                    value={username}
-                    onChange={(e) => setUsername(sanitizeUsernameInput(e.target.value))}
-                    placeholder="Collector username"
-                    className="field"
-                    autoComplete="username"
-                  />
-                  <div
-                    style={{
-                      marginTop: 6,
-                      fontSize: 13,
-                      color: usernameHelpColor,
-                      fontWeight:
-                        usernameStatus === "available" || usernameStatus === "taken"
-                          ? 800
-                          : 600,
-                    }}
-                  >
-                    {usernameHelp || "Letters, numbers, and underscores only."}
-                  </div>
-                  <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
-                    Usernames are saved lowercase so duplicates do not happen.
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="fieldLabel">Password</label>
-                <div style={{ position: "relative" }}>
-                  <input
-                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Password"
                     className="field"
-                    autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                    style={{ padding: "14px 92px 14px 14px" }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        void handleSubmit();
-                      }
+                    type="password"
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                    placeholder={mode === "signup" ? "Create a password" : "Your password"}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void handleSubmit();
                     }}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="togglePasswordButton"
-                  >
-                    {showPassword ? "Hide" : "Show"}
-                  </button>
                 </div>
+              ) : null}
 
-                {password && (
-                  <div style={{ marginTop: 10 }}>
-                    <div
-                      style={{
-                        height: 10,
-                        borderRadius: 999,
-                        background: "#e5e7eb",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: "100%",
-                          width: passwordStrength.width,
-                          background: passwordStrength.color,
-                          transition: "width 0.2s ease",
-                        }}
-                      />
-                    </div>
-                    <div
-                      style={{
-                        marginTop: 6,
-                        fontSize: 13,
-                        fontWeight: 800,
-                        color: passwordStrength.color,
-                      }}
-                    >
-                      Password strength: {passwordStrength.label}
-                    </div>
-                    {mode === "signup" && (
-                      <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
-                        Use at least 8 characters. Stronger passwords usually include uppercase,
-                        lowercase, numbers, and symbols.
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  onClick={() => void handleSubmit()}
-                  disabled={loading}
-                  className="primaryButton"
-                  style={{ opacity: loading ? 0.7 : 1 }}
-                >
-                  {loading
-                    ? mode === "signin"
-                      ? "Signing In..."
-                      : "Creating Account..."
-                    : mode === "signin"
-                      ? "Open My Vault"
-                      : "Create Free Vault"}
-                </button>
-
-                {mode === "signin" && (
-                  <button
-                    type="button"
-                    onClick={() => void handleForgotPassword()}
-                    className="secondaryButton"
-                  >
-                    Forgot Password
-                  </button>
-                )}
-              </div>
-
-              {!!message && (
-                <div className={`messageBox ${messageIsSuccess ? "successBox" : "errorBox"}`}>
-                  {message}
-                </div>
-              )}
+              <button
+                type="button"
+                className="primaryButton"
+                onClick={() => void handleSubmit()}
+                disabled={loading}
+              >
+                {loading
+                  ? "Working..."
+                  : mode === "signup"
+                    ? "Create Free Account 💜"
+                    : mode === "reset"
+                      ? "Send Reset Email"
+                      : "Sign In 💜"}
+              </button>
             </div>
 
-            <div className="trustStrip">
-              <div className="trustItem">
-                <span>✅</span>
-                <span>Free accounts can save up to 50 Doorables before upgrading.</span>
-              </div>
-              <div className="trustItem">
-                <span>🔐</span>
-                <span>Your login is handled through secure Supabase authentication.</span>
-              </div>
-              <div className="trustItem">
-                <span>💜</span>
-                <span>Adorable Vault is fan-made and built for collector organization.</span>
-              </div>
+            <div className="helperLinks">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode(mode === "signin" ? "signup" : "signin");
+                  setMessage("");
+                }}
+                style={{
+                  color: "#4f46e5",
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                  fontFamily: "inherit",
+                  fontWeight: 950,
+                  cursor: "pointer",
+                }}
+              >
+                {mode === "signin" ? "Need an account?" : "Already have an account?"}
+              </button>
+
+              <Link href="/pricing">View plans</Link>
+              <Link href="/">Back home</Link>
             </div>
-          </section>
-        </div>
+
+            <div className="finePrint">
+              This page no longer auto-redirects away from login. If you are already signed in,
+              you can continue to your vault or sign out and use another account.
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   );

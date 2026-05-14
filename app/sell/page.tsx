@@ -100,7 +100,7 @@ function getSafeNextPath() {
 
 function formatMoney(value: string) {
   const clean = value.trim();
-  if (!clean) return "No price listed";
+  if (!clean) return "Add a price";
   const number = Number(clean);
   if (Number.isNaN(number)) return "Price preview";
   return `$${number.toFixed(2)}`;
@@ -329,6 +329,7 @@ export default function SellPage() {
   function validateForm() {
     if (!title.trim()) return "Please add a listing title.";
     if (title.trim().length < 3) return "Please make the title a little more descriptive.";
+    if (!price.trim()) return "Please add a listing price.";
     if (!shippingEnabled && !localPickupEnabled) {
       return "Please choose shipping, local pickup, or both.";
     }
@@ -1060,6 +1061,91 @@ export default function SellPage() {
           font-size: 13px;
         }
 
+        .extrasSellCard {
+          margin-top: 18px;
+          border-radius: 28px;
+          padding: 22px;
+          color: #111827;
+          background:
+            radial-gradient(circle at top right, rgba(196,181,253,0.36), transparent 32%),
+            radial-gradient(circle at bottom left, rgba(250,204,21,0.22), transparent 34%),
+            linear-gradient(180deg, #ffffff, #f8fafc);
+          border: 1px solid rgba(255,255,255,0.62);
+          box-shadow: 0 20px 46px rgba(0,0,0,0.24);
+        }
+
+        .extrasSellBadge {
+          display: inline-flex;
+          width: fit-content;
+          align-items: center;
+          gap: 7px;
+          border-radius: 999px;
+          padding: 8px 12px;
+          color: #5b21b6;
+          background: #ede9fe;
+          border: 1px solid #ddd6fe;
+          font-size: 12px;
+          font-weight: 1000;
+          margin-bottom: 10px;
+        }
+
+        .extrasSellTitle {
+          margin: 0;
+          color: #312e81;
+          font-size: clamp(1.55rem, 3.4vw, 2.35rem);
+          line-height: 1.02;
+          letter-spacing: -0.9px;
+          font-weight: 1000;
+        }
+
+        .extrasSellText {
+          margin-top: 10px;
+          color: #475569;
+          line-height: 1.6;
+          font-size: 14px;
+          font-weight: 820;
+          max-width: 880px;
+        }
+
+        .extrasSellGrid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+          margin-top: 14px;
+        }
+
+        .extrasSellItem {
+          display: grid;
+          grid-template-columns: 36px 1fr;
+          gap: 10px;
+          align-items: start;
+          border-radius: 18px;
+          padding: 13px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          color: #475569;
+          font-size: 13px;
+          font-weight: 850;
+          line-height: 1.42;
+        }
+
+        .extrasSellIcon {
+          width: 36px;
+          height: 36px;
+          border-radius: 14px;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(135deg, #ede9fe, #bfdbfe);
+          color: #312e81;
+        }
+
+        .extrasSellActions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 16px;
+        }
+
         .mobileSticky {
           position: fixed;
           left: 12px;
@@ -1195,6 +1281,20 @@ export default function SellPage() {
             border-radius: 18px;
           }
 
+          .extrasSellCard {
+            border-radius: 22px;
+            padding: 16px;
+          }
+
+          .extrasSellGrid {
+            grid-template-columns: 1fr;
+          }
+
+          .extrasSellActions {
+            display: grid;
+            grid-template-columns: 1fr;
+          }
+
           .listingPreviewTitle {
             font-size: 19px;
           }
@@ -1324,7 +1424,7 @@ export default function SellPage() {
                 <div>
                   <label className="fieldLabel">
                     <span>Price</span>
-                    <span>{numericPrice !== null ? formatMoney(price) : "Optional"}</span>
+                    <span className="required">Required</span>
                   </label>
                   <input
                     className="field"
@@ -1333,7 +1433,9 @@ export default function SellPage() {
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                   />
-                  <div className="noteBox">Leave blank if you want people to message you for price.</div>
+                  <div className="noteBox">
+                    {numericPrice !== null ? `Price preview: ${formatMoney(price)}` : "Add the exact price buyers should expect."}
+                  </div>
                 </div>
               </div>
 
@@ -1589,6 +1691,38 @@ export default function SellPage() {
             </section>
           </aside>
         </div>
+
+        <section className="extrasSellCard">
+          <div className="extrasSellBadge">💸 Sell extras smarter</div>
+          <h2 className="extrasSellTitle">Got duplicates? Turn your extras into easy Marketplace listings.</h2>
+          <div className="extrasSellText">
+            The fastest workflow is to check your collection first, filter to Extras, then list the duplicates you are ready to sell or trade. Keep one for your vault, price the extras clearly, and give buyers enough detail to feel comfortable messaging you.
+          </div>
+
+          <div className="extrasSellGrid">
+            <div className="extrasSellItem">
+              <span className="extrasSellIcon">🔎</span>
+              <span>Use the Extras filter in your collection to find duplicates without digging through everything.</span>
+            </div>
+            <div className="extrasSellItem">
+              <span className="extrasSellIcon">⚡</span>
+              <span>Use Auto-list Extras from the collection page when you want to create listings faster.</span>
+            </div>
+            <div className="extrasSellItem">
+              <span className="extrasSellIcon">💜</span>
+              <span>Price each extra clearly so collectors know what to expect before they message you.</span>
+            </div>
+          </div>
+
+          <div className="extrasSellActions">
+            <Link href="/collection" className="submitButton">
+              View My Extras
+            </Link>
+            <Link href="/marketplace" className="secondaryButton">
+              Browse Marketplace
+            </Link>
+          </div>
+        </section>
       </div>
 
       <div className="mobileSticky">

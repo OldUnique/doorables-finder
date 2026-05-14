@@ -23,6 +23,14 @@ type MarketplaceListing = {
   pickup_location: string | null;
 };
 
+const DESCRIPTION_TEMPLATES = [
+  "New from blind box.",
+  "Smoke-free home.",
+  "May have normal manufactured paint or factory flaws.",
+  "Please ask questions before buying.",
+  "Bundle deals welcome.",
+];
+
 async function compressImage(file: File): Promise<File> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -33,9 +41,8 @@ async function compressImage(file: File): Promise<File> {
     img.onload = () => {
       URL.revokeObjectURL(objectUrl);
 
-      const MAX_WIDTH = 900;
-      const MAX_HEIGHT = 900;
-
+      const MAX_WIDTH = 1000;
+      const MAX_HEIGHT = 1000;
       let width = img.width;
       let height = img.height;
 
@@ -73,7 +80,7 @@ async function compressImage(file: File): Promise<File> {
           );
         },
         "image/jpeg",
-        0.72
+        0.76
       );
     };
 
@@ -97,6 +104,20 @@ function formatMoney(value: string) {
   const number = Number(clean);
   if (Number.isNaN(number)) return "Price preview";
   return `$${number.toFixed(2)}`;
+}
+
+function formatNumberValue(value: string) {
+  const clean = value.trim();
+  if (!clean) return null;
+  const number = Number(clean);
+  if (Number.isNaN(number)) return null;
+  return number;
+}
+
+function getStatusText(status: ListingStatus) {
+  if (status === "sold") return "✅ Sold";
+  if (status === "pending") return "⏳ Pending";
+  return "🟢 Active";
 }
 
 export default function SellPage() {
@@ -125,7 +146,12 @@ export default function SellPage() {
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
+    document.title = editingId ? "Edit Listing | Adorable Vault" : "Create Listing | Adorable Vault";
+  }, [editingId]);
+
+  useEffect(() => {
     void checkUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function checkUser() {
@@ -162,7 +188,7 @@ export default function SellPage() {
           : "";
 
       if (editId) {
-        await loadListingForEdit(editId, user.id);
+        await loadListingForEdit(editId, user.id, resolvedUsername || user.email || "");
       }
 
       setCheckingAuth(false);
@@ -172,7 +198,11 @@ export default function SellPage() {
     }
   }
 
-  async function loadListingForEdit(listingId: string, currentUserId: string) {
+  async function loadListingForEdit(
+    listingId: string,
+    currentUserId: string,
+    fallbackSeller = ""
+  ) {
     const { data, error } = await supabase
       .from("marketplace_listings")
       .select(`
@@ -211,7 +241,7 @@ export default function SellPage() {
     setDescription(String(listing.description ?? ""));
     setPrice(listing.price === null || listing.price === undefined ? "" : String(listing.price));
     setImageUrl(String(listing.image_url ?? ""));
-    setSeller(String(listing.seller_name ?? seller ?? ""));
+    setSeller(String(listing.seller_name ?? fallbackSeller ?? ""));
     setShippingEnabled(!!listing.shipping_available);
     setShippingPrice(
       listing.shipping_price === null || listing.shipping_price === undefined
@@ -251,8 +281,8 @@ export default function SellPage() {
       }
 
       const compressedFile = await compressImage(file);
-      const previewUrl = URL.createObjectURL(compressedFile);
-      setImageUrl(previewUrl);
+      const localPreviewUrl = URL.createObjectURL(compressedFile);
+      setImageUrl(localPreviewUrl);
 
       const {
         data: { user },
@@ -276,8 +306,6 @@ export default function SellPage() {
           upsert: false,
         });
 
-      URL.revokeObjectURL(previewUrl);
-
       if (uploadError) {
         setError(uploadError.message);
         setUploading(false);
@@ -289,6 +317,7 @@ export default function SellPage() {
         .getPublicUrl(fileName);
 
       setImageUrl(data.publicUrl);
+      URL.revokeObjectURL(localPreviewUrl);
       setNotice("Image uploaded and compressed 💜");
       setUploading(false);
     } catch (error) {
@@ -410,6 +439,38 @@ export default function SellPage() {
     }
   }
 
+  function addDescriptionTemplate(template: string) {
+    setDescription((prev) => {
+      const cleanPrev = prev.trim();
+      if (cleanPrev.toLowerCase().includes(template.toLowerCase())) return prev;
+      return cleanPrev ? `${cleanPrev}\n${template}` : template;
+    });
+  }
+
+  const completeness = useMemo(() => {
+    let score = 0;
+    if (title.trim().length >= 3) score += 20;
+    if (description.trim().length >= 20) score += 20;
+    if (price.trim()) score += 15;
+    if (imageUrl.trim()) score += 20;
+    if (shippingEnabled || localPickupEnabled) score += 15;
+    if ((shippingEnabled && shippingPrice.trim()) || !shippingEnabled) score += 5;
+    if ((localPickupEnabled && pickupLocation.trim()) || !localPickupEnabled) score += 5;
+    return Math.min(100, score);
+  }, [description, imageUrl, localPickupEnabled, pickupLocation, price, shippingEnabled, shippingPrice, title]);
+
+  const canSubmit = !loading && !uploading;
+  const deliveryLabel = shippingEnabled && localPickupEnabled
+    ? "Shipping + local pickup"
+    : shippingEnabled
+      ? "Shipping available"
+      : localPickupEnabled
+        ? "Local pickup available"
+        : "Choose delivery";
+
+  const hasImage = !!imageUrl.trim();
+  const numericPrice = formatNumberValue(price);
+
   if (checkingAuth) {
     return (
       <main className="page loadingPage">
@@ -443,6 +504,9 @@ export default function SellPage() {
         <div className="loadingCard">
           <div style={{ fontSize: 34, marginBottom: 10 }}>🛍️</div>
           <div style={{ fontWeight: 1000, fontSize: 22 }}>Checking your account...</div>
+          <div style={{ marginTop: 8, color: "rgba(255,255,255,0.78)", fontWeight: 800 }}>
+            Getting your seller tools ready.
+          </div>
         </div>
       </main>
     );
@@ -481,10 +545,10 @@ export default function SellPage() {
         .shell {
           position: relative;
           z-index: 1;
-          max-width: 1220px;
+          max-width: 1240px;
           margin: 0 auto;
-          padding: 22px;
-          padding-bottom: 84px;
+          padding: 20px;
+          padding-bottom: 112px;
         }
 
         .pageLinks {
@@ -492,7 +556,7 @@ export default function SellPage() {
           gap: 12px;
           flex-wrap: wrap;
           align-items: center;
-          margin-bottom: 18px;
+          margin-bottom: 16px;
         }
 
         .pageLink,
@@ -502,12 +566,12 @@ export default function SellPage() {
           justify-content: center;
           min-height: 48px;
           padding: 12px 18px;
-          border-radius: 16px;
+          border-radius: 999px;
           text-decoration: none;
-          font-weight: 950;
-          letter-spacing: 0.01em;
+          font-weight: 1000;
           transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
           backdrop-filter: blur(8px);
+          box-sizing: border-box;
         }
 
         .pageLink:hover {
@@ -520,7 +584,6 @@ export default function SellPage() {
           background: rgba(15, 23, 42, 0.72);
           border: 1px solid rgba(255,255,255,0.28);
           box-shadow: 0 12px 26px rgba(15,23,42,0.28);
-          text-shadow: 0 1px 0 rgba(0,0,0,0.25);
         }
 
         .pageLinkMarketplace,
@@ -529,7 +592,6 @@ export default function SellPage() {
           background: linear-gradient(135deg, #4f46e5, #7c3aed);
           border: 1px solid rgba(255,255,255,0.34);
           box-shadow: 0 14px 30px rgba(79,70,229,0.38);
-          text-shadow: 0 1px 0 rgba(0,0,0,0.22);
         }
 
         .hero {
@@ -542,9 +604,9 @@ export default function SellPage() {
           border: 1px solid rgba(255,255,255,0.16);
           box-shadow: 0 26px 64px rgba(0,0,0,0.36);
           display: grid;
-          grid-template-columns: 1fr auto;
+          grid-template-columns: minmax(0, 1fr) minmax(260px, 0.38fr);
           gap: 18px;
-          align-items: center;
+          align-items: stretch;
         }
 
         .heroBadge {
@@ -563,7 +625,7 @@ export default function SellPage() {
 
         .heroTitle {
           margin: 0;
-          font-size: clamp(2.15rem, 5.4vw, 4rem);
+          font-size: clamp(2.05rem, 5.4vw, 4rem);
           line-height: 0.96;
           letter-spacing: -1.8px;
           font-weight: 1000;
@@ -615,15 +677,32 @@ export default function SellPage() {
         .heroBubble {
           border-radius: 24px;
           padding: 18px;
-          min-width: 250px;
-          background: rgba(15,23,42,0.58);
+          background:
+            radial-gradient(circle at top right, rgba(250,204,21,0.16), transparent 35%),
+            rgba(15,23,42,0.58);
           border: 1px solid rgba(255,255,255,0.14);
           box-shadow: 0 14px 28px rgba(0,0,0,0.20);
+          display: grid;
+          align-content: center;
+        }
+
+        .qualityTrack {
+          height: 10px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.14);
+          overflow: hidden;
+          margin-top: 12px;
+        }
+
+        .qualityFill {
+          height: 100%;
+          border-radius: inherit;
+          background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
         }
 
         .layout {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) 370px;
+          grid-template-columns: minmax(0, 1fr) 382px;
           gap: 18px;
           align-items: start;
         }
@@ -639,11 +718,28 @@ export default function SellPage() {
           box-shadow: 0 20px 46px rgba(0,0,0,0.24);
         }
 
+        .previewStack {
+          display: grid;
+          gap: 18px;
+          position: sticky;
+          top: 92px;
+        }
+
         .sectionTitle {
           color: #312e81;
           font-size: 21px;
           font-weight: 1000;
           margin-bottom: 12px;
+          line-height: 1.1;
+        }
+
+        .sectionSub {
+          color: #64748b;
+          font-size: 13px;
+          line-height: 1.5;
+          font-weight: 800;
+          margin-top: -5px;
+          margin-bottom: 13px;
         }
 
         .formGrid {
@@ -651,12 +747,27 @@ export default function SellPage() {
           gap: 14px;
         }
 
+        .twoColumn {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+
         .fieldLabel {
-          display: block;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
           font-size: 13px;
           font-weight: 950;
           color: #334155;
           margin-bottom: 6px;
+        }
+
+        .required {
+          color: #7c3aed;
+          font-size: 12px;
+          font-weight: 1000;
         }
 
         .field,
@@ -666,10 +777,11 @@ export default function SellPage() {
           border-radius: 15px;
           border: 1px solid #d1d5db;
           box-sizing: border-box;
-          font-size: 15px;
+          font-size: 16px;
           background: white;
           color: #111827;
           outline: none;
+          font-family: inherit;
         }
 
         .field:focus,
@@ -679,8 +791,9 @@ export default function SellPage() {
         }
 
         .textarea {
-          min-height: 124px;
+          min-height: 128px;
           resize: vertical;
+          line-height: 1.5;
         }
 
         .sellerBox {
@@ -693,6 +806,9 @@ export default function SellPage() {
           font-size: 15px;
           font-weight: 900;
           color: #111827;
+          min-height: 50px;
+          display: flex;
+          align-items: center;
         }
 
         .panelBox {
@@ -709,8 +825,9 @@ export default function SellPage() {
         }
 
         .toggleButton,
-        .statusButton {
-          min-height: 48px;
+        .statusButton,
+        .templateButton {
+          min-height: 50px;
           padding: 12px 14px;
           border-radius: 16px;
           border: 1px solid #c7d2fe;
@@ -718,6 +835,7 @@ export default function SellPage() {
           color: #3730a3;
           font-weight: 950;
           cursor: pointer;
+          font-family: inherit;
         }
 
         .toggleButtonActive,
@@ -732,6 +850,21 @@ export default function SellPage() {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 8px;
+        }
+
+        .templateGrid {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-top: 9px;
+        }
+
+        .templateButton {
+          min-height: 38px;
+          border-radius: 999px;
+          padding: 8px 11px;
+          font-size: 12px;
+          background: #f5f3ff;
         }
 
         .uploadBox {
@@ -750,6 +883,7 @@ export default function SellPage() {
           background: white;
           border: 1px solid #d1d5db;
           box-sizing: border-box;
+          color: #111827;
         }
 
         .noteBox {
@@ -758,6 +892,11 @@ export default function SellPage() {
           color: #64748b;
           line-height: 1.5;
           font-weight: 750;
+        }
+
+        .counterGood {
+          color: #166534;
+          font-weight: 900;
         }
 
         .errorBox,
@@ -784,13 +923,14 @@ export default function SellPage() {
           display: flex;
           gap: 10px;
           flex-wrap: wrap;
+          align-items: center;
         }
 
         .submitButton,
         .secondaryButton,
         .submitButton:visited,
         .secondaryButton:visited {
-          min-height: 52px;
+          min-height: 54px;
           border-radius: 999px;
           padding: 13px 18px;
           font-weight: 1000;
@@ -800,6 +940,8 @@ export default function SellPage() {
           justify-content: center;
           gap: 8px;
           box-sizing: border-box;
+          font-family: inherit;
+          font-size: 15px;
         }
 
         .submitButton {
@@ -846,6 +988,7 @@ export default function SellPage() {
           font-weight: 1000;
           line-height: 1.1;
           margin-bottom: 6px;
+          word-break: break-word;
         }
 
         .listingPreviewPrice {
@@ -873,6 +1016,7 @@ export default function SellPage() {
           border: 1px solid #c7d2fe;
           font-size: 12px;
           font-weight: 950;
+          line-height: 1.2;
         }
 
         .previewDescription {
@@ -893,10 +1037,6 @@ export default function SellPage() {
           font-size: 13px;
           font-weight: 850;
           line-height: 1.45;
-        }
-
-        .noticeCard {
-          margin-top: 18px;
         }
 
         .noticeList {
@@ -920,46 +1060,121 @@ export default function SellPage() {
           font-size: 13px;
         }
 
+        .mobileSticky {
+          position: fixed;
+          left: 12px;
+          right: 12px;
+          bottom: 12px;
+          z-index: 70;
+          display: none;
+          grid-template-columns: 1fr auto;
+          gap: 9px;
+          align-items: center;
+          padding: 9px;
+          border-radius: 20px;
+          background: rgba(15,23,42,0.92);
+          border: 1px solid rgba(255,255,255,0.16);
+          backdrop-filter: blur(14px);
+          box-shadow: 0 18px 40px rgba(0,0,0,0.36);
+        }
+
+        .mobileStickyText {
+          color: white;
+          font-size: 12px;
+          line-height: 1.3;
+          font-weight: 900;
+        }
+
+        .mobileStickyButton {
+          min-height: 46px;
+          border: none;
+          border-radius: 16px;
+          padding: 11px 13px;
+          background: linear-gradient(135deg, #ec4899, #7c3aed, #2563eb);
+          color: white;
+          font-weight: 1000;
+          font-family: inherit;
+          white-space: nowrap;
+        }
+
         @media (max-width: 980px) {
           .shell {
-            padding: 14px;
-            padding-bottom: 60px;
+            padding: 12px;
+            padding-bottom: 96px;
           }
 
           .pageLinks {
             display: grid;
             grid-template-columns: 1fr 1fr;
+            gap: 9px;
           }
 
           .pageLink {
             width: 100%;
+            min-height: 46px;
+            padding: 11px 12px;
           }
 
           .hero {
             grid-template-columns: 1fr;
-            border-radius: 25px;
-            padding: 21px;
+            border-radius: 24px;
+            padding: 18px;
+            gap: 13px;
+          }
+
+          .heroTitle {
+            font-size: clamp(1.8rem, 9vw, 2.7rem);
+            letter-spacing: -1.2px;
+          }
+
+          .heroText {
+            font-size: 13.5px;
+            line-height: 1.5;
           }
 
           .heroBubble {
             min-width: 0;
+            border-radius: 20px;
           }
 
           .heroSteps {
-            grid-template-columns: 1fr;
+            display: flex;
+            overflow-x: auto;
+            gap: 9px;
+            padding-bottom: 2px;
+            scrollbar-width: none;
+          }
+
+          .heroSteps::-webkit-scrollbar {
+            display: none;
+          }
+
+          .heroStep {
+            flex: 0 0 78%;
+            min-height: 104px;
           }
 
           .layout {
             grid-template-columns: 1fr;
           }
 
+          .previewStack {
+            position: static;
+            gap: 12px;
+          }
+
           .formCard,
           .previewCard,
           .noticeCard {
-            border-radius: 23px;
-            padding: 18px;
+            border-radius: 22px;
+            padding: 16px;
           }
 
+          .previewStack {
+            order: -1;
+          }
+
+          .twoColumn,
           .toggleWrap,
           .statusGrid {
             grid-template-columns: 1fr;
@@ -976,13 +1191,52 @@ export default function SellPage() {
           }
 
           .previewImageBox {
-            min-height: 190px;
+            min-height: 180px;
+            border-radius: 18px;
+          }
+
+          .listingPreviewTitle {
+            font-size: 19px;
+          }
+
+          .listingPreviewPrice {
+            font-size: 22px;
+          }
+
+          .field,
+          .textarea {
+            font-size: 16px;
+          }
+
+          .mobileSticky {
+            display: grid;
           }
         }
 
-        @media (max-width: 640px) {
+        @media (max-width: 560px) {
           .pageLinks {
             grid-template-columns: 1fr;
+          }
+
+          .heroStep {
+            flex-basis: 88%;
+          }
+
+          .templateGrid {
+            display: grid;
+            grid-template-columns: 1fr;
+          }
+
+          .templateButton {
+            width: 100%;
+          }
+
+          .mobileSticky {
+            grid-template-columns: 1fr;
+          }
+
+          .mobileStickyButton {
+            width: 100%;
           }
         }
       `}</style>
@@ -1008,35 +1262,37 @@ export default function SellPage() {
             </h1>
 
             <div className="heroText">
-              Add a clear title, photo, price, delivery options, and condition notes.
-              Buyers can message you through Adorable Vault, but payment and delivery are handled directly between buyer and seller.
+              Add a clear title, photo, price, delivery options, and condition notes. Buyers can message you through Adorable Vault, while payment and delivery stay directly between buyer and seller.
             </div>
 
             <div className="heroSteps">
               <div className="heroStep">
                 <div className="heroStepNumber">1</div>
-                <div className="heroStepText">Add a title, photo, and a few details buyers will care about.</div>
+                <div className="heroStepText">Add a clear title, photo, and condition notes buyers will care about.</div>
               </div>
               <div className="heroStep">
                 <div className="heroStepNumber">2</div>
-                <div className="heroStepText">Choose shipping, pickup, or both so your delivery options are clear.</div>
+                <div className="heroStepText">Choose shipping, pickup, or both so expectations are clear.</div>
               </div>
               <div className="heroStep">
                 <div className="heroStepNumber">3</div>
-                <div className="heroStepText">Post to Marketplace and let buyers message you directly.</div>
+                <div className="heroStepText">Post it to Marketplace and let collectors message you directly.</div>
               </div>
             </div>
           </div>
 
           <div className="heroBubble">
             <div style={{ color: "#fde68a", fontSize: 13, fontWeight: 1000, marginBottom: 7 }}>
-              Seller profile
+              Listing strength
             </div>
-            <div style={{ fontSize: 22, fontWeight: 1000, lineHeight: 1.1 }}>
-              {seller || username || "Collector"}
+            <div style={{ fontSize: 28, fontWeight: 1000, lineHeight: 1 }}>
+              {completeness}%
             </div>
-            <div style={{ marginTop: 8, color: "rgba(255,255,255,0.78)", fontSize: 13, lineHeight: 1.45 }}>
-              Your Marketplace listing will show this seller name.
+            <div className="qualityTrack">
+              <div className="qualityFill" style={{ width: `${completeness}%` }} />
+            </div>
+            <div style={{ marginTop: 10, color: "rgba(255,255,255,0.78)", fontSize: 13, lineHeight: 1.45, fontWeight: 850 }}>
+              {deliveryLabel} • {hasImage ? "Photo added" : "Photo recommended"}
             </div>
           </div>
         </section>
@@ -1044,45 +1300,73 @@ export default function SellPage() {
         <div className="layout">
           <section className="formCard">
             <div className="sectionTitle">Listing details</div>
+            <div className="sectionSub">The clearer your listing is, the easier it is for another collector to say yes.</div>
 
             <div className="formGrid">
-              <div>
-                <label className="fieldLabel">Title</label>
-                <input
-                  className="field"
-                  placeholder="Example: Series 11 Stitch extra"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  maxLength={90}
-                />
-                <div className="noteBox">{title.length}/90 characters</div>
+              <div className="twoColumn">
+                <div>
+                  <label className="fieldLabel">
+                    <span>Title</span>
+                    <span className="required">Required</span>
+                  </label>
+                  <input
+                    className="field"
+                    placeholder="Example: Series 11 Stitch extra"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    maxLength={90}
+                  />
+                  <div className="noteBox">
+                    <span className={title.trim().length >= 3 ? "counterGood" : ""}>{title.length}/90 characters</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="fieldLabel">
+                    <span>Price</span>
+                    <span>{numericPrice !== null ? formatMoney(price) : "Optional"}</span>
+                  </label>
+                  <input
+                    className="field"
+                    placeholder="Example: 5 or 5.00"
+                    inputMode="decimal"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                  />
+                  <div className="noteBox">Leave blank if you want people to message you for price.</div>
+                </div>
               </div>
 
               <div>
-                <label className="fieldLabel">Seller</label>
+                <label className="fieldLabel">
+                  <span>Seller</span>
+                </label>
                 <div className="sellerBox">{seller || username || "Loading..."}</div>
               </div>
 
               <div>
-                <label className="fieldLabel">Description / condition notes</label>
+                <label className="fieldLabel">
+                  <span>Description / condition notes</span>
+                  <span>{description.length} characters</span>
+                </label>
                 <textarea
                   className="textarea"
                   placeholder="Example: New from blind box, may have normal manufactured defects. Smoke-free home. Please ask questions before buying."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
-              </div>
-
-              <div>
-                <label className="fieldLabel">Price</label>
-                <input
-                  className="field"
-                  placeholder="Example: 5 or 5.00"
-                  inputMode="decimal"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                />
-                <div className="noteBox">Leave blank if you want people to message you for price.</div>
+                <div className="templateGrid">
+                  {DESCRIPTION_TEMPLATES.map((template) => (
+                    <button
+                      key={template}
+                      type="button"
+                      className="templateButton"
+                      onClick={() => addDescriptionTemplate(template)}
+                    >
+                      + {template.replace(".", "")}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {editingId && (
@@ -1101,9 +1385,7 @@ export default function SellPage() {
                         key={option.value}
                         type="button"
                         onClick={() => setListingStatus(option.value as ListingStatus)}
-                        className={`statusButton ${
-                          listingStatus === option.value ? "statusButtonActive" : ""
-                        }`}
+                        className={`statusButton ${listingStatus === option.value ? "statusButtonActive" : ""}`}
                       >
                         {option.label}
                       </button>
@@ -1116,6 +1398,7 @@ export default function SellPage() {
                 <div className="sectionTitle" style={{ fontSize: 18, marginBottom: 10 }}>
                   Delivery options
                 </div>
+                <div className="sectionSub">Pick at least one. Avoid posting your full address publicly.</div>
 
                 <div className="toggleWrap">
                   <button
@@ -1137,7 +1420,10 @@ export default function SellPage() {
 
                 {shippingEnabled && (
                   <div style={{ marginTop: 12 }}>
-                    <label className="fieldLabel">Shipping price</label>
+                    <label className="fieldLabel">
+                      <span>Shipping price</span>
+                      <span className="required">Required</span>
+                    </label>
                     <input
                       className="field"
                       placeholder="Example: 6 or 0 for free shipping"
@@ -1151,16 +1437,17 @@ export default function SellPage() {
 
                 {localPickupEnabled && (
                   <div style={{ marginTop: 12 }}>
-                    <label className="fieldLabel">Pickup location</label>
+                    <label className="fieldLabel">
+                      <span>Pickup location</span>
+                      <span className="required">Required</span>
+                    </label>
                     <input
                       className="field"
                       placeholder="City, state only — avoid full address"
                       value={pickupLocation}
                       onChange={(e) => setPickupLocation(e.target.value)}
                     />
-                    <div className="noteBox">
-                      For safety, list a general city/state. Share exact meetup details privately.
-                    </div>
+                    <div className="noteBox">Share exact meetup details privately after messaging.</div>
                   </div>
                 )}
               </div>
@@ -1169,6 +1456,7 @@ export default function SellPage() {
                 <div className="sectionTitle" style={{ fontSize: 18, marginBottom: 10 }}>
                   Picture
                 </div>
+                <div className="sectionSub">A clear photo makes the Marketplace feel safer and easier to browse.</div>
 
                 <input
                   type="file"
@@ -1178,13 +1466,13 @@ export default function SellPage() {
                 />
 
                 <div className="noteBox">
-                  {uploading
-                    ? "Compressing and uploading image..."
-                    : "Images are compressed before upload to help save bandwidth."}
+                  {uploading ? "Compressing and uploading image..." : "Images are compressed before upload to help the site load faster."}
                 </div>
 
                 <div style={{ marginTop: 12 }}>
-                  <label className="fieldLabel">Or paste image URL</label>
+                  <label className="fieldLabel">
+                    <span>Or paste image URL</span>
+                  </label>
                   <input
                     className="field"
                     placeholder="https://..."
@@ -1200,16 +1488,18 @@ export default function SellPage() {
               <div className="buttonRow">
                 <button
                   onClick={() => void handleSubmit()}
-                  disabled={loading || uploading}
+                  disabled={!canSubmit}
                   className="submitButton"
                 >
                   {loading
                     ? editingId
                       ? "Saving..."
                       : "Posting..."
-                    : editingId
-                      ? "Save Listing"
-                      : "Post Listing"}
+                    : uploading
+                      ? "Uploading image..."
+                      : editingId
+                        ? "Save Listing"
+                        : "Post Listing"}
                 </button>
 
                 <Link href="/marketplace" className="secondaryButton">
@@ -1219,14 +1509,14 @@ export default function SellPage() {
             </div>
           </section>
 
-          <aside>
+          <aside className="previewStack">
             <section className="previewCard">
               <div className="sectionTitle">Live preview</div>
 
               <div className="previewImageBox">
-                {imageUrl ? (
+                {imageUrl.trim() ? (
                   <img
-                    src={imageUrl}
+                    src={imageUrl.trim()}
                     alt="Listing preview"
                     loading="lazy"
                     decoding="async"
@@ -1246,18 +1536,11 @@ export default function SellPage() {
               <div className="listingPreviewPrice">{formatMoney(price)}</div>
 
               <div className="pillRow">
-                <span className="pill">
-                  {listingStatus === "sold"
-                    ? "✅ Sold"
-                    : listingStatus === "pending"
-                      ? "⏳ Pending"
-                      : "🟢 Active"}
-                </span>
+                <span className="pill">{getStatusText(listingStatus)}</span>
 
                 {shippingEnabled && (
                   <span className="pill">
-                    🚚 Shipping
-                    {shippingPrice.trim() ? ` • ${formatMoney(shippingPrice)}` : ""}
+                    🚚 Shipping{shippingPrice.trim() ? ` • ${formatMoney(shippingPrice)}` : ""}
                   </span>
                 )}
 
@@ -1292,11 +1575,11 @@ export default function SellPage() {
                 </div>
                 <div className="noticeItem">
                   <span>📝</span>
-                  <span>Mention condition, defects, duplicates, or missing packaging.</span>
+                  <span>Mention condition, defects, duplicates, missing packaging, or bundle details.</span>
                 </div>
                 <div className="noticeItem">
-                  <span>💬</span>
-                  <span>Keep communication clear and only complete transactions you are comfortable with.</span>
+                  <span>📍</span>
+                  <span>Use city/state for pickup publicly. Share exact meetup details privately.</span>
                 </div>
                 <div className="noticeItem">
                   <span>⚠️</span>
@@ -1306,6 +1589,21 @@ export default function SellPage() {
             </section>
           </aside>
         </div>
+      </div>
+
+      <div className="mobileSticky">
+        <div className="mobileStickyText">
+          {editingId ? "Ready to save?" : "Ready to post?"}<br />
+          Listing strength: {completeness}%
+        </div>
+        <button
+          type="button"
+          className="mobileStickyButton"
+          onClick={() => void handleSubmit()}
+          disabled={!canSubmit}
+        >
+          {loading ? "Saving..." : uploading ? "Uploading..." : editingId ? "Save" : "Post"}
+        </button>
       </div>
     </main>
   );

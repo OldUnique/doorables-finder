@@ -15,6 +15,8 @@ type ProfileRow = {
 };
 
 const FREE_LIMIT = 50;
+const MONTHLY_PRICE_LABEL = "$3/month";
+const YEARLY_PRICE_LABEL = "$15/year";
 
 function cleanUsername(value: string) {
   return value
@@ -33,8 +35,16 @@ function normalizeVisibility(value: unknown): Visibility {
     .replace(/-/g, "_")
     .replace(/\+/g, "_");
 
-  if (["full", "public", "full_collection", "full_public", "all"].includes(clean)) return "full";
-  if (["extras_only", "wishlist_extras", "wishlist_and_extras", "wishlist", "extras"].includes(clean)) return "extras_only";
+  if (["full", "public", "full_collection", "full_public", "all"].includes(clean)) {
+    return "full";
+  }
+
+  if (
+    ["extras_only", "wishlist_extras", "wishlist_and_extras", "wishlist", "extras"].includes(clean)
+  ) {
+    return "extras_only";
+  }
+
   return "private";
 }
 
@@ -42,6 +52,18 @@ function visibilityLabel(value: Visibility) {
   if (value === "full") return "Full Collection";
   if (value === "extras_only") return "Wishlist + Extras";
   return "Private";
+}
+
+function visibilityHelp(value: Visibility) {
+  if (value === "full") {
+    return "Other collectors can see your full public collection, wishlist, and extras.";
+  }
+
+  if (value === "extras_only") {
+    return "Other collectors can see what you still need and what extras you may trade or sell.";
+  }
+
+  return "Only you can see your collection details.";
 }
 
 function safeNextPath() {
@@ -54,14 +76,73 @@ function getProfileUrl(username: string) {
   return `https://www.mydoorables.com/collector/${username}`;
 }
 
+function getFreeVaultMessage(ownedCount: number, isSubscribed: boolean) {
+  if (isSubscribed) {
+    return {
+      label: "Full Access Active",
+      title: "Unlimited vault unlocked 👑",
+      text: "You can keep building, tracking, sharing, selling, and organizing without the 50-save limit.",
+      tone: "success",
+    };
+  }
+
+  if (ownedCount >= FREE_LIMIT) {
+    return {
+      label: "Free Vault Full",
+      title: "Your starter shelf is full 💜",
+      text: "Upgrade to keep adding Doorables, unlock unlimited tracking, and use the full collector toolkit.",
+      tone: "danger",
+    };
+  }
+
+  if (ownedCount >= 40) {
+    return {
+      label: "Almost Full",
+      title: "Your vault is getting serious 👀",
+      text: `You have ${FREE_LIMIT - ownedCount} free save${
+        FREE_LIMIT - ownedCount === 1 ? "" : "s"
+      } left. Full access is ready whenever your collection outgrows the starter shelf.`,
+      tone: "warning",
+    };
+  }
+
+  if (ownedCount >= 25) {
+    return {
+      label: "Halfway Hooked",
+      title: "Your vault is filling up nicely ✨",
+      text: "This is the sweet spot where your checklist starts becoming genuinely useful during shopping, trades, and live sales.",
+      tone: "purple",
+    };
+  }
+
+  if (ownedCount > 0) {
+    return {
+      label: "Vault Started",
+      title: "You started your collector vault 💜",
+      text: "Keep adding what you own so your checklist is ready the next time you are hunting.",
+      tone: "purple",
+    };
+  }
+
+  return {
+    label: "Fresh Vault",
+    title: "Start with your first saved Doorable",
+    text: "Add a few favorites to your collection, then the tracker starts showing progress, extras, and what you still need.",
+    tone: "neutral",
+  };
+}
+
 export default function AccountPage() {
   const supabase = useMemo(() => getSupabase(), []);
 
   const [userId, setUserId] = useState("");
   const [email, setEmail] = useState("");
+
   const [username, setUsername] = useState("");
   const [originalUsername, setOriginalUsername] = useState("");
+
   const [visibility, setVisibility] = useState<Visibility>("private");
+
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [freeMonthsEarned, setFreeMonthsEarned] = useState(0);
   const [referralUsed, setReferralUsed] = useState("");
@@ -74,12 +155,15 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [shareStatus, setShareStatus] = useState("");
+  const [referralStatus, setReferralStatus] = useState("");
 
   useEffect(() => {
     void loadAccount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadAccount() {
@@ -113,7 +197,6 @@ export default function AccountPage() {
       if (!fullProfile.error) {
         profile = fullProfile.data as ProfileRow | null;
       } else {
-        // Fallback keeps the page working even if the referral/free-month columns have not been added yet.
         const basicProfile = await supabase
           .from("users")
           .select("username, is_subscribed, collection_visibility")
@@ -143,13 +226,13 @@ export default function AccountPage() {
 
   async function loadStats(currentUserId: string) {
     const [doorablesResult, userDoorablesResult, listingsResult] = await Promise.allSettled([
-      supabase.from("doorables").select("id"),
+      supabase.from("doorables").select("id", { count: "exact", head: true }),
       supabase.from("user_doorables").select("doorable_id, qty_owned").eq("user_id", currentUserId),
       supabase.from("marketplace_listings").select("id, status").eq("user_id", currentUserId),
     ]);
 
     if (doorablesResult.status === "fulfilled" && !doorablesResult.value.error) {
-      setTotalCount((doorablesResult.value.data || []).length);
+      setTotalCount(doorablesResult.value.count || 0);
     }
 
     if (userDoorablesResult.status === "fulfilled" && !userDoorablesResult.value.error) {
@@ -169,7 +252,9 @@ export default function AccountPage() {
 
     if (listingsResult.status === "fulfilled" && !listingsResult.value.error) {
       const rows = listingsResult.value.data || [];
-      setActiveListingsCount(rows.filter((row: any) => String(row.status || "active") === "active").length);
+      setActiveListingsCount(
+        rows.filter((row: any) => String(row.status || "active") === "active").length
+      );
     }
   }
 
@@ -249,7 +334,7 @@ export default function AccountPage() {
 
       setUsername(clean);
       setOriginalUsername(clean);
-      setNotice("Account saved 💜");
+      setNotice("Account saved 💜 Your vault settings are updated.");
       setSaving(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save account.");
@@ -289,6 +374,31 @@ export default function AccountPage() {
     }
   }
 
+  async function copyReferralText() {
+    const clean = cleanUsername(username);
+
+    if (!clean) {
+      setReferralStatus("Save a username first so people can use your referral.");
+      return;
+    }
+
+    const profileUrl = getProfileUrl(clean);
+    const text = `I use Adorable Vault to track my Doorables collection 💜 Check it out here: ${profileUrl} — referral username: @${clean}`;
+
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        setReferralStatus("Referral message copied 💜");
+      } else {
+        setReferralStatus(text);
+      }
+
+      window.setTimeout(() => setReferralStatus(""), 4000);
+    } catch {
+      setReferralStatus("Could not copy automatically. Try sharing your profile link instead.");
+    }
+  }
+
   async function signOut() {
     try {
       setSigningOut(true);
@@ -302,16 +412,59 @@ export default function AccountPage() {
 
   const cleanCurrentUsername = cleanUsername(username);
   const hasUnsavedUsername = cleanCurrentUsername !== originalUsername;
+
   const completion = totalCount ? Math.round((ownedCount / totalCount) * 100) : 0;
   const freeUsed = Math.min(ownedCount, FREE_LIMIT);
   const freePercent = Math.min(100, Math.round((freeUsed / FREE_LIMIT) * 100));
   const freeLeft = Math.max(0, FREE_LIMIT - freeUsed);
   const profileUrl = cleanCurrentUsername ? `/collector/${cleanCurrentUsername}` : "";
+  const profileFullUrl = cleanCurrentUsername ? getProfileUrl(cleanCurrentUsername) : "";
+  const vaultMessage = getFreeVaultMessage(ownedCount, isSubscribed);
+
+  const setupSteps = [
+    {
+      label: "Save a username",
+      done: !!cleanCurrentUsername,
+      detail: cleanCurrentUsername ? `@${cleanCurrentUsername}` : "Creates your public collector link",
+    },
+    {
+      label: "Choose visibility",
+      done: visibility !== "private",
+      detail:
+        visibility === "private"
+          ? "Private is safest, but public profiles help sharing"
+          : visibilityLabel(visibility),
+    },
+    {
+      label: "Start tracking",
+      done: ownedCount > 0,
+      detail: ownedCount > 0 ? `${ownedCount} saved Doorables` : "Add your first owned Doorable",
+    },
+    {
+      label: "Share your profile",
+      done: !!cleanCurrentUsername && visibility !== "private",
+      detail: "Perfect for trades, wishlists, and showing extras",
+    },
+    {
+      label: "Use marketplace tools",
+      done: activeListingsCount > 0 || extrasCount > 0,
+      detail:
+        activeListingsCount > 0
+          ? `${activeListingsCount} active listing${activeListingsCount === 1 ? "" : "s"}`
+          : extrasCount > 0
+            ? `${extrasCount} extra${extrasCount === 1 ? "" : "s"} ready to list`
+            : "Track extras first, then list them",
+    },
+  ];
+
+  const setupDone = setupSteps.filter((step) => step.done).length;
+  const setupPercent = Math.round((setupDone / setupSteps.length) * 100);
 
   if (loading) {
     return (
       <main className="accountPage loadingPage">
         <style jsx>{pageStyles}</style>
+
         <div className="loadingCard">
           <div className="loadingIcon">💜</div>
           <h1>Loading your account...</h1>
@@ -332,7 +485,7 @@ export default function AccountPage() {
               <h1 className="heroTitle">Sign in to manage your vault.</h1>
               <p className="heroText">
                 Your account page is where you manage your username, public collector profile,
-                collection visibility, subscription status, and seller tools.
+                collection visibility, subscription status, referral info, and seller tools.
               </p>
               <div className="heroActions">
                 <Link href={`/login?next=${encodeURIComponent(safeNextPath())}`} className="primaryButton">
@@ -359,7 +512,8 @@ export default function AccountPage() {
             <div className="badge">⚙️ Account Home Base</div>
             <h1 className="heroTitle">Your Vault Account</h1>
             <p className="heroText">
-              Manage your collector name, public profile, subscription, and quick links from one clean spot.
+              Make your vault feel personal: set your collector name, choose what others can see,
+              share your profile, and jump back into tracking without digging around.
             </p>
 
             <div className="signedInPill">
@@ -368,13 +522,9 @@ export default function AccountPage() {
           </div>
 
           <div className="heroSideCard">
-            <div className="sideLabel">Current access</div>
+            <div className="sideLabel">{vaultMessage.label}</div>
             <div className="sideTitle">{isSubscribed ? "Full Access 👑" : "Starter Vault 💜"}</div>
-            <div className="sideText">
-              {isSubscribed
-                ? "Unlimited tracking, marketplace tools, messages, and public collector features are unlocked."
-                : `${freeLeft} free save${freeLeft === 1 ? "" : "s"} left before upgrading.`}
-            </div>
+            <div className="sideText">{vaultMessage.text}</div>
           </div>
         </section>
 
@@ -406,6 +556,40 @@ export default function AccountPage() {
             <div className="statIcon">🛍️</div>
             <div className="statValue">{activeListingsCount}</div>
             <div className="statLabel">Active Listings</div>
+          </div>
+        </section>
+
+        <section className="setupCard">
+          <div>
+            <div className="eyebrow">Vault setup</div>
+            <h2 className="panelTitle">Make your account feel finished</h2>
+            <p className="mutedText">
+              A complete account makes the site feel more like a personal collector vault and less like another random checklist.
+            </p>
+          </div>
+
+          <div className="setupProgress">
+            <div className="progressCircle">{setupPercent}%</div>
+            <div>
+              <strong>
+                {setupDone}/{setupSteps.length} setup steps complete
+              </strong>
+              <div className="progressTrack">
+                <div className="progressFill" style={{ width: `${setupPercent}%` }} />
+              </div>
+            </div>
+          </div>
+
+          <div className="setupGrid">
+            {setupSteps.map((step) => (
+              <div key={step.label} className={`setupStep ${step.done ? "done" : ""}`}>
+                <span>{step.done ? "✅" : "○"}</span>
+                <span>
+                  <strong>{step.label}</strong>
+                  <small>{step.detail}</small>
+                </span>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -443,7 +627,7 @@ export default function AccountPage() {
                     <div className="previewLabel">Profile link</div>
                     {cleanCurrentUsername ? (
                       <Link href={profileUrl} className="profileLink">
-                        {profileUrl}
+                        {profileFullUrl}
                       </Link>
                     ) : (
                       <div className="mutedText">Save a username to create your profile link.</div>
@@ -461,7 +645,7 @@ export default function AccountPage() {
                   <div className="visibilityHeader">
                     <div>
                       <div className="previewLabel">Collection visibility</div>
-                      <div className="helperText">Choose what other collectors can see on your public profile.</div>
+                      <div className="helperText">{visibilityHelp(visibility)}</div>
                     </div>
                     <strong>{visibilityLabel(visibility)}</strong>
                   </div>
@@ -542,25 +726,39 @@ export default function AccountPage() {
           </div>
 
           <aside className="sideStack">
-            <section className="panelCard subscriptionCard">
+            <section className={`panelCard subscriptionCard ${vaultMessage.tone}`}>
               <div className="eyebrow">Plan status</div>
-              <h2 className="panelTitle">{isSubscribed ? "Full Access Active" : "Starter Vault"}</h2>
-              <p className="mutedText">
-                {isSubscribed
-                  ? "You are unlocked for unlimited collection tracking, selling tools, marketplace messaging, and public collector features."
-                  : "Free accounts can save up to 50 Doorables. Upgrade when you need unlimited tracking and marketplace tools."}
-              </p>
+              <h2 className="panelTitle">{vaultMessage.title}</h2>
+              <p className="mutedText">{vaultMessage.text}</p>
 
               {!isSubscribed && (
-                <div className="freeProgressBox">
-                  <div className="progressTop">
-                    <strong>{freeUsed}/50 saved</strong>
-                    <span>{freePercent}%</span>
+                <>
+                  <div className="freeProgressBox">
+                    <div className="progressTop">
+                      <strong>{freeUsed}/50 saved</strong>
+                      <span>{freePercent}%</span>
+                    </div>
+                    <div className="progressTrack">
+                      <div className="progressFill" style={{ width: `${freePercent}%` }} />
+                    </div>
+                    <div className="helperText">
+                      {freeLeft > 0
+                        ? `${freeLeft} free save${freeLeft === 1 ? "" : "s"} left.`
+                        : "Your free vault is full."}
+                    </div>
                   </div>
-                  <div className="progressTrack">
-                    <div className="progressFill" style={{ width: `${freePercent}%` }} />
+
+                  <div className="planMiniGrid">
+                    <div className="planMini">
+                      <span>Monthly</span>
+                      <strong>{MONTHLY_PRICE_LABEL}</strong>
+                    </div>
+                    <div className="planMini best">
+                      <span>Best Value</span>
+                      <strong>{YEARLY_PRICE_LABEL}</strong>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
 
               <div className="sideButtons">
@@ -577,14 +775,26 @@ export default function AccountPage() {
               <div className="eyebrow">Referral perks</div>
               <h2 className="panelTitle">Share the vault</h2>
               <p className="mutedText">
-                Send your collector profile or username to friends. When referral tracking is active,
-                paid referrals can help earn free months.
+                Your username can be used as a referral username during checkout. Copy a quick invite message and send it to collector friends.
               </p>
+
+              <div className="referralBox">
+                <span>Your referral username</span>
+                <strong>{cleanCurrentUsername ? `@${cleanCurrentUsername}` : "Save username first"}</strong>
+              </div>
+
+              <button type="button" onClick={() => void copyReferralText()} className="softButton" style={{ width: "100%" }}>
+                Copy Referral Message 💜
+              </button>
+
+              {!!referralStatus && <div className="copyStatus">{referralStatus}</div>}
 
               <div className="miniList">
                 <div className="miniItem">
                   <span>🎁</span>
-                  <span>Free months earned: <strong>{freeMonthsEarned}</strong></span>
+                  <span>
+                    Free months earned: <strong>{freeMonthsEarned}</strong>
+                  </span>
                 </div>
                 <div className="miniItem">
                   <span>💜</span>
@@ -592,6 +802,31 @@ export default function AccountPage() {
                     Referral used: <strong>{referralUsed ? `@${referralUsed}` : "None yet"}</strong>
                   </span>
                 </div>
+              </div>
+            </section>
+
+            <section className="panelCard nextCard">
+              <div className="eyebrow">Best next move</div>
+              <h2 className="panelTitle">Keep the hook going</h2>
+              <div className="miniList">
+                <Link href="/collection" className="miniItem linkedMini">
+                  <span>💜</span>
+                  <span>
+                    Add a few more Doorables so your progress and series stats feel alive.
+                  </span>
+                </Link>
+                <Link href="/marketplace" className="miniItem linkedMini">
+                  <span>🛍️</span>
+                  <span>
+                    Check the Marketplace and see how extras could turn into trades or sales.
+                  </span>
+                </Link>
+                <Link href="/feedback" className="miniItem linkedMini">
+                  <span>💬</span>
+                  <span>
+                    Leave feedback if anything feels confusing, missing, or not collector-friendly.
+                  </span>
+                </Link>
               </div>
             </section>
 
@@ -684,7 +919,7 @@ const pageStyles = `
     border: 1px solid rgba(255,255,255,0.16);
     box-shadow: 0 26px 64px rgba(0,0,0,0.36);
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 310px;
+    grid-template-columns: minmax(0, 1fr) 330px;
     gap: 18px;
     align-items: center;
   }
@@ -740,6 +975,10 @@ const pageStyles = `
     word-break: break-word;
   }
 
+  .signedInPill strong {
+    margin-left: 4px;
+  }
+
   .heroSideCard {
     border-radius: 24px;
     padding: 18px;
@@ -771,7 +1010,7 @@ const pageStyles = `
 
   .sideText {
     margin-top: 8px;
-    color: rgba(255,255,255,0.78);
+    color: rgba(255,255,255,0.80);
     font-size: 13px;
     line-height: 1.45;
     font-weight: 800;
@@ -813,7 +1052,8 @@ const pageStyles = `
   }
 
   .statCard,
-  .panelCard {
+  .panelCard,
+  .setupCard {
     background: linear-gradient(180deg, #ffffff, #f8fafc);
     color: #111827;
     border-radius: 26px;
@@ -849,6 +1089,81 @@ const pageStyles = `
     font-size: 13px;
     line-height: 1.35;
     font-weight: 850;
+  }
+
+  .setupCard {
+    margin-bottom: 18px;
+    padding: 22px;
+    background:
+      radial-gradient(circle at top right, rgba(196,181,253,0.34), transparent 30%),
+      linear-gradient(180deg, #ffffff, #f8fafc);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .setupProgress {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 13px;
+    border-radius: 20px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+  }
+
+  .progressCircle {
+    width: 64px;
+    height: 64px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #4f46e5, #a855f7);
+    color: white;
+    font-weight: 1000;
+  }
+
+  .setupGrid {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .setupStep {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 8px;
+    align-items: start;
+    padding: 11px;
+    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+  }
+
+  .setupStep.done {
+    background: #ecfdf5;
+    border-color: #bbf7d0;
+  }
+
+  .setupStep strong,
+  .setupStep small {
+    display: block;
+  }
+
+  .setupStep strong {
+    font-size: 13px;
+    line-height: 1.2;
+  }
+
+  .setupStep small {
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.25;
+    font-weight: 800;
   }
 
   .layoutGrid {
@@ -966,7 +1281,8 @@ const pageStyles = `
 
   .profilePreviewBox,
   .visibilityBox,
-  .freeProgressBox {
+  .freeProgressBox,
+  .referralBox {
     border-radius: 20px;
     padding: 16px;
     background: #f8fafc;
@@ -1114,6 +1430,24 @@ const pageStyles = `
       linear-gradient(180deg, #ffffff, #f8fafc);
   }
 
+  .subscriptionCard.warning {
+    background:
+      radial-gradient(circle at top right, rgba(250,204,21,0.32), transparent 32%),
+      linear-gradient(180deg, #ffffff, #fff7ed);
+  }
+
+  .subscriptionCard.danger {
+    background:
+      radial-gradient(circle at top right, rgba(244,63,94,0.20), transparent 30%),
+      linear-gradient(180deg, #ffffff, #fff1f2);
+  }
+
+  .subscriptionCard.success {
+    background:
+      radial-gradient(circle at top right, rgba(34,197,94,0.20), transparent 30%),
+      linear-gradient(180deg, #ffffff, #ecfdf5);
+  }
+
   .progressTop {
     display: flex;
     justify-content: space-between;
@@ -1129,12 +1463,55 @@ const pageStyles = `
     border-radius: 999px;
     overflow: hidden;
     background: #e5e7eb;
+    margin-top: 9px;
   }
 
   .progressFill {
     height: 100%;
     border-radius: inherit;
     background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
+  }
+
+  .planMiniGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+    margin-top: 12px;
+  }
+
+  .planMini {
+    border-radius: 16px;
+    padding: 11px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+  }
+
+  .planMini.best {
+    background: #fef3c7;
+    border-color: #fde68a;
+  }
+
+  .planMini span,
+  .planMini strong,
+  .referralBox span,
+  .referralBox strong {
+    display: block;
+  }
+
+  .planMini span,
+  .referralBox span {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 900;
+    margin-bottom: 4px;
+  }
+
+  .planMini strong,
+  .referralBox strong {
+    color: #312e81;
+    font-size: 19px;
+    font-weight: 1000;
+    word-break: break-word;
   }
 
   .sideButtons {
@@ -1149,7 +1526,8 @@ const pageStyles = `
     margin-top: 14px;
   }
 
-  .miniItem {
+  .miniItem,
+  .miniItem:visited {
     display: grid;
     grid-template-columns: 34px 1fr;
     gap: 10px;
@@ -1158,10 +1536,22 @@ const pageStyles = `
     border-radius: 17px;
     background: #f8fafc;
     border: 1px solid #e5e7eb;
-    color: #374151;
+    color: #374151 !important;
     line-height: 1.45;
     font-weight: 800;
     font-size: 13px;
+    text-decoration: none !important;
+  }
+
+  .linkedMini:hover {
+    border-color: #a78bfa;
+    box-shadow: 0 10px 22px rgba(124,58,237,0.12);
+  }
+
+  .nextCard {
+    background:
+      radial-gradient(circle at top right, rgba(191,219,254,0.55), transparent 32%),
+      linear-gradient(180deg, #ffffff, #f8fafc);
   }
 
   .dangerCard {
@@ -1181,6 +1571,12 @@ const pageStyles = `
     gap: 10px;
     flex-wrap: wrap;
     margin-top: 20px;
+  }
+
+  @media (max-width: 1080px) {
+    .setupGrid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media (max-width: 980px) {
@@ -1224,6 +1620,22 @@ const pageStyles = `
       font-size: 26px;
     }
 
+    .setupCard {
+      grid-template-columns: 1fr;
+      border-radius: 22px;
+      padding: 17px;
+    }
+
+    .setupProgress {
+      grid-template-columns: 64px 1fr;
+      padding: 11px;
+    }
+
+    .progressCircle {
+      width: 58px;
+      height: 58px;
+    }
+
     .layoutGrid {
       grid-template-columns: 1fr;
     }
@@ -1259,6 +1671,16 @@ const pageStyles = `
     .signedInPill {
       display: grid;
       border-radius: 18px;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .setupGrid {
+      grid-template-columns: 1fr;
+    }
+
+    .planMiniGrid {
+      grid-template-columns: 1fr;
     }
   }
 

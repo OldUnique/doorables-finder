@@ -46,6 +46,21 @@ function cleanId(value: unknown) {
   return String(value || "").trim();
 }
 
+function isLikelyUuid(value: unknown) {
+  const clean = cleanId(value);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clean);
+}
+
+function chunkArray<T>(items: T[], size: number) {
+  const chunks: T[][] = [];
+
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+
+  return chunks;
+}
+
 function niceDate(value?: string | null) {
   if (!value) return "Unknown";
   const d = new Date(value);
@@ -132,17 +147,33 @@ export default function AdminSubmissionsPage() {
     const nextDoorables: Record<string, Doorable> = {};
     let lookupWarning = "";
 
-    if (doorableIds.length === 0) {
-      return { nextDoorables, lookupWarning };
+    const uniqueIds = Array.from(new Set(doorableIds.map(cleanId).filter(Boolean)));
+    const validUuidIds = uniqueIds.filter(isLikelyUuid);
+    const invalidIds = uniqueIds.filter((id) => !isLikelyUuid(id));
+
+    if (validUuidIds.length === 0) {
+      return {
+        nextDoorables,
+        lookupWarning: invalidIds.length
+          ? `Loaded submissions, but ${invalidIds.length} Doorable ID${invalidIds.length === 1 ? "" : "s"} are not valid UUIDs.`
+          : "",
+      };
     }
 
-    const idLookup = await supabase
-      .from("doorables")
-      .select("id, name, series, movie, image_url")
-      .in("id", doorableIds);
+    // Important: one bad/non-UUID value can make Supabase return Bad Request for the whole .in() lookup.
+    // So we only send clean UUIDs and load them in small chunks.
+    for (const idChunk of chunkArray(validUuidIds, 100)) {
+      const { data, error } = await supabase
+        .from("doorables")
+        .select("id, name, series, movie, image_url")
+        .in("id", idChunk);
 
-    if (!idLookup.error) {
-      (idLookup.data || []).forEach((row: any) => {
+      if (error) {
+        lookupWarning = "Doorable lookup by id failed: " + error.message;
+        continue;
+      }
+
+      (data || []).forEach((row: any) => {
         const id = cleanId(row.id);
         if (!id) return;
 
@@ -154,42 +185,18 @@ export default function AdminSubmissionsPage() {
           image_url: row.image_url ?? null,
         };
       });
-    } else {
-      lookupWarning = "Doorable lookup by id failed: " + idLookup.error.message;
     }
 
-    const missingAfterIdLookup = doorableIds.filter((id) => !nextDoorables[id]);
+    const stillMissing = validUuidIds.filter((id) => !nextDoorables[id]);
 
-    if (missingAfterIdLookup.length > 0) {
-      const uuidLookup = await supabase
-        .from("doorables")
-        .select("uuid, name, series, movie, image_url")
-        .in("uuid", missingAfterIdLookup);
-
-      if (!uuidLookup.error) {
-        (uuidLookup.data || []).forEach((row: any) => {
-          const id = cleanId(row.uuid);
-          if (!id) return;
-
-          nextDoorables[id] = {
-            id,
-            name: row.name ?? null,
-            series: row.series ?? null,
-            movie: row.movie ?? null,
-            image_url: row.image_url ?? null,
-          };
-        });
-      }
+    if (!lookupWarning && stillMissing.length > 0) {
+      lookupWarning = `Loaded submissions, but ${stillMissing.length} submission${
+        stillMissing.length === 1 ? "" : "s"
+      } could not be matched to a Doorable row. The Doorable ID will show on those cards.`;
     }
 
-    const stillMissing = doorableIds.filter((id) => !nextDoorables[id]);
-
-    if (stillMissing.length > 0) {
-      lookupWarning =
-        lookupWarning ||
-        `Loaded submissions, but ${stillMissing.length} submission${
-          stillMissing.length === 1 ? "" : "s"
-        } could not be matched to a Doorable row. The Doorable ID will show on those cards.`;
+    if (!lookupWarning && invalidIds.length > 0) {
+      lookupWarning = `Skipped ${invalidIds.length} invalid Doorable ID${invalidIds.length === 1 ? "" : "s"} so the rest of the queue could load.`;
     }
 
     return { nextDoorables, lookupWarning };
@@ -299,33 +306,33 @@ export default function AdminSubmissionsPage() {
   async function updateDoorableImage(doorableId: string, imageUrl: string) {
     const cleanDoorableId = cleanId(doorableId);
 
-    const updateById = await supabase
+    if (!isLikelyUuid(cleanDoorableId)) {
+      return {
+        success: false,
+        message:
+          "That submission has an invalid Doorable ID, so it cannot safely update the Doorables table. Delete/re-submit it or fix image_submissions.doorable_id in Supabase.",
+      };
+    }
+
+    const { data, error } = await supabase
       .from("doorables")
       .update({ image_url: imageUrl })
       .eq("id", cleanDoorableId)
       .select("id");
 
-    if (!updateById.error && updateById.data && updateById.data.length > 0) {
-      return { success: true, message: "" };
+    if (error) {
+      return { success: false, message: error.message };
     }
 
-    const updateByUuid = await supabase
-      .from("doorables")
-      .update({ image_url: imageUrl })
-      .eq("uuid", cleanDoorableId)
-      .select("uuid");
-
-    if (!updateByUuid.error && updateByUuid.data && updateByUuid.data.length > 0) {
-      return { success: true, message: "" };
+    if (!data || data.length === 0) {
+      return {
+        success: false,
+        message:
+          "No matching Doorable row was found for that ID. Check that image_submissions.doorable_id matches public.doorables.id exactly.",
+      };
     }
 
-    return {
-      success: false,
-      message:
-        updateById.error?.message ||
-        updateByUuid.error?.message ||
-        "The Doorable image did not update. Check that image_submissions.doorable_id matches the Doorables table primary ID.",
-    };
+    return { success: true, message: "" };
   }
 
   async function approveSubmission(submission: Submission) {

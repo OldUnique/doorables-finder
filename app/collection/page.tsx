@@ -38,6 +38,7 @@ type SeriesProgressItem = {
   series: string;
   total: number;
   owned: number;
+  remaining: number;
   percent: number;
   subcategoryLabel: string;
   isMissingSeries: boolean;
@@ -327,6 +328,139 @@ function getCommunityTier(
     accent: "linear-gradient(135deg,#64748b,#94a3b8)",
     score,
   };
+}
+
+function getVaultMilestone(ownedCount: number, isSubscribed: boolean) {
+  if (isSubscribed) {
+    return {
+      eyebrow: "👑 Unlimited Vault Active",
+      title: "Your vault can keep growing without a cap.",
+      body: "Keep adding Doorables, notes, extras, public profile updates, marketplace listings, and photo submissions whenever you want.",
+      tone: "gold",
+    };
+  }
+
+  if (ownedCount >= FREE_LIMIT) {
+    return {
+      eyebrow: "💜 Free Vault Full",
+      title: "You hit 50 saved Doorables — the vault did its job.",
+      body: "Upgrade to keep tracking every figure, series, extra, wishlist item, and seller tool without hitting another wall.",
+      tone: "full",
+    };
+  }
+
+  if (ownedCount >= 40) {
+    return {
+      eyebrow: "🔥 Almost full",
+      title: "Your vault is getting serious.",
+      body: `You have ${FREE_LIMIT - ownedCount} free saves left. This is the perfect time to unlock unlimited before your next hunt or live sale.`,
+      tone: "warm",
+    };
+  }
+
+  if (ownedCount >= 25) {
+    return {
+      eyebrow: "✨ Halfway hooked",
+      title: "You are officially building a real collector vault.",
+      body: "Keep filling it in, check your progress by series, and use the Need/Extras filters before you buy another duplicate.",
+      tone: "purple",
+    };
+  }
+
+  if (ownedCount >= 10) {
+    return {
+      eyebrow: "💜 Vault started",
+      title: "The useful part is kicking in now.",
+      body: "The more you save, the better this becomes during shopping, trades, Whatnot shows, and blind-box chaos.",
+      tone: "blue",
+    };
+  }
+
+  if (ownedCount > 0) {
+    return {
+      eyebrow: "🌱 First shelf started",
+      title: "Add a few more and the magic starts showing.",
+      body: "Try adding your newest favorites first, then use filters to track what you have, need, and can trade.",
+      tone: "green",
+    };
+  }
+
+  return {
+    eyebrow: "👀 Start with your favorites",
+    title: "Build your vault before your next Doorables hunt.",
+    body: "Tap + on the Doorables you own. Once your collection is saved, you can stop guessing and start checking.",
+    tone: "blue",
+  };
+}
+
+function getSeriesProgressTheme(percent: number) {
+  if (percent >= 100) {
+    return {
+      label: "Complete",
+      icon: "🏆",
+      fill: "linear-gradient(90deg,#f59e0b,#facc15,#fde68a)",
+      background: "linear-gradient(135deg,#fff7ed,#fef3c7)",
+      border: "#f59e0b",
+      text: "#78350f",
+      glow: "0 14px 28px rgba(245,158,11,0.22)",
+    };
+  }
+
+  if (percent >= 75) {
+    return {
+      label: "Almost there",
+      icon: "🔥",
+      fill: "linear-gradient(90deg,#f97316,#f59e0b)",
+      background: "linear-gradient(135deg,#fff7ed,#ffffff)",
+      border: "#fdba74",
+      text: "#9a3412",
+      glow: "0 12px 24px rgba(249,115,22,0.15)",
+    };
+  }
+
+  if (percent >= 50) {
+    return {
+      label: "Halfway+",
+      icon: "💜",
+      fill: "linear-gradient(90deg,#7c3aed,#c084fc)",
+      background: "linear-gradient(135deg,#f5f3ff,#ffffff)",
+      border: "#c4b5fd",
+      text: "#5b21b6",
+      glow: "0 12px 24px rgba(124,58,237,0.14)",
+    };
+  }
+
+  if (percent >= 25) {
+    return {
+      label: "Building",
+      icon: "🧩",
+      fill: "linear-gradient(90deg,#2563eb,#60a5fa)",
+      background: "linear-gradient(135deg,#eff6ff,#ffffff)",
+      border: "#bfdbfe",
+      text: "#1d4ed8",
+      glow: "0 12px 24px rgba(37,99,235,0.12)",
+    };
+  }
+
+  return {
+    label: "Started",
+    icon: "🌱",
+    fill: "linear-gradient(90deg,#64748b,#94a3b8)",
+    background: "linear-gradient(135deg,#f8fafc,#ffffff)",
+    border: "#e5e7eb",
+    text: "#475569",
+    glow: "0 10px 20px rgba(15,23,42,0.08)",
+  };
+}
+
+function getSeriesHook(entry: SeriesProgressItem) {
+  if (entry.percent >= 100) return "Series complete — gold vault status unlocked.";
+  if (entry.remaining === 1) return "Only 1 left. This is the danger zone 👀";
+  if (entry.remaining <= 3) return `Only ${entry.remaining} left to finish this series.`;
+  if (entry.percent >= 75) return `${entry.remaining} left — this one is almost gold.`;
+  if (entry.percent >= 50) return "Halfway there. Keep the momentum going.";
+  if (entry.owned > 0) return "Started. Add more to build this shelf.";
+  return "No saves yet. Tap to start this series.";
 }
 
 function LoggedOutCollectionLanding() {
@@ -779,17 +913,17 @@ function LoggedOutCollectionLanding() {
         <section className="guestHero">
           <div>
             <div className="guestBadge">✨ Preview before signing up ✨</div>
-            <h1 className="guestTitle">Track your Doorables collection without the chaos.</h1>
+            <h1 className="guestTitle">Stop guessing what you have. Start building your vault.</h1>
             <p className="guestText">
-              Save what you own, mark what you still need, organize extras, and share your collector profile.
+              Save what you own, mark what you still need, organize extras, and check your collection before you buy another duplicate.
               Free accounts can save up to 50 Doorables before upgrading.
             </p>
 
             <div className="guestPills">
               <span className="guestPill">Free up to 50 saves</span>
-              <span className="guestPill">Mobile-friendly list view</span>
+              <span className="guestPill">Mobile-friendly hunt list</span>
               <span className="guestPill">Extras + wishlist tracking</span>
-              <span className="guestPill">Public profile sharing</span>
+              <span className="guestPill">Series progress dopamine</span>
             </div>
 
             <div className="guestActions">
@@ -812,15 +946,15 @@ function LoggedOutCollectionLanding() {
               </div>
               <div className="guestStat">
                 <strong>Need</strong>
-                <span>wishlist</span>
+                <span>hunt list</span>
               </div>
               <div className="guestStat">
                 <strong>Extras</strong>
                 <span>trade/sell</span>
               </div>
               <div className="guestStat">
-                <strong>Share</strong>
-                <span>profile</span>
+                <strong>Gold</strong>
+                <span>complete series</span>
               </div>
             </div>
 
@@ -835,12 +969,12 @@ function LoggedOutCollectionLanding() {
               </div>
 
               <div className="mockRow">
-                <div className="mockThumb">💎</div>
+                <div className="mockThumb">🏆</div>
                 <div>
-                  <div className="mockName">Wishlist item</div>
-                  <div className="mockMeta">Need it? Track it.</div>
+                  <div className="mockName">Complete a series</div>
+                  <div className="mockMeta">Watch it turn gold.</div>
                 </div>
-                <div className="mockQty">0</div>
+                <div className="mockQty">✓</div>
               </div>
             </div>
           </div>
@@ -882,7 +1016,7 @@ function LoggedOutCollectionLanding() {
 
         <section className="guestSoftCard">
           <div>
-            <div className="guestSoftTitle">Why you saw this instead of a login wall</div>
+            <div className="guestSoftTitle">Built for the moment you ask, “Do I already have this one?”</div>
             <div className="guestSoftText">
               The collection tracker saves your personal collection, so you will still need an account to use it.
               But you can preview the experience first, browse public areas, and decide if it is useful before signing up.
@@ -1616,6 +1750,8 @@ export default function Page() {
   const extrasCount = cards.reduce((sum, card) => sum + Math.max(0, Number(card.qty || 0) - 1), 0);
   const freeSlotsLeft = Math.max(0, FREE_LIMIT - ownedCount);
   const freeLimitReached = !isSubscribed && ownedCount >= FREE_LIMIT;
+  const freeSavePercent = Math.min(100, Math.round((ownedCount / FREE_LIMIT) * 100));
+  const vaultMilestone = useMemo(() => getVaultMilestone(ownedCount, isSubscribed), [ownedCount, isSubscribed]);
 
   const collectionTier = useMemo(() => getCollectionTier(completion, ownedCount), [completion, ownedCount]);
   const marketplaceTier = useMemo(
@@ -1643,10 +1779,6 @@ export default function Page() {
     cards.forEach((card) => {
       const cleanSeries = cleanText(card.series);
       const cleanSubcategory = cleanText(card.subcategory);
-
-      // Fix for blank/dirty series values:
-      // If series is blank but subcategory exists, use the subcategory as the visible title
-      // instead of showing a floating bullet or an empty card.
       const key = cleanSeries || cleanSubcategory || "Unassigned Series";
 
       const current = grouped.get(key) || {
@@ -1671,12 +1803,23 @@ export default function Page() {
         series,
         total: value.total,
         owned: value.owned,
+        remaining: Math.max(0, value.total - value.owned),
         percent: value.total ? Math.round((value.owned / value.total) * 100) : 0,
         subcategoryLabel: value.subcategories.join(", "),
         isMissingSeries: value.isMissingSeries,
       }))
       .sort((a, b) => seriesSort(a.series, b.series));
   }, [cards]);
+
+  const closestSeries = useMemo(() => {
+    return seriesProgress
+      .filter((entry) => entry.owned > 0 && entry.percent < 100)
+      .sort((a, b) => {
+        if (a.remaining !== b.remaining) return a.remaining - b.remaining;
+        return b.percent - a.percent;
+      })
+      .slice(0, 3);
+  }, [seriesProgress]);
 
   const visibleSeriesProgress = isMobile && !expandedSeries ? seriesProgress.slice(0, 8) : seriesProgress;
 
@@ -1844,7 +1987,9 @@ export default function Page() {
         .tierCard,
         .statCard,
         .upgradeWall,
-        .autoSellCard {
+        .autoSellCard,
+        .hookPanel,
+        .finishPanel {
           backdrop-filter: blur(6px);
         }
 
@@ -1880,6 +2025,8 @@ export default function Page() {
           opacity: 0.92;
           font-size: 16px;
           font-weight: 750;
+          max-width: 780px;
+          line-height: 1.5;
         }
 
         .heroProgress {
@@ -1945,11 +2092,50 @@ export default function Page() {
         .panel,
         .tierCard,
         .statCard,
-        .autoSellCard {
+        .autoSellCard,
+        .finishPanel {
           background: rgba(255,255,255,0.94);
           color: #111827;
           box-shadow: 0 10px 24px rgba(0,0,0,0.18);
           border: 1px solid rgba(255,255,255,0.35);
+        }
+
+        .hookPanel {
+          display: grid;
+          grid-template-columns: 1.2fr 0.9fr 0.9fr;
+          gap: 14px;
+          margin-bottom: 18px;
+        }
+
+        .hookTile {
+          border-radius: 24px;
+          padding: 18px;
+          color: #111827;
+          background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          border: 1px solid rgba(255,255,255,0.55);
+          box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+        }
+
+        .hookTile.primary {
+          background:
+            radial-gradient(circle at top right, rgba(244,114,182,0.22), transparent 34%),
+            linear-gradient(135deg, rgba(255,255,255,0.99), rgba(245,243,255,0.96));
+          border-color: rgba(216,180,254,0.8);
+        }
+
+        .hookTitle {
+          font-size: 20px;
+          line-height: 1.08;
+          font-weight: 1000;
+          color: #312e81;
+          margin-bottom: 7px;
+        }
+
+        .hookText {
+          color: #475569;
+          line-height: 1.55;
+          font-size: 14px;
+          font-weight: 820;
         }
 
         .upgradeWall {
@@ -2046,6 +2232,32 @@ export default function Page() {
           border-radius: 24px;
           padding: 16px;
           margin-bottom: 18px;
+        }
+
+        .finishPanel {
+          border-radius: 24px;
+          padding: 18px;
+          margin-bottom: 18px;
+          background:
+            radial-gradient(circle at top right, rgba(250,204,21,0.28), transparent 32%),
+            linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+        }
+
+        .finishGrid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+          margin-top: 12px;
+        }
+
+        .finishCard {
+          border-radius: 18px;
+          padding: 13px;
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 8px 18px rgba(15,23,42,0.08);
+          text-align: left;
+          cursor: pointer;
         }
 
         .statsGrid {
@@ -2258,18 +2470,15 @@ export default function Page() {
           border-radius: 20px;
           border: 1px solid #e5e7eb;
           padding: 14px;
-          background: #ffffff;
           text-align: left;
           cursor: pointer;
-          min-height: 116px;
+          min-height: 132px;
           display: grid;
           align-content: start;
           gap: 7px;
-          box-shadow: 0 8px 18px rgba(15,23,42,0.07);
         }
 
         .seriesTitle {
-          color: #4f46e5;
           font-size: 16px;
           line-height: 1.18;
           font-weight: 1000;
@@ -2287,6 +2496,15 @@ export default function Page() {
           color: #475569;
           font-size: 14px;
           font-weight: 900;
+        }
+
+        .seriesHook {
+          font-size: 12px;
+          line-height: 1.35;
+          font-weight: 900;
+          border-radius: 999px;
+          padding: 6px 9px;
+          width: fit-content;
         }
 
         .cardsGrid {
@@ -2680,6 +2898,10 @@ export default function Page() {
           .cardsGrid {
             grid-template-columns: repeat(3, minmax(0, 1fr));
           }
+
+          .hookPanel {
+            grid-template-columns: 1fr;
+          }
         }
 
         @media (max-width: 920px) {
@@ -2714,6 +2936,25 @@ export default function Page() {
             box-sizing: border-box;
             padding: 13px;
             border-radius: 18px;
+          }
+
+          .hookPanel {
+            gap: 10px;
+            margin-bottom: 12px;
+          }
+
+          .hookTile {
+            border-radius: 20px;
+            padding: 14px;
+          }
+
+          .hookTitle {
+            font-size: 17px;
+          }
+
+          .hookText {
+            font-size: 12.5px;
+            line-height: 1.45;
           }
 
           .upgradeWall {
@@ -2767,6 +3008,10 @@ export default function Page() {
             scroll-snap-align: start;
           }
 
+          .finishGrid {
+            grid-template-columns: 1fr;
+          }
+
           .statsGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 10px;
@@ -2778,7 +3023,8 @@ export default function Page() {
             border-radius: 18px;
           }
 
-          .panel {
+          .panel,
+          .finishPanel {
             border-radius: 19px;
             padding: 13px;
             margin-bottom: 13px;
@@ -2881,7 +3127,7 @@ export default function Page() {
           }
 
           .seriesProgressButton {
-            min-height: 104px;
+            min-height: 118px;
             border-radius: 18px;
             padding: 14px;
           }
@@ -3048,32 +3294,81 @@ export default function Page() {
           <div className="heroTop">
             <div>
               <h1 className="heroTitle">My Collection 💜</h1>
-              <div className="heroSubtitle">Track what you own, what you need, and what you can trade.</div>
+              <div className="heroSubtitle">
+                Stop guessing what you have. Check your collection before your next Doorables hunt, live sale, trade, or duplicate buy.
+              </div>
             </div>
 
             <div className="heroProgress">
               <div style={{ fontSize: 14, opacity: 0.88, marginBottom: 8 }}>Collection Completion</div>
               <div style={{ fontSize: 30, fontWeight: 1000, marginBottom: 10 }}>{completion}%</div>
               <div className="progressTrack">
-                <div className="progressFill" style={{ width: `${completion}%` }} />
+                <div
+                  className="progressFill"
+                  style={{
+                    width: `${completion}%`,
+                    background: completion >= 100 ? "linear-gradient(90deg,#f59e0b,#facc15,#fde68a)" : undefined,
+                  }}
+                />
               </div>
             </div>
           </div>
 
           {!isSubscribed && (
             <div className="upgradeBox">
-              <div style={{ fontWeight: 1000, marginBottom: 4 }}>Free plan: up to 50 saved Doorables</div>
+              <div style={{ fontWeight: 1000, marginBottom: 4 }}>{vaultMilestone.eyebrow}</div>
               <div className="mutedText">
-                You are using {ownedCount}/50 saved Doorables. Upgrade to unlock unlimited collection,
-                marketplace, and selling.
+                You are using {ownedCount}/50 saved Doorables. Upgrade when your vault outgrows the starter shelf.
               </div>
               <div style={{ marginTop: 10 }}>
                 <Link href="/pricing" className="primaryButton">
-                  Upgrade
+                  Unlock Unlimited Vault
                 </Link>
               </div>
             </div>
           )}
+        </section>
+
+        <section className="hookPanel">
+          <div className="hookTile primary">
+            <div className="hookTitle">{vaultMilestone.title}</div>
+            <div className="hookText">{vaultMilestone.body}</div>
+            {!isSubscribed && (
+              <div style={{ marginTop: 12 }}>
+                <div className="progressTrack" style={{ background: "#e5e7eb" }}>
+                  <div
+                    className="progressFill"
+                    style={{
+                      width: `${freeSavePercent}%`,
+                      background:
+                        freeSavePercent >= 100
+                          ? "linear-gradient(90deg,#f97316,#ec4899)"
+                          : freeSavePercent >= 80
+                            ? "linear-gradient(90deg,#f97316,#f59e0b)"
+                            : "linear-gradient(90deg,#60a5fa,#c084fc)",
+                    }}
+                  />
+                </div>
+                <div style={{ color: "#64748b", fontWeight: 900, fontSize: 12, marginTop: 7 }}>
+                  {ownedCount}/{FREE_LIMIT} free saves used • {freeSlotsLeft} left
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="hookTile">
+            <div className="hookTitle">Finish a series, turn it gold 🏆</div>
+            <div className="hookText">
+              Series cards now shift colors as you collect more. When a series reaches 100%, it gets a gold completed look.
+            </div>
+          </div>
+
+          <div className="hookTile">
+            <div className="hookTitle">Extras can become listings 💸</div>
+            <div className="hookText">
+              The Extras filter shows duplicates fast, and Full Access can turn extras into Marketplace draft listings.
+            </div>
+          </div>
         </section>
 
         <section id="upgrade-wall" className="upgradeWall">
@@ -3157,6 +3452,40 @@ export default function Page() {
             </div>
           ))}
         </section>
+
+        {closestSeries.length > 0 && (
+          <section className="finishPanel">
+            <div className="eyebrow">🏆 Closest to gold</div>
+            <div className="upgradeTitle" style={{ marginBottom: 4 }}>These series are closest to complete.</div>
+            <div className="mutedText" style={{ fontSize: 14 }}>
+              Tap one to jump to it and chase those last few pieces.
+            </div>
+            <div className="finishGrid">
+              {closestSeries.map((entry) => {
+                const theme = getSeriesProgressTheme(entry.percent);
+                return (
+                  <button
+                    key={entry.series}
+                    type="button"
+                    className="finishCard"
+                    onClick={() => jumpToSeries(entry.series)}
+                    style={{ borderColor: theme.border, boxShadow: theme.glow }}
+                  >
+                    <div style={{ color: theme.text, fontWeight: 1000, marginBottom: 5 }}>
+                      {theme.icon} {entry.series}
+                    </div>
+                    <div style={{ color: "#64748b", fontWeight: 850, fontSize: 13, marginBottom: 8 }}>
+                      {entry.owned}/{entry.total} collected • {entry.remaining} left
+                    </div>
+                    <div style={{ height: 9, borderRadius: 999, background: "#e5e7eb", overflow: "hidden" }}>
+                      <div style={{ width: `${entry.percent}%`, height: "100%", background: theme.fill }} />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {username && (
           <section className="panel">
@@ -3253,7 +3582,7 @@ export default function Page() {
           {[
             { label: "Total", value: totalCount, action: "all" },
             { label: "Owned", value: ownedCount, action: "have" },
-            { label: "Still Need", value: needCount, action: "need" },
+            { label: "Chase / Need", value: needCount, action: "need" },
             { label: "Extras", value: extrasCount, action: "extra" },
           ].map((stat) => (
             <button
@@ -3316,7 +3645,7 @@ export default function Page() {
             {[
               { value: "all", label: "All" },
               { value: "have", label: "Have" },
-              { value: "need", label: "Need" },
+              { value: "need", label: "Chase" },
               { value: "extra", label: "Extras" },
             ].map((option) => (
               <button
@@ -3349,7 +3678,7 @@ export default function Page() {
                 {[
                   { value: "all", label: "All" },
                   { value: "have", label: "Have" },
-                  { value: "need", label: "Need" },
+                  { value: "need", label: "Chase / Need" },
                   { value: "extra", label: "+Extra" },
                 ].map((option) => (
                   <button
@@ -3418,7 +3747,7 @@ export default function Page() {
             <div>
               <div style={{ fontSize: 18, fontWeight: 1000 }}>Series Progress</div>
               <div style={{ fontSize: 13, color: "#64748b", marginTop: 3, fontWeight: 700 }}>
-                {seriesProgress.length} series tracked • open when you want to jump by series
+                {seriesProgress.length} series tracked • colors slowly shift as progress grows • complete series turn gold
               </div>
             </div>
             <button type="button" className="secondaryButton" onClick={() => setShowSeriesProgress((prev) => !prev)}>
@@ -3429,25 +3758,49 @@ export default function Page() {
           {showSeriesProgress && (
             <>
               <div className="seriesProgressGrid" style={{ marginTop: 12 }}>
-                {visibleSeriesProgress.map((entry) => (
-                  <button key={entry.series} onClick={() => jumpToSeries(entry.series)} className="seriesProgressButton">
-                    <div className="seriesTitle">{entry.series}</div>
+                {visibleSeriesProgress.map((entry) => {
+                  const theme = getSeriesProgressTheme(entry.percent);
+                  return (
+                    <button
+                      key={entry.series}
+                      onClick={() => jumpToSeries(entry.series)}
+                      className="seriesProgressButton"
+                      style={{
+                        background: theme.background,
+                        borderColor: theme.border,
+                        boxShadow: theme.glow,
+                      }}
+                    >
+                      <div className="seriesTitle" style={{ color: theme.text }}>
+                        {theme.icon} {entry.series}
+                      </div>
 
-                    {entry.subcategoryLabel ? (
-                      <div className="seriesSubtitle">{entry.subcategoryLabel}</div>
-                    ) : entry.isMissingSeries ? (
-                      <div className="seriesSubtitle">Series field is blank in Supabase — using this group name for now.</div>
-                    ) : null}
+                      {entry.subcategoryLabel ? (
+                        <div className="seriesSubtitle">{entry.subcategoryLabel}</div>
+                      ) : entry.isMissingSeries ? (
+                        <div className="seriesSubtitle">Series field is blank in Supabase — using this group name for now.</div>
+                      ) : null}
 
-                    <div className="seriesMeta">
-                      {entry.owned}/{entry.total} collected • {entry.percent}%
-                    </div>
+                      <div className="seriesMeta">
+                        {entry.owned}/{entry.total} collected • {entry.percent}% • {entry.remaining} left
+                      </div>
 
-                    <div style={{ height: 10, borderRadius: 999, background: "#e5e7eb", overflow: "hidden" }}>
-                      <div style={{ width: `${entry.percent}%`, height: "100%", background: "linear-gradient(90deg,#60a5fa,#a78bfa)" }} />
-                    </div>
-                  </button>
-                ))}
+                      <div style={{ height: 10, borderRadius: 999, background: "#e5e7eb", overflow: "hidden" }}>
+                        <div style={{ width: `${entry.percent}%`, height: "100%", background: theme.fill }} />
+                      </div>
+
+                      <div
+                        className="seriesHook"
+                        style={{
+                          color: theme.text,
+                          background: entry.percent >= 100 ? "rgba(245,158,11,0.14)" : "rgba(79,70,229,0.10)",
+                        }}
+                      >
+                        {theme.label}: {getSeriesHook(entry)}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
 
               {isMobile && seriesProgress.length > 8 && (
@@ -3510,7 +3863,7 @@ export default function Page() {
                         marginTop: 6,
                       }}
                     >
-                      {savingId === item.id ? "Saving..." : statusText}
+                      {savingId === item.id ? "Saving..." : statusText === "Need" ? "Chase / Need" : statusText}
                     </div>
 
                     <div className="listControls">
@@ -3608,7 +3961,7 @@ export default function Page() {
                 </div>
 
                 <div className="statusText" style={{ color: statusText === "Need" ? "#7c3aed" : statusText === "Extra" ? "#2563eb" : "#166534" }}>
-                  {savingId === item.id ? "Saving..." : statusText}
+                  {savingId === item.id ? "Saving..." : statusText === "Need" ? "Chase / Need" : statusText}
                 </div>
 
                 {isMobile ? (
@@ -3697,7 +4050,13 @@ export default function Page() {
                 {ownedCount}/{FREE_LIMIT} free saves used
               </div>
               <div className="progressTrack">
-                <div className="progressFill" style={{ width: `${Math.min(100, Math.round((ownedCount / FREE_LIMIT) * 100))}%` }} />
+                <div
+                  className="progressFill"
+                  style={{
+                    width: `${freeSavePercent}%`,
+                    background: freeSavePercent >= 80 ? "linear-gradient(90deg,#f97316,#f59e0b)" : undefined,
+                  }}
+                />
               </div>
             </div>
             <Link href="/pricing" className="secondaryButton">

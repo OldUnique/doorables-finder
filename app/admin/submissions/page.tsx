@@ -15,6 +15,7 @@ type Submission = {
   status: string | null;
   created_at: string | null;
   user_id: string | null;
+  submitted_by?: string | null;
 };
 
 type Doorable = {
@@ -32,12 +33,17 @@ type UserRow = {
 
 const ADMIN_EMAILS = [
   "riffeljosh80@gmail.com",
+  "rffeljosh80@gmail.com",
   "jjowens@ktc.edu",
   "dntuttle1@gmail.com",
 ];
 
 function isAdminEmail(email?: string | null) {
   return !!email && ADMIN_EMAILS.includes(email.trim().toLowerCase());
+}
+
+function cleanId(value: unknown) {
+  return String(value || "").trim();
 }
 
 function niceDate(value?: string | null) {
@@ -57,6 +63,19 @@ function statusTheme(status?: string | null) {
   }
 
   return { bg: "#fef3c7", text: "#92400e", border: "#fde68a", label: "Pending ⏳" };
+}
+
+function getSubmitterId(submission: Submission) {
+  return cleanId(submission.user_id || submission.submitted_by);
+}
+
+function getSubmitterLabel(submission: Submission, usersById: Record<string, UserRow>) {
+  const submitterId = getSubmitterId(submission);
+
+  if (!submitterId) return "Unknown user";
+  if (submitterId.includes("@")) return submitterId;
+
+  return usersById[submitterId]?.email || submitterId;
 }
 
 export default function AdminSubmissionsPage() {
@@ -82,61 +101,168 @@ export default function AdminSubmissionsPage() {
   const [selectedId, setSelectedId] = useState("");
   const [compactMode, setCompactMode] = useState(false);
 
+  async function fetchSubmissionsWithFallback() {
+    const selectOptions = [
+      "id, doorable_id, image_url, status, created_at, user_id, submitted_by",
+      "id, doorable_id, image_url, status, created_at, submitted_by",
+      "id, doorable_id, image_url, status, created_at, user_id",
+      "id, doorable_id, image_url, status, created_at",
+    ];
+
+    let lastError = "";
+
+    for (const selectColumns of selectOptions) {
+      const { data, error } = await supabase
+        .from("image_submissions")
+        .select(selectColumns)
+        .in("status", ["pending", "approved", "rejected"])
+        .order("created_at", { ascending: false });
+
+      if (!error) {
+        return { data: data || [], error: "" };
+      }
+
+      lastError = error.message;
+    }
+
+    return { data: [], error: lastError || "Could not load image submissions." };
+  }
+
+  async function loadDoorablesBySubmissionIds(doorableIds: string[]) {
+    const nextDoorables: Record<string, Doorable> = {};
+    let lookupWarning = "";
+
+    if (doorableIds.length === 0) {
+      return { nextDoorables, lookupWarning };
+    }
+
+    const idLookup = await supabase
+      .from("doorables")
+      .select("id, name, series, movie, image_url")
+      .in("id", doorableIds);
+
+    if (!idLookup.error) {
+      (idLookup.data || []).forEach((row: any) => {
+        const id = cleanId(row.id);
+        if (!id) return;
+
+        nextDoorables[id] = {
+          id,
+          name: row.name ?? null,
+          series: row.series ?? null,
+          movie: row.movie ?? null,
+          image_url: row.image_url ?? null,
+        };
+      });
+    } else {
+      lookupWarning = "Doorable lookup by id failed: " + idLookup.error.message;
+    }
+
+    const missingAfterIdLookup = doorableIds.filter((id) => !nextDoorables[id]);
+
+    if (missingAfterIdLookup.length > 0) {
+      const uuidLookup = await supabase
+        .from("doorables")
+        .select("uuid, name, series, movie, image_url")
+        .in("uuid", missingAfterIdLookup);
+
+      if (!uuidLookup.error) {
+        (uuidLookup.data || []).forEach((row: any) => {
+          const id = cleanId(row.uuid);
+          if (!id) return;
+
+          nextDoorables[id] = {
+            id,
+            name: row.name ?? null,
+            series: row.series ?? null,
+            movie: row.movie ?? null,
+            image_url: row.image_url ?? null,
+          };
+        });
+      }
+    }
+
+    const stillMissing = doorableIds.filter((id) => !nextDoorables[id]);
+
+    if (stillMissing.length > 0) {
+      lookupWarning =
+        lookupWarning ||
+        `Loaded submissions, but ${stillMissing.length} submission${
+          stillMissing.length === 1 ? "" : "s"
+        } could not be matched to a Doorable row. The Doorable ID will show on those cards.`;
+    }
+
+    return { nextDoorables, lookupWarning };
+  }
+
+  async function loadUsersBySubmissionIds(submissionRows: Submission[]) {
+    const submitterIds = Array.from(
+      new Set(
+        submissionRows
+          .map((row) => getSubmitterId(row))
+          .filter((value) => value && !value.includes("@"))
+      )
+    );
+
+    const nextUsers: Record<string, UserRow> = {};
+
+    if (submitterIds.length === 0) {
+      return nextUsers;
+    }
+
+    const { data } = await supabase
+      .from("users")
+      .select("id, email")
+      .in("id", submitterIds);
+
+    (data || []).forEach((row: any) => {
+      const id = cleanId(row.id);
+      if (!id) return;
+      nextUsers[id] = row as UserRow;
+    });
+
+    return nextUsers;
+  }
+
   async function loadEverything() {
     setLoading(true);
     setMessage("");
 
-    const { data: subData, error: subError } = await supabase
-      .from("image_submissions")
-      .select("id, doorable_id, image_url, status, created_at, user_id")
-      .in("status", ["pending", "approved", "rejected"])
-      .order("created_at", { ascending: false });
+    const submissionResult = await fetchSubmissionsWithFallback();
 
-    if (subError) {
-      setMessage("Could not load submissions: " + subError.message);
+    if (submissionResult.error) {
+      setMessage("Could not load submissions: " + submissionResult.error);
+      setSubmissions([]);
+      setDoorablesById({});
+      setUsersById({});
       setLoading(false);
       return;
     }
 
-    const submissionRows = (subData || []) as Submission[];
+    const submissionRows = ((submissionResult.data || []) as any[]).map((row) => ({
+      id: cleanId(row.id),
+      doorable_id: cleanId(row.doorable_id),
+      image_url: cleanId(row.image_url),
+      status: row.status || "pending",
+      created_at: row.created_at ?? null,
+      user_id: row.user_id ? cleanId(row.user_id) : null,
+      submitted_by: row.submitted_by ? cleanId(row.submitted_by) : null,
+    })) as Submission[];
+
     setSubmissions(submissionRows);
 
     const doorableIds = Array.from(
-      new Set(submissionRows.map((row) => row.doorable_id).filter(Boolean))
+      new Set(submissionRows.map((row) => cleanId(row.doorable_id)).filter(Boolean))
     );
 
-    const userIds = Array.from(
-      new Set(submissionRows.map((row) => row.user_id).filter(Boolean))
-    ) as string[];
+    const { nextDoorables, lookupWarning } = await loadDoorablesBySubmissionIds(doorableIds);
+    setDoorablesById(nextDoorables);
 
-    if (doorableIds.length > 0) {
-      const { data: doorableData } = await supabase
-        .from("doorables")
-        .select("id, name, series, movie, image_url")
-        .in("id", doorableIds);
+    const nextUsers = await loadUsersBySubmissionIds(submissionRows);
+    setUsersById(nextUsers);
 
-      const nextDoorables: Record<string, Doorable> = {};
-      (doorableData || []).forEach((row: any) => {
-        nextDoorables[row.id] = row as Doorable;
-      });
-      setDoorablesById(nextDoorables);
-    } else {
-      setDoorablesById({});
-    }
-
-    if (userIds.length > 0) {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("id, email")
-        .in("id", userIds);
-
-      const nextUsers: Record<string, UserRow> = {};
-      (userData || []).forEach((row: any) => {
-        nextUsers[row.id] = row as UserRow;
-      });
-      setUsersById(nextUsers);
-    } else {
-      setUsersById({});
+    if (lookupWarning) {
+      setMessage(lookupWarning);
     }
 
     setLoading(false);
@@ -167,26 +293,49 @@ export default function AdminSubmissionsPage() {
     }
 
     void checkAccess();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, supabase]);
+
+  async function updateDoorableImage(doorableId: string, imageUrl: string) {
+    const cleanDoorableId = cleanId(doorableId);
+
+    const updateById = await supabase
+      .from("doorables")
+      .update({ image_url: imageUrl })
+      .eq("id", cleanDoorableId)
+      .select("id");
+
+    if (!updateById.error && updateById.data && updateById.data.length > 0) {
+      return { success: true, message: "" };
+    }
+
+    const updateByUuid = await supabase
+      .from("doorables")
+      .update({ image_url: imageUrl })
+      .eq("uuid", cleanDoorableId)
+      .select("uuid");
+
+    if (!updateByUuid.error && updateByUuid.data && updateByUuid.data.length > 0) {
+      return { success: true, message: "" };
+    }
+
+    return {
+      success: false,
+      message:
+        updateById.error?.message ||
+        updateByUuid.error?.message ||
+        "The Doorable image did not update. Check that image_submissions.doorable_id matches the Doorables table primary ID.",
+    };
+  }
 
   async function approveSubmission(submission: Submission) {
     setBusyId(submission.id);
     setMessage("");
 
-    const { data: doorableUpdateData, error: updateError } = await supabase
-      .from("doorables")
-      .update({ image_url: submission.image_url })
-      .eq("id", submission.doorable_id)
-      .select("id");
+    const doorableUpdate = await updateDoorableImage(submission.doorable_id, submission.image_url);
 
-    if (updateError) {
-      setMessage("Could not update doorable image: " + updateError.message);
-      setBusyId(null);
-      return;
-    }
-
-    if (!doorableUpdateData || doorableUpdateData.length === 0) {
-      setMessage("Approve blocked: the Doorable image did not update. Check RLS permissions on the doorables table.");
+    if (!doorableUpdate.success) {
+      setMessage("Approve blocked: " + doorableUpdate.message);
       setBusyId(null);
       return;
     }
@@ -298,7 +447,7 @@ export default function AdminSubmissionsPage() {
     setBusyId(null);
   }
 
-  const pending = submissions.filter((s) => s.status === "pending");
+  const pending = submissions.filter((s) => (s.status || "pending") === "pending");
   const approved = submissions.filter((s) => s.status === "approved");
   const rejected = submissions.filter((s) => s.status === "rejected");
 
@@ -308,7 +457,7 @@ export default function AdminSubmissionsPage() {
       ...Array.from(
         new Set(
           submissions
-            .map((sub) => doorablesById[sub.doorable_id]?.series || "")
+            .map((sub) => doorablesById[cleanId(sub.doorable_id)]?.series || "")
             .filter(Boolean)
         )
       ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" })),
@@ -321,7 +470,7 @@ export default function AdminSubmissionsPage() {
       ...Array.from(
         new Set(
           submissions
-            .map((sub) => doorablesById[sub.doorable_id]?.movie || "")
+            .map((sub) => doorablesById[cleanId(sub.doorable_id)]?.movie || "")
             .filter(Boolean)
         )
       ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" })),
@@ -332,10 +481,8 @@ export default function AdminSubmissionsPage() {
     const q = search.trim().toLowerCase();
 
     const filtered = submissions.filter((submission) => {
-      const doorable = doorablesById[submission.doorable_id];
-      const submitter = submission.user_id
-        ? usersById[submission.user_id]?.email || submission.user_id
-        : "Unknown user";
+      const doorable = doorablesById[cleanId(submission.doorable_id)];
+      const submitter = getSubmitterLabel(submission, usersById);
 
       const matchesStatus =
         statusFilter === "all" ? true : (submission.status || "pending") === statusFilter;
@@ -353,6 +500,7 @@ export default function AdminSubmissionsPage() {
         submitter,
         submission.status,
         submission.id,
+        submission.doorable_id,
       ]
         .filter(Boolean)
         .join(" ")
@@ -362,8 +510,8 @@ export default function AdminSubmissionsPage() {
     });
 
     filtered.sort((a, b) => {
-      const doorableA = doorablesById[a.doorable_id];
-      const doorableB = doorablesById[b.doorable_id];
+      const doorableA = doorablesById[cleanId(a.doorable_id)];
+      const doorableB = doorablesById[cleanId(b.doorable_id)];
 
       if (sortMode === "oldest") {
         return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
@@ -506,7 +654,7 @@ export default function AdminSubmissionsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search Doorable, series, movie, submitter..."
+              placeholder="Search Doorable, series, movie, submitter, ID..."
               className="field"
             />
 
@@ -584,12 +732,8 @@ export default function AdminSubmissionsPage() {
         {selectedSubmission ? (
           <SubmissionPreviewModal
             submission={selectedSubmission}
-            doorable={doorablesById[selectedSubmission.doorable_id]}
-            submitter={
-              selectedSubmission.user_id
-                ? usersById[selectedSubmission.user_id]?.email || selectedSubmission.user_id
-                : "Unknown user"
-            }
+            doorable={doorablesById[cleanId(selectedSubmission.doorable_id)]}
+            submitter={getSubmitterLabel(selectedSubmission, usersById)}
             busyId={busyId}
             onClose={() => setSelectedId("")}
             onApprove={approveSubmission}
@@ -608,10 +752,8 @@ export default function AdminSubmissionsPage() {
         ) : (
           <section className={`submissionGrid ${compactMode ? "compact" : ""}`}>
             {filteredSubmissions.map((submission, index) => {
-              const doorable = doorablesById[submission.doorable_id];
-              const submitter = submission.user_id
-                ? usersById[submission.user_id]?.email || submission.user_id
-                : "Unknown user";
+              const doorable = doorablesById[cleanId(submission.doorable_id)];
+              const submitter = getSubmitterLabel(submission, usersById);
               const theme = statusTheme(submission.status);
               const isBusy = busyId === submission.id;
 
@@ -623,6 +765,11 @@ export default function AdminSubmissionsPage() {
                       <div className="subMeta">
                         {doorable?.series || "Unknown Series"} • {doorable?.movie || "Unknown Movie"}
                       </div>
+                      {!doorable ? (
+                        <div className="idWarning">
+                          Doorable ID: {submission.doorable_id || "Missing doorable_id"}
+                        </div>
+                      ) : null}
                     </div>
 
                     <span
@@ -645,6 +792,14 @@ export default function AdminSubmissionsPage() {
                     <div>
                       <span>Submitted</span>
                       <strong>{niceDate(submission.created_at)}</strong>
+                    </div>
+                    <div>
+                      <span>Submission ID</span>
+                      <strong>{submission.id}</strong>
+                    </div>
+                    <div>
+                      <span>Doorable ID</span>
+                      <strong>{submission.doorable_id || "Missing"}</strong>
                     </div>
                   </div>
 
@@ -790,6 +945,11 @@ function SubmissionPreviewModal(props: {
               {props.doorable?.series || "Unknown Series"} • {props.doorable?.movie || "Unknown Movie"}
             </div>
             <div className="subMeta">Submitted by: {props.submitter}</div>
+            {!props.doorable ? (
+              <div className="idWarning">
+                Doorable ID: {props.submission.doorable_id || "Missing doorable_id"}
+              </div>
+            ) : null}
           </div>
 
           <span
@@ -1128,6 +1288,18 @@ const pageStyles = `
     font-size: 13px;
     font-weight: 800;
     line-height: 1.35;
+  }
+
+  .idWarning {
+    margin-top: 8px;
+    color: #92400e;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    border-radius: 12px;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 900;
+    overflow-wrap: anywhere;
   }
 
   .statusBadge {

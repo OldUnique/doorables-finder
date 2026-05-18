@@ -24,22 +24,14 @@ export const metadata: Metadata = {
   authors: [{ name: "Adorable Vault" }],
   creator: "Adorable Vault",
   publisher: "Adorable Vault",
-
-  /*
-    IMPORTANT FOR GOOGLE:
-    Do NOT put alternates.canonical: "/" in the root layout.
-    A root canonical can accidentally make every page tell Google
-    that the homepage is the main/canonical page.
-
-    Instead:
-    - Keep metadataBase here.
-    - Add page-specific canonicals inside each page that needs one.
-  */
-
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "Adorable Vault | Doorables Collection Tracker",
     description:
       "Track your Doorables collection, wishlist, extras, marketplace listings, and public collector profile.",
+    url: "https://www.mydoorables.com",
     siteName: "Adorable Vault",
     type: "website",
     locale: "en_US",

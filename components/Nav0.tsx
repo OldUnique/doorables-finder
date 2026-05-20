@@ -248,10 +248,12 @@ export default function Nav() {
       }
     : styles.shell;
 
-  // These intentionally go to the login page itself.
-  // Do NOT add next=/collection here, because that makes the header feel like it skips login/signup.
-  const signInHref = "/login";
-  const signUpHref = "/login?mode=signup";
+  // Sign in opens the login screen and sends users to their collection after login.
+  const signInHref = "/login?next=/collection";
+
+  // Sign up opens the same login page directly in Sign Up mode.
+  // This works with the updated login page that reads ?mode=signup.
+  const signUpHref = "/login?mode=signup&next=/collection";
 
   return (
     <header style={styles.header}>

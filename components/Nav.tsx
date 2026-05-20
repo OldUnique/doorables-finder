@@ -134,7 +134,7 @@ const styles: Record<string, CSSProperties> = {
   },
   mobileAccount: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
     gap: 8,
   },
 };
@@ -250,8 +250,8 @@ export default function Nav() {
 
   // These intentionally go to the login page itself.
   // Do NOT add next=/collection here, because that makes the header feel like it skips login/signup.
-  const signInHref = "/login";
-  const signUpHref = "/login?mode=signup";
+  const authHref = "/login";
+  
 
   return (
     <header style={styles.header}>
@@ -296,11 +296,8 @@ export default function Nav() {
 
         {!isCompact ? (
           <div style={styles.rightActions}>
-            <Link href={signInHref} style={accountStyle(false, "signin")}>
-              💜 Sign In
-            </Link>
-            <Link href={signUpHref} style={accountStyle(false, "signup")}>
-              ✨ Sign Up
+            <Link href={authHref} style={accountStyle(false, "signin")}>
+              💜 Sign In / Sign Up
             </Link>
           </div>
         ) : (
@@ -343,11 +340,8 @@ export default function Nav() {
           </nav>
 
           <div style={styles.mobileAccount}>
-            <Link href={signInHref} style={accountStyle(true, "signin")} onClick={closeMenu}>
-              💜 Sign In
-            </Link>
-            <Link href={signUpHref} style={accountStyle(true, "signup")} onClick={closeMenu}>
-              ✨ Sign Up
+            <Link href={authHref} style={accountStyle(true, "signin")} onClick={closeMenu}>
+              💜 Sign In / Sign Up
             </Link>
             <Link href="/account" style={accountStyle(true, "account")} onClick={closeMenu}>
               ⚙️ Account

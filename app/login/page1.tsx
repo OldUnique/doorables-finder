@@ -105,15 +105,20 @@ export default function LoginPage() {
 
   useEffect(() => {
     const checkUser = async () => {
-      // Keep the login page visible even when someone is already signed in.
-      // This makes the header Sign In / Sign Up buttons open the actual auth page
-      // instead of automatically sending logged-in users to /collection.
-      await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        router.replace(getSafeNextPath());
+        return;
+      }
+
       setCheckingSession(false);
     };
 
     void checkUser();
-  }, [supabase]);
+  }, [router, supabase]);
 
   useEffect(() => {
     if (mode !== "signup") return;

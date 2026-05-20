@@ -134,7 +134,7 @@ const styles: Record<string, CSSProperties> = {
   },
   mobileAccount: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
     gap: 8,
   },
 };
@@ -167,11 +167,16 @@ function pillStyle(active = false, mobile = false): CSSProperties {
   };
 }
 
-function accountStyle(mobile = false, variant: "signin" | "account" = "signin"): CSSProperties {
+function accountStyle(
+  mobile = false,
+  variant: "signin" | "signup" | "account" = "signin"
+): CSSProperties {
   const accountBackground =
     variant === "account"
       ? "linear-gradient(135deg, #4f46e5, #7c3aed)"
-      : "linear-gradient(135deg, #ec4899, #7c3aed, #2563eb)";
+      : variant === "signup"
+        ? "linear-gradient(135deg, #f59e0b, #ec4899, #7c3aed)"
+        : "linear-gradient(135deg, #ec4899, #7c3aed, #2563eb)";
 
   return {
     minHeight: mobile ? 50 : 43,
@@ -243,7 +248,12 @@ export default function Nav() {
       }
     : styles.shell;
 
-  const signInHref = "/login";
+  // Sign in opens the login screen and sends users to their collection after login.
+  const signInHref = "/login?next=/collection";
+
+  // Sign up opens the same login page directly in Sign Up mode.
+  // This works with the updated login page that reads ?mode=signup.
+  const signUpHref = "/login?mode=signup&next=/collection";
 
   return (
     <header style={styles.header}>
@@ -291,6 +301,9 @@ export default function Nav() {
             <Link href={signInHref} style={accountStyle(false, "signin")}>
               💜 Sign In
             </Link>
+            <Link href={signUpHref} style={accountStyle(false, "signup")}>
+              ✨ Sign Up
+            </Link>
           </div>
         ) : (
           <button
@@ -334,6 +347,9 @@ export default function Nav() {
           <div style={styles.mobileAccount}>
             <Link href={signInHref} style={accountStyle(true, "signin")} onClick={closeMenu}>
               💜 Sign In
+            </Link>
+            <Link href={signUpHref} style={accountStyle(true, "signup")} onClick={closeMenu}>
+              ✨ Sign Up
             </Link>
             <Link href="/account" style={accountStyle(true, "account")} onClick={closeMenu}>
               ⚙️ Account

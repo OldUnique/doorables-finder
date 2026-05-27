@@ -146,6 +146,58 @@ function seriesSort(a: string, b: string) {
   });
 }
 
+async function fetchAllDoorables(supabase: ReturnType<typeof getSupabase>) {
+  const pageSize = 1000;
+  let from = 0;
+  const allRows: any[] = [];
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("doorables")
+      .select("id, name, series, rarity, image_url")
+      .order("series", { ascending: true })
+      .order("name", { ascending: true })
+      .range(from, from + pageSize - 1);
+
+    if (error) throw error;
+
+    const rows = data || [];
+    allRows.push(...rows);
+
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return allRows;
+}
+
+async function fetchAllUserDoorables(
+  supabase: ReturnType<typeof getSupabase>,
+  userId: string
+) {
+  const pageSize = 1000;
+  let from = 0;
+  const allRows: any[] = [];
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("user_doorables")
+      .select("doorable_id, qty_owned, custom_tag, wanted")
+      .eq("user_id", userId)
+      .range(from, from + pageSize - 1);
+
+    if (error) throw error;
+
+    const rows = data || [];
+    allRows.push(...rows);
+
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return allRows;
+}
+
 export default function PublicCollectorPage() {
   const params = useParams();
   const rawUsername = decodeURIComponent(String(params?.username || "")).trim();
@@ -241,24 +293,21 @@ export default function PublicCollectorPage() {
       setCollectorUserId(String(userRow.id));
 
       if (normalizedMode !== "private") {
-        const { data: doorables, error: doorablesError } = await supabase
-          .from("doorables")
-          .select("id, name, series, rarity, image_url")
-          .range(0, 1999);
+        let doorables: any[] = [];
+        let userDoorables: any[] = [];
 
-        if (doorablesError) {
-          setError(doorablesError.message);
+        try {
+          doorables = await fetchAllDoorables(supabase);
+        } catch (err: any) {
+          setError(err?.message || "Could not load Doorables.");
           setLoading(false);
           return;
         }
 
-        const { data: userDoorables, error: userDoorablesError } = await supabase
-          .from("user_doorables")
-          .select("doorable_id, qty_owned, custom_tag, wanted")
-          .eq("user_id", userRow.id);
-
-        if (userDoorablesError) {
-          setError(userDoorablesError.message);
+        try {
+          userDoorables = await fetchAllUserDoorables(supabase, String(userRow.id));
+        } catch (err: any) {
+          setError(err?.message || "Could not load this collector's saved Doorables.");
           setLoading(false);
           return;
         }

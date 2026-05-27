@@ -38,6 +38,7 @@ export default function AppHeader() {
   const [authChecked, setAuthChecked] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const unreadLabel = unreadCount > 9 ? "9+" : String(unreadCount);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -153,6 +154,7 @@ export default function AppHeader() {
 
     if (typeof window !== "undefined") {
       window.addEventListener("messages-read-updated", handleUnreadRefreshEvent);
+      window.addEventListener("focus", handleUnreadRefreshEvent);
     }
 
     return () => {
@@ -162,6 +164,7 @@ export default function AppHeader() {
 
       if (typeof window !== "undefined") {
         window.removeEventListener("messages-read-updated", handleUnreadRefreshEvent);
+        window.removeEventListener("focus", handleUnreadRefreshEvent);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -182,9 +185,9 @@ export default function AppHeader() {
       String(conversation.id)
     );
 
-    const { count, error: msgError } = await supabase
+    const { data: messages, error: msgError } = await supabase
       .from("marketplace_messages")
-      .select("id", { count: "exact", head: true })
+      .select("id")
       .in("conversation_id", conversationIds)
       .neq("sender_id", userId)
       .is("read_at", null);
@@ -194,7 +197,7 @@ export default function AppHeader() {
       return;
     }
 
-    setUnreadCount(count ?? 0);
+    setUnreadCount(messages?.length ?? 0);
   }
 
   async function handleLogout() {
@@ -211,30 +214,33 @@ export default function AppHeader() {
     const isMessages = link.href === "/messages";
     const showUnread = isMessages && unreadCount > 0;
 
+    const className = [
+      "avNavBubble",
+      active ? "avNavBubbleActive" : "",
+      showUnread ? "avNavBubbleHasUnread" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
     return (
       <Link
         key={`${mobile ? "mobile" : "desktop"}-${link.href}`}
         href={link.href}
         onClick={() => setMenuOpen(false)}
-        className={active ? "avNavBubble avNavBubbleActive" : "avNavBubble"}
+        className={className}
         aria-current={active ? "page" : undefined}
         aria-label={
           showUnread
             ? `${link.label}, ${unreadCount} unread message${unreadCount === 1 ? "" : "s"}`
             : link.label
         }
+        data-unread={showUnread ? unreadLabel : undefined}
       >
         <span className="avNavIcon" aria-hidden="true">
           {link.icon}
         </span>
 
         <span className="avNavLabel">{label}</span>
-
-        {showUnread && (
-          <span className="avUnreadBadge" title={`${unreadCount} unread`}>
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
 
         {mobile && (
           <span className="avNavArrow" aria-hidden="true">
@@ -299,19 +305,20 @@ export default function AppHeader() {
         <button
           type="button"
           onClick={() => setMenuOpen((prev) => !prev)}
-          className="avMobileMenuButton"
+          className={unreadCount > 0 ? "avMobileMenuButton avMobileMenuButtonHasUnread" : "avMobileMenuButton"}
           aria-expanded={menuOpen}
           aria-controls="mobile-header-panel"
-          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-label={
+            menuOpen
+              ? "Close navigation menu"
+              : unreadCount > 0
+                ? `Open navigation menu, ${unreadCount} unread message${unreadCount === 1 ? "" : "s"}`
+                : "Open navigation menu"
+          }
+          data-unread={unreadCount > 0 ? unreadLabel : undefined}
         >
           <span>{menuOpen ? "Close" : "Menu"}</span>
           <span aria-hidden="true">{menuOpen ? "✕" : "☰"}</span>
-
-          {unreadCount > 0 && (
-            <span className="avMenuUnreadDot" title={`${unreadCount} unread`}>
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
         </button>
 
         <div
@@ -547,22 +554,27 @@ export default function AppHeader() {
           font-weight: 500;
         }
 
-        .avUnreadBadge {
+        .avNavBubbleHasUnread::after {
+          content: attr(data-unread);
+          position: absolute;
+          top: -8px;
+          right: -8px;
+          z-index: 10;
           min-width: 22px;
           height: 22px;
           padding: 0 7px;
           border-radius: 999px;
           background: linear-gradient(135deg, #ec4899, #8b5cf6);
-          color: white !important;
+          color: #ffffff;
           font-size: 12px;
           font-weight: 1000;
+          line-height: 1;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           box-shadow: 0 8px 16px rgba(139, 92, 246, 0.35);
-          border: 1px solid rgba(255, 255, 255, 0.35);
-          line-height: 1;
-          flex: 0 0 auto;
+          border: 2px solid rgba(8, 11, 24, 0.95);
+          pointer-events: none;
         }
 
         .avDesktopAccount {
@@ -640,24 +652,26 @@ export default function AppHeader() {
           overflow: visible;
         }
 
-        .avMenuUnreadDot {
+        .avMobileMenuButtonHasUnread::after {
+          content: attr(data-unread);
           position: absolute;
           top: -8px;
           right: -8px;
+          z-index: 10;
           min-width: 22px;
           height: 22px;
           padding: 0 7px;
           border-radius: 999px;
           background: linear-gradient(135deg, #ec4899, #8b5cf6);
-          color: white;
+          color: #ffffff;
           font-size: 12px;
           font-weight: 1000;
+          line-height: 1;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           border: 2px solid rgba(8, 11, 24, 0.96);
           box-shadow: 0 8px 16px rgba(139, 92, 246, 0.35);
-          line-height: 1;
           pointer-events: none;
         }
 
@@ -787,6 +801,13 @@ export default function AppHeader() {
             padding: 9px 12px;
             border-radius: 17px;
             white-space: nowrap;
+          }
+
+          .avMobileNav .avNavBubbleHasUnread::after {
+            top: 50%;
+            right: 42px;
+            transform: translateY(-50%);
+            border-color: rgba(30, 27, 75, 0.98);
           }
 
           .avMobileNav .avNavIcon {

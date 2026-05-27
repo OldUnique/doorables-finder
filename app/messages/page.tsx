@@ -168,6 +168,7 @@ export default function MessagesPage() {
       const listingId = params?.get("listing") || "";
       const conversationIdFromUrl = params?.get("conversation") || "";
       const draftFromUrl = params?.get("draft") || "";
+      const hasDirectMessageTarget = Boolean(listingId || conversationIdFromUrl || draftFromUrl);
 
       let preferredConversationId = conversationIdFromUrl;
 
@@ -182,7 +183,12 @@ export default function MessagesPage() {
         }
       }
 
-      await loadConversations(currentUserId, preferredConversationId);
+      await loadConversations(
+        currentUserId,
+        preferredConversationId,
+        false,
+        hasDirectMessageTarget
+      );
 
       if (draftFromUrl) {
         setDraft(draftFromUrl);
@@ -265,7 +271,8 @@ export default function MessagesPage() {
   async function loadConversations(
     currentUserId: string,
     conversationIdFromUrl?: string,
-    keepCurrentView?: boolean
+    keepCurrentView?: boolean,
+    shouldAutoOpenFirstConversation = true
   ) {
     const { data, error } = await supabase
       .from("marketplace_conversations")
@@ -332,11 +339,18 @@ export default function MessagesPage() {
 
     setConversations(mapped);
 
+    const isMobile =
+      typeof window !== "undefined" && window.innerWidth <= 920;
+
     const currentStillExists = mapped.some((item) => item.id === selectedConversationId);
+    const shouldKeepSelectedConversation = keepCurrentView && currentStillExists;
+    const shouldOpenFirstConversation =
+      shouldAutoOpenFirstConversation || !isMobile || shouldKeepSelectedConversation;
+
     const preferredId =
       conversationIdFromUrl ||
-      (currentStillExists ? selectedConversationId : "") ||
-      (mapped[0] ? mapped[0].id : "");
+      (shouldKeepSelectedConversation ? selectedConversationId : "") ||
+      (shouldOpenFirstConversation && mapped[0] ? mapped[0].id : "");
 
     setSelectedConversationId(preferredId);
 
@@ -344,8 +358,10 @@ export default function MessagesPage() {
       await loadMessages(preferredId);
       await markConversationRead(preferredId, currentUserId);
 
-      if (!keepCurrentView && typeof window !== "undefined" && window.innerWidth <= 920) {
+      if (!keepCurrentView && isMobile && shouldAutoOpenFirstConversation) {
         setShowConversationList(false);
+      } else if (!keepCurrentView && isMobile) {
+        setShowConversationList(true);
       }
     } else {
       setMessages([]);

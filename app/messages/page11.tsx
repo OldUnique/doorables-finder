@@ -15,6 +15,7 @@ type Conversation = {
   seller_name: string | null;
   conversation_type: string | null;
   collector_name: string | null;
+  unread_count: number;
 };
 
 type Message = {
@@ -54,8 +55,10 @@ export default function MessagesPage() {
   const [selectedConversationId, setSelectedConversationId] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+
   const [error, setError] = useState("");
 
   const [newCollectorUsername, setNewCollectorUsername] = useState("");
@@ -66,6 +69,30 @@ export default function MessagesPage() {
     void initialize();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`messages-inbox-live-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "marketplace_messages",
+        },
+        async () => {
+          await refreshConversationsQuietly();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase, userId]);
 
   useEffect(() => {
     if (!selectedConversationId || !userId) return;
@@ -140,6 +167,7 @@ export default function MessagesPage() {
 
       const listingId = params?.get("listing") || "";
       const conversationIdFromUrl = params?.get("conversation") || "";
+      const draftFromUrl = params?.get("draft") || "";
 
       let preferredConversationId = conversationIdFromUrl;
 
@@ -155,6 +183,19 @@ export default function MessagesPage() {
       }
 
       await loadConversations(currentUserId, preferredConversationId);
+
+      if (draftFromUrl) {
+        setDraft(draftFromUrl);
+
+        if (typeof window !== "undefined" && preferredConversationId) {
+          window.history.replaceState(
+            null,
+            "",
+            `/messages?conversation=${encodeURIComponent(preferredConversationId)}`
+          );
+        }
+      }
+
       setLoading(false);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Could not load messages.");
@@ -250,7 +291,7 @@ export default function MessagesPage() {
       return;
     }
 
-    const mapped = ((data || []) as any[]).map((row) => ({
+    const baseMapped = ((data || []) as any[]).map((row) => ({
       id: String(row.id),
       listing_id: row.listing_id ? String(row.listing_id) : null,
       buyer_id: String(row.buyer_id),
@@ -263,7 +304,31 @@ export default function MessagesPage() {
       seller_name: row.marketplace_listings?.seller_name ?? "Collector",
       conversation_type: row.conversation_type ?? "marketplace",
       collector_name: row.collector_name ?? null,
-    })) as Conversation[];
+    })) as Omit<Conversation, "unread_count">[];
+
+    const unreadCounts = new Map<string, number>();
+
+    if (baseMapped.length > 0) {
+      const { data: unreadRows } = await supabase
+        .from("marketplace_messages")
+        .select("conversation_id")
+        .in(
+          "conversation_id",
+          baseMapped.map((item) => item.id)
+        )
+        .neq("sender_id", currentUserId)
+        .is("read_at", null);
+
+      ((unreadRows || []) as any[]).forEach((row) => {
+        const conversationId = String(row.conversation_id);
+        unreadCounts.set(conversationId, (unreadCounts.get(conversationId) || 0) + 1);
+      });
+    }
+
+    const mapped: Conversation[] = baseMapped.map((item) => ({
+      ...item,
+      unread_count: unreadCounts.get(item.id) || 0,
+    }));
 
     setConversations(mapped);
 
@@ -322,6 +387,12 @@ export default function MessagesPage() {
       .eq("conversation_id", conversationId)
       .neq("sender_id", activeUserId)
       .is("read_at", null);
+
+    setConversations((prev) =>
+      prev.map((item) =>
+        item.id === conversationId ? { ...item, unread_count: 0 } : item
+      )
+    );
 
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("messages-read-updated"));
@@ -460,6 +531,11 @@ export default function MessagesPage() {
 
   const activeConversation =
     conversations.find((item) => item.id === selectedConversationId) ?? null;
+
+  const totalUnread = useMemo(
+    () => conversations.reduce((sum, item) => sum + item.unread_count, 0),
+    [conversations]
+  );
 
   function getConversationTitle(conversation: Conversation | null) {
     if (!conversation) return "Conversation";
@@ -629,6 +705,25 @@ export default function MessagesPage() {
           color: #111827;
         }
 
+        .sidebarCountWrap {
+          display: inline-flex;
+          gap: 8px;
+          align-items: center;
+          color: #64748b;
+          font-size: 13px;
+        }
+
+        .totalUnreadBadge {
+          min-height: 24px;
+          padding: 4px 9px;
+          border-radius: 999px;
+          background: linear-gradient(135deg, #ec4899, #8b5cf6);
+          color: #ffffff !important;
+          font-size: 12px;
+          font-weight: 1000;
+          box-shadow: 0 8px 16px rgba(139,92,246,0.28);
+        }
+
         .startBox {
           background:
             radial-gradient(circle at top right, rgba(196,181,253,0.28), transparent 30%),
@@ -706,7 +801,7 @@ export default function MessagesPage() {
         .conversationTopLine {
           display: flex;
           gap: 8px;
-          align-items: start;
+          align-items: flex-start;
         }
 
         .conversationIcon {
@@ -736,6 +831,22 @@ export default function MessagesPage() {
           font-weight: 800;
           display: block;
           line-height: 1.35;
+        }
+
+        .unreadBadge {
+          min-width: 24px;
+          height: 24px;
+          padding: 0 7px;
+          border-radius: 999px;
+          background: linear-gradient(135deg, #ec4899, #8b5cf6);
+          color: #ffffff !important;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          font-weight: 1000;
+          box-shadow: 0 8px 16px rgba(139,92,246,0.28);
+          margin-left: auto;
         }
 
         .messagePanel {
@@ -949,8 +1060,13 @@ export default function MessagesPage() {
             >
               <div className="sidebarTitle">
                 <span>Conversations</span>
-                <span style={{ color: "#64748b", fontSize: 13 }}>
-                  {conversations.length}
+                <span className="sidebarCountWrap">
+                  {totalUnread > 0 && (
+                    <span className="totalUnreadBadge">
+                      {totalUnread > 9 ? "9+" : totalUnread} unread
+                    </span>
+                  )}
+                  <span>{conversations.length}</span>
                 </span>
               </div>
 
@@ -1010,7 +1126,8 @@ export default function MessagesPage() {
                           <span className="conversationIcon">
                             {getConversationIcon(item)}
                           </span>
-                          <span style={{ minWidth: 0 }}>
+
+                          <span style={{ minWidth: 0, flex: 1 }}>
                             <span className="conversationTitle">
                               {getConversationTitle(item)}
                             </span>
@@ -1019,6 +1136,12 @@ export default function MessagesPage() {
                               {item.created_at ? ` • ${formatMessageTime(item.created_at)}` : ""}
                             </span>
                           </span>
+
+                          {item.unread_count > 0 && (
+                            <span className="unreadBadge">
+                              {item.unread_count > 9 ? "9+" : item.unread_count}
+                            </span>
+                          )}
                         </div>
                       </button>
                     );

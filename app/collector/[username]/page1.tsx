@@ -60,6 +60,10 @@ function normalizeVisibility(value: unknown): VisibilityMode {
   return "private";
 }
 
+function cleanText(value: unknown) {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
 function rarityTheme(rarity: string): Theme {
   const value = String(rarity || "").toLowerCase().trim();
 
@@ -211,6 +215,8 @@ export default function PublicCollectorPage() {
   const [displayName, setDisplayName] = useState(username);
   const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
+  const [search, setSearch] = useState("");
+  const [seriesFilter, setSeriesFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
   const [collectorUserId, setCollectorUserId] = useState("");
@@ -231,7 +237,7 @@ export default function PublicCollectorPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [viewFilter, viewMode]);
+  }, [viewFilter, viewMode, search, seriesFilter]);
 
   async function findCollectorByUsername(supabase: ReturnType<typeof getSupabase>) {
     const wantedUsername = rawUsername.trim();
@@ -324,9 +330,9 @@ export default function PublicCollectorPage() {
 
           return {
             id: String(d.id ?? ""),
-            name: String(d.name ?? "Unknown"),
-            series: String(d.series ?? "Unknown Series"),
-            rarity: String(d.rarity ?? "Common"),
+            name: cleanText(d.name) || "Unknown",
+            series: cleanText(d.series) || "Unknown Series",
+            rarity: cleanText(d.rarity) || "Common",
             image: String(d.image_url ?? ""),
             qty,
             note: String(row?.custom_tag ?? ""),
@@ -496,6 +502,11 @@ export default function PublicCollectorPage() {
     }
   }
 
+  function clearProfileSearch() {
+    setSearch("");
+    setSeriesFilter("all");
+  }
+
   const stats = useMemo(() => {
     const extras = cards.filter((c) => c.qty > 1).length;
     const wishlist = cards.filter((c) => c.qty <= 0 || c.wanted).length;
@@ -503,20 +514,60 @@ export default function PublicCollectorPage() {
     return { extras, wishlist, owned, total: cards.length };
   }, [cards]);
 
+  const seriesOptions = useMemo(() => {
+    const values = cards
+      .map((card) => cleanText(card.series))
+      .filter(Boolean)
+      .sort(seriesSort);
+
+    return ["all", ...Array.from(new Set(values))];
+  }, [cards]);
+
+  const searchableCards = useMemo(() => {
+    const q = search.trim().toLowerCase();
+
+    return cards.filter((card) => {
+      const matchesSeries = seriesFilter === "all" || card.series === seriesFilter;
+
+      const statusWords = [
+        card.qty > 1 ? "extra extras duplicate duplicates trade" : "",
+        card.qty > 0 ? "owned have" : "",
+        card.qty <= 0 || card.wanted ? "wishlist need chase wanted" : "",
+      ].join(" ");
+
+      const searchableText = [
+        card.name,
+        card.series,
+        card.rarity,
+        card.note,
+        statusWords,
+        `qty ${card.qty}`,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const matchesSearch = !q || searchableText.includes(q);
+
+      return matchesSeries && matchesSearch;
+    });
+  }, [cards, search, seriesFilter]);
+
   const completion = stats.total ? Math.round((stats.owned / stats.total) * 100) : 0;
   const isOwnProfile = !!currentUserId && !!collectorUserId && currentUserId === collectorUserId;
 
   const displayedCards = useMemo(() => {
-    if (viewFilter === "owned") return cards.filter((c) => c.qty > 0);
-    if (viewFilter === "extras") return cards.filter((c) => c.qty > 1);
-    if (viewFilter === "wishlist") return cards.filter((c) => c.qty <= 0 || c.wanted);
-    return cards;
-  }, [cards, viewFilter]);
+    if (viewFilter === "owned") return searchableCards.filter((c) => c.qty > 0);
+    if (viewFilter === "extras") return searchableCards.filter((c) => c.qty > 1);
+    if (viewFilter === "wishlist") return searchableCards.filter((c) => c.qty <= 0 || c.wanted);
+    return searchableCards;
+  }, [searchableCards, viewFilter]);
 
   const cardsPerPage = viewMode === "list" ? (isMobile ? 40 : 80) : isMobile ? 8 : 24;
   const totalPages = Math.max(1, Math.ceil(displayedCards.length / cardsPerPage));
   const safePage = Math.min(page, totalPages);
   const pagedCards = displayedCards.slice((safePage - 1) * cardsPerPage, safePage * cardsPerPage);
+
+  const activeSearchCount = (search.trim() ? 1 : 0) + (seriesFilter !== "all" ? 1 : 0);
 
   function getStatusLabel(card: PublicCard) {
     if (card.qty > 1) return "Extra";
@@ -789,6 +840,61 @@ export default function PublicCollectorPage() {
       margin-bottom: 12px;
     }
 
+    .searchPanel {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) minmax(220px, 320px) auto;
+      gap: 10px;
+      align-items: center;
+      margin: 12px 0 14px;
+      padding: 12px;
+      border-radius: 20px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+    }
+
+    .profileSearch,
+    .seriesSelect {
+      width: 100%;
+      min-height: 48px;
+      border-radius: 15px;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      color: #111827;
+      padding: 12px 14px;
+      font-size: 14px;
+      font-weight: 800;
+      box-sizing: border-box;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .profileSearch:focus,
+    .seriesSelect:focus {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 4px rgba(139,92,246,0.12);
+    }
+
+    .clearSearchButton {
+      min-height: 48px;
+      border: none;
+      border-radius: 999px;
+      padding: 12px 15px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-weight: 1000;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+
+    .searchHint {
+      grid-column: 1 / -1;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 850;
+      line-height: 1.45;
+    }
+
     .viewModeToggle {
       display: inline-flex;
       align-items: center;
@@ -999,6 +1105,15 @@ export default function PublicCollectorPage() {
 
       .actionPanel {
         min-width: 0;
+      }
+
+      .searchPanel {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .clearSearchButton {
+        width: 100%;
       }
 
       .cardsGrid {
@@ -1241,8 +1356,47 @@ export default function PublicCollectorPage() {
             </div>
           </div>
 
+          <div className="searchPanel">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search this profile by name, series, rarity, status, or note..."
+              className="profileSearch"
+            />
+
+            <select
+              value={seriesFilter}
+              onChange={(e) => setSeriesFilter(e.target.value)}
+              className="seriesSelect"
+            >
+              {seriesOptions.map((series) => (
+                <option key={series} value={series}>
+                  {series === "all" ? "All Series" : series}
+                </option>
+              ))}
+            </select>
+
+            {activeSearchCount > 0 ? (
+              <button type="button" className="clearSearchButton" onClick={clearProfileSearch}>
+                Clear Search
+              </button>
+            ) : (
+              <button type="button" className="clearSearchButton" onClick={() => setSearch("Series ")}>
+                Search Series
+              </button>
+            )}
+
+            <div className="searchHint">
+              {activeSearchCount > 0
+                ? `Search active: showing ${displayedCards.length} matching item${displayedCards.length === 1 ? "" : "s"} from this public profile.`
+                : "Tip: type “Series 12”, “Movie Moments”, “rare”, “extra”, “wishlist”, or pick a series from the dropdown."}
+            </div>
+          </div>
+
           {displayedCards.length === 0 ? (
-            <div style={{ color: "#6b7280", padding: 10, fontWeight: 800 }}>Nothing to show in this section yet.</div>
+            <div style={{ color: "#6b7280", padding: 10, fontWeight: 800 }}>
+              Nothing matches that search or filter yet.
+            </div>
           ) : (
             <section className={viewMode === "list" ? "cardsList" : "cardsGrid"}>
               {pagedCards.map((item, index) => {

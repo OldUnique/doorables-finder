@@ -39,6 +39,10 @@ function formatMessageTime(value: string | null) {
   });
 }
 
+function cleanUsername(value: string) {
+  return value.trim().replace(/^@+/, "").toLowerCase();
+}
+
 export default function MessagesPage() {
   const supabase = useMemo(() => getSupabase(), []);
   const router = useRouter();
@@ -57,17 +61,10 @@ export default function MessagesPage() {
   const [newCollectorUsername, setNewCollectorUsername] = useState("");
   const [creatingCollectorChat, setCreatingCollectorChat] = useState(false);
   const [showConversationList, setShowConversationList] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     void initialize();
-  }, []);
-
-  useEffect(() => {
-    const updateMobile = () => setIsMobile(window.innerWidth <= 920);
-    updateMobile();
-    window.addEventListener("resize", updateMobile);
-    return () => window.removeEventListener("resize", updateMobile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -94,6 +91,7 @@ export default function MessagesPage() {
     return () => {
       void supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConversationId, supabase, userId]);
 
   useEffect(() => {
@@ -366,9 +364,9 @@ export default function MessagesPage() {
     try {
       setError("");
 
-      const cleanUsername = newCollectorUsername.trim().toLowerCase();
+      const cleanCollectorUsername = cleanUsername(newCollectorUsername);
 
-      if (!cleanUsername) {
+      if (!cleanCollectorUsername) {
         setError("Enter a username first.");
         return;
       }
@@ -378,7 +376,7 @@ export default function MessagesPage() {
         return;
       }
 
-      if (cleanUsername === username.trim().toLowerCase()) {
+      if (cleanCollectorUsername === username.trim().toLowerCase()) {
         setError("You cannot start a collector chat with yourself.");
         return;
       }
@@ -388,7 +386,7 @@ export default function MessagesPage() {
       const { data: userRow, error: userRowError } = await supabase
         .from("users")
         .select("id, username")
-        .ilike("username", cleanUsername)
+        .ilike("username", cleanCollectorUsername)
         .maybeSingle();
 
       if (userRowError) {
@@ -404,7 +402,7 @@ export default function MessagesPage() {
       }
 
       const otherUserId = String(userRow.id);
-      const otherUsername = String(userRow.username ?? cleanUsername);
+      const otherUsername = String(userRow.username ?? cleanCollectorUsername);
 
       const { data: existing, error: existingError } = await supabase
         .from("marketplace_conversations")
@@ -496,12 +494,12 @@ export default function MessagesPage() {
             radial-gradient(circle at 70% 80%, rgba(236,72,153,0.16) 0%, rgba(236,72,153,0) 24%),
             linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%);
           padding: 16px;
+          color: #ffffff;
         }
 
         .shell {
           max-width: 1320px;
           margin: 0 auto;
-          color: white;
         }
 
         .hero {
@@ -524,12 +522,14 @@ export default function MessagesPage() {
           font-weight: 1000;
           letter-spacing: -1px;
           line-height: 1;
+          color: #ffffff;
         }
 
         .heroSub {
           margin-top: 8px;
-          opacity: 0.92;
+          color: rgba(255,255,255,0.92);
           line-height: 1.5;
+          font-weight: 750;
         }
 
         .heroActions {
@@ -555,6 +555,7 @@ export default function MessagesPage() {
           cursor: pointer;
           box-sizing: border-box;
           white-space: nowrap;
+          font-family: inherit;
         }
 
         .bubblePrimary,
@@ -597,13 +598,13 @@ export default function MessagesPage() {
 
         .messagesLayout {
           display: grid;
-          grid-template-columns: 360px 1fr;
+          grid-template-columns: 380px 1fr;
           gap: 16px;
         }
 
         .conversationSidebar,
         .messagePanel {
-          background: rgba(255,255,255,0.96);
+          background: rgba(255,255,255,0.97);
           color: #111827;
           border-radius: 24px;
           padding: 14px;
@@ -625,6 +626,7 @@ export default function MessagesPage() {
           gap: 10px;
           font-weight: 1000;
           font-size: 18px;
+          color: #111827;
         }
 
         .startBox {
@@ -634,6 +636,20 @@ export default function MessagesPage() {
           border: 1px solid #e5e7eb;
           border-radius: 18px;
           padding: 12px;
+          color: #111827;
+        }
+
+        .input,
+        .draftBox {
+          color: #111827;
+          background: #ffffff;
+          font-family: inherit;
+        }
+
+        .input::placeholder,
+        .draftBox::placeholder {
+          color: #64748b;
+          opacity: 1;
         }
 
         .input {
@@ -659,19 +675,32 @@ export default function MessagesPage() {
           padding: 13px 14px;
           border-radius: 16px;
           border: 1px solid #e5e7eb;
-          background: white;
+          background: #ffffff;
+          color: #111827 !important;
           cursor: pointer;
           transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+          font-family: inherit;
+          appearance: none;
+        }
+
+        .conversationButton,
+        .conversationButton * {
+          color: #111827;
         }
 
         .conversationButton:hover {
           transform: translateY(-1px);
           box-shadow: 0 10px 20px rgba(15,23,42,0.08);
+          border-color: #c7d2fe;
         }
 
         .conversationButton.active {
-          background: linear-gradient(135deg, #eef2ff, #f5f3ff);
-          border-color: #a78bfa;
+          background:
+            radial-gradient(circle at top right, rgba(196,181,253,0.34), transparent 34%),
+            linear-gradient(135deg, #ffffff, #f5f3ff);
+          border-color: #8b5cf6;
+          box-shadow: 0 12px 24px rgba(124,58,237,0.13);
+          color: #111827 !important;
         }
 
         .conversationTopLine {
@@ -688,21 +717,25 @@ export default function MessagesPage() {
           place-items: center;
           border-radius: 12px;
           background: #eef2ff;
+          color: #3730a3 !important;
         }
 
         .conversationTitle {
-          font-weight: 950;
+          font-weight: 1000;
           line-height: 1.25;
           word-break: break-word;
           display: block;
+          color: #111827 !important;
+          font-size: 14px;
         }
 
         .conversationMeta {
           font-size: 12px;
-          color: #6b7280;
+          color: #475569 !important;
           margin-top: 4px;
-          font-weight: 750;
+          font-weight: 800;
           display: block;
+          line-height: 1.35;
         }
 
         .messagePanel {
@@ -722,6 +755,8 @@ export default function MessagesPage() {
         .messageTitle {
           font-weight: 1000;
           line-height: 1.25;
+          color: #111827;
+          font-size: 18px;
         }
 
         .messageSubtitle {
@@ -748,10 +783,10 @@ export default function MessagesPage() {
         }
 
         .emptyState {
-          color: #6b7280;
+          color: #475569;
           padding: 16px;
           border-radius: 16px;
-          background: white;
+          background: #ffffff;
           border: 1px dashed #d1d5db;
           font-weight: 850;
           text-align: center;
@@ -767,13 +802,13 @@ export default function MessagesPage() {
         .messageMine {
           justify-self: end;
           background: linear-gradient(135deg, #2563eb, #7c3aed);
-          color: white;
+          color: #ffffff;
           border-bottom-right-radius: 6px;
         }
 
         .messageTheirs {
           justify-self: start;
-          background: white;
+          background: #ffffff;
           color: #111827;
           border: 1px solid #e5e7eb;
           border-bottom-left-radius: 6px;
@@ -798,6 +833,13 @@ export default function MessagesPage() {
           font-size: 14px;
         }
 
+        .draftBox:focus,
+        .input:focus {
+          outline: none;
+          border-color: #8b5cf6;
+          box-shadow: 0 0 0 4px rgba(139,92,246,0.12);
+        }
+
         .mobileBackButton {
           display: none;
         }
@@ -808,9 +850,17 @@ export default function MessagesPage() {
           box-shadow: 0 20px 44px rgba(0,0,0,0.28);
           border-radius: 24px;
           padding: 22px;
-          color: white;
+          color: #ffffff;
           font-weight: 950;
           text-align: center;
+        }
+
+        .tipText {
+          color: #64748b;
+          font-size: 12px;
+          margin-top: 8px;
+          line-height: 1.45;
+          font-weight: 750;
         }
 
         @media (max-width: 920px) {
@@ -905,10 +955,10 @@ export default function MessagesPage() {
               </div>
 
               <div className="startBox">
-                <div style={{ fontWeight: 950, marginBottom: 8 }}>
+                <div style={{ fontWeight: 950, marginBottom: 8, color: "#111827" }}>
                   Start Collector Chat
                 </div>
-                <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.45, marginBottom: 10 }}>
+                <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.45, marginBottom: 10, fontWeight: 750 }}>
                   Enter a collector username to start a direct chat.
                 </div>
                 <input
@@ -945,6 +995,7 @@ export default function MessagesPage() {
                     return (
                       <button
                         key={item.id}
+                        type="button"
                         onClick={() => {
                           setSelectedConversationId(item.id);
                           void loadMessages(item.id);
@@ -1063,7 +1114,7 @@ export default function MessagesPage() {
                 </button>
               </div>
 
-              <div style={{ color: "#64748b", fontSize: 12, marginTop: 8, lineHeight: 1.45 }}>
+              <div className="tipText">
                 Tip: Press Ctrl + Enter, or Command + Enter on Mac, to send quickly.
               </div>
             </section>

@@ -437,26 +437,14 @@ export default function PublicCollectorPage() {
         conversationId = String(created.id);
       }
 
-      if (prefilledBody) {
-        const { error: messageError } = await supabase
-          .from("marketplace_messages")
-          .insert([
-            {
-              conversation_id: conversationId,
-              sender_id: user.id,
-              body: prefilledBody,
-              read_at: null,
-            },
-          ]);
+      // Important:
+      // This does NOT send the message automatically.
+      // It only opens /messages with the text prefilled as a draft.
+      const draftQuery = prefilledBody
+        ? `&draft=${encodeURIComponent(prefilledBody)}`
+        : "";
 
-        if (messageError) {
-          setError(messageError.message);
-          setStartingChatId("");
-          return;
-        }
-      }
-
-      window.location.href = `/messages?conversation=${conversationId}`;
+      window.location.href = `/messages?conversation=${encodeURIComponent(conversationId)}${draftQuery}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start message.");
       setStartingChatId("");
@@ -1336,7 +1324,7 @@ export default function PublicCollectorPage() {
             <div>
               <div style={{ fontSize: 20, fontWeight: 1000 }}>{getFilterTitle()}</div>
               <div style={{ fontSize: 13, color: "#64748b", fontWeight: 800, marginTop: 3 }}>
-                {currentUserId ? "Tap a card action to connect with this collector." : "Visitors can view this profile. Log in to message or start your own vault."}
+                {currentUserId ? "Tap a card action to open a message draft for this collector." : "Visitors can view this profile. Log in to message or start your own vault."}
               </div>
             </div>
 

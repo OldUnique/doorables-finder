@@ -39,8 +39,6 @@ export default function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const unreadLabel = unreadCount > 9 ? "9+" : String(unreadCount);
-
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
@@ -166,7 +164,6 @@ export default function AppHeader() {
         window.removeEventListener("messages-read-updated", handleUnreadRefreshEvent);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
   async function loadUnreadCount(userId: string) {
@@ -180,13 +177,11 @@ export default function AppHeader() {
       return;
     }
 
-    const conversationIds = conversations.map((conversation: { id: string }) =>
-      String(conversation.id)
-    );
+    const conversationIds = conversations.map((conversation: { id: string }) => conversation.id);
 
-    const { count, error: msgError } = await supabase
+    const { data: messages, error: msgError } = await supabase
       .from("marketplace_messages")
-      .select("id", { count: "exact", head: true })
+      .select("id")
       .in("conversation_id", conversationIds)
       .neq("sender_id", userId)
       .is("read_at", null);
@@ -196,7 +191,7 @@ export default function AppHeader() {
       return;
     }
 
-    setUnreadCount(count ?? 0);
+    setUnreadCount(messages?.length ?? 0);
   }
 
   async function handleLogout() {
@@ -211,25 +206,14 @@ export default function AppHeader() {
     const active = isActivePath(pathname, link.href);
     const label = mobile && link.shortLabel ? link.shortLabel : link.label;
     const isMessages = link.href === "/messages";
-    const showUnread = isMessages && unreadCount > 0;
-
-    const className = [
-      "avNavBubble",
-      active ? "avNavBubbleActive" : "",
-      isMessages ? "avNavBubbleMessages" : "",
-      showUnread ? "avNavBubbleHasUnread" : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
 
     return (
       <Link
         key={`${mobile ? "mobile" : "desktop"}-${link.href}`}
         href={link.href}
         onClick={() => setMenuOpen(false)}
-        className={className}
+        className={active ? "avNavBubble avNavBubbleActive" : "avNavBubble"}
         aria-current={active ? "page" : undefined}
-        aria-label={showUnread ? `${link.label}, ${unreadCount} unread message${unreadCount === 1 ? "" : "s"}` : link.label}
       >
         <span className="avNavIcon" aria-hidden="true">
           {link.icon}
@@ -237,15 +221,15 @@ export default function AppHeader() {
 
         <span className="avNavLabel">{label}</span>
 
-        {showUnread && (
-          <span className="avUnreadBadge" title={`${unreadCount} unread`}>
-            {unreadLabel}
-          </span>
-        )}
-
         {mobile && (
           <span className="avNavArrow" aria-hidden="true">
             ›
+          </span>
+        )}
+
+        {isMessages && unreadCount > 0 && (
+          <span className="avUnreadBadge" title={`${unreadCount} unread`}>
+            {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </Link>
@@ -306,25 +290,13 @@ export default function AppHeader() {
         <button
           type="button"
           onClick={() => setMenuOpen((prev) => !prev)}
-          className={unreadCount > 0 ? "avMobileMenuButton avMobileMenuButtonHasUnread" : "avMobileMenuButton"}
+          className="avMobileMenuButton"
           aria-expanded={menuOpen}
           aria-controls="mobile-header-panel"
-          aria-label={
-            menuOpen
-              ? "Close navigation menu"
-              : unreadCount > 0
-                ? `Open navigation menu, ${unreadCount} unread message${unreadCount === 1 ? "" : "s"}`
-                : "Open navigation menu"
-          }
+          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
         >
           <span>{menuOpen ? "Close" : "Menu"}</span>
           <span aria-hidden="true">{menuOpen ? "✕" : "☰"}</span>
-
-          {unreadCount > 0 && (
-            <span className="avMenuUnreadBadge" title={`${unreadCount} unread messages`}>
-              {unreadLabel}
-            </span>
-          )}
         </button>
 
         <div
@@ -514,7 +486,7 @@ export default function AppHeader() {
             0 8px 18px rgba(0, 0, 0, 0.14);
           transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
           white-space: nowrap;
-          overflow: visible;
+          overflow: hidden;
         }
 
         .avNavBubble:hover {
@@ -531,10 +503,6 @@ export default function AppHeader() {
           box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.15),
             0 12px 24px rgba(124, 58, 237, 0.32);
-        }
-
-        .avNavBubbleMessages.avNavBubbleHasUnread {
-          padding-right: 24px;
         }
 
         .avNavIcon {
@@ -565,26 +533,18 @@ export default function AppHeader() {
         }
 
         .avUnreadBadge {
-          position: absolute;
-          top: -8px;
-          right: -8px;
-          min-width: 24px;
-          height: 24px;
-          padding: 0 7px;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 5px;
           border-radius: 999px;
-          background: linear-gradient(135deg, #ef4444, #ec4899, #8b5cf6);
-          color: #ffffff !important;
-          font-size: 12px;
+          background: #ef4444;
+          color: white;
+          font-size: 11px;
           font-weight: 1000;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          border: 2px solid rgba(8, 11, 24, 0.96);
-          box-shadow:
-            0 0 0 2px rgba(255, 255, 255, 0.18),
-            0 8px 18px rgba(236, 72, 153, 0.42);
-          z-index: 5;
-          pointer-events: none;
+          box-shadow: 0 0 0 2px rgba(10, 14, 30, 0.88);
         }
 
         .avDesktopAccount {
@@ -641,7 +601,6 @@ export default function AppHeader() {
         }
 
         .avMobileMenuButton {
-          position: relative;
           display: none;
           min-height: 42px;
           padding: 10px 14px;
@@ -659,33 +618,6 @@ export default function AppHeader() {
           box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.12),
             0 8px 18px rgba(0, 0, 0, 0.14);
-          overflow: visible;
-        }
-
-        .avMobileMenuButtonHasUnread {
-          padding-right: 20px;
-        }
-
-        .avMenuUnreadBadge {
-          position: absolute;
-          top: -8px;
-          right: -8px;
-          min-width: 24px;
-          height: 24px;
-          padding: 0 7px;
-          border-radius: 999px;
-          background: linear-gradient(135deg, #ef4444, #ec4899, #8b5cf6);
-          color: #ffffff;
-          font-size: 12px;
-          font-weight: 1000;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          border: 2px solid rgba(8, 11, 24, 0.96);
-          box-shadow:
-            0 0 0 2px rgba(255, 255, 255, 0.18),
-            0 8px 18px rgba(236, 72, 153, 0.42);
-          pointer-events: none;
         }
 
         .avMobileBackdrop,
@@ -700,10 +632,6 @@ export default function AppHeader() {
 
           .avNavBubble {
             padding: 10px 13px;
-          }
-
-          .avNavBubbleMessages.avNavBubbleHasUnread {
-            padding-right: 24px;
           }
         }
 
@@ -818,17 +746,6 @@ export default function AppHeader() {
             padding: 9px 12px;
             border-radius: 17px;
             white-space: nowrap;
-          }
-
-          .avMobileNav .avNavBubbleMessages.avNavBubbleHasUnread {
-            padding-right: 46px;
-          }
-
-          .avMobileNav .avUnreadBadge {
-            top: 50%;
-            right: 44px;
-            transform: translateY(-50%);
-            border-color: rgba(30, 27, 75, 0.98);
           }
 
           .avMobileNav .avNavIcon {

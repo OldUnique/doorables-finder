@@ -39,6 +39,8 @@ export default function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  const unreadLabel = unreadCount > 9 ? "9+" : String(unreadCount);
+
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
@@ -211,18 +213,23 @@ export default function AppHeader() {
     const isMessages = link.href === "/messages";
     const showUnread = isMessages && unreadCount > 0;
 
+    const className = [
+      "avNavBubble",
+      active ? "avNavBubbleActive" : "",
+      isMessages ? "avNavBubbleMessages" : "",
+      showUnread ? "avNavBubbleHasUnread" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
     return (
       <Link
         key={`${mobile ? "mobile" : "desktop"}-${link.href}`}
         href={link.href}
         onClick={() => setMenuOpen(false)}
-        className={active ? "avNavBubble avNavBubbleActive" : "avNavBubble"}
+        className={className}
         aria-current={active ? "page" : undefined}
-        aria-label={
-          showUnread
-            ? `${link.label}, ${unreadCount} unread message${unreadCount === 1 ? "" : "s"}`
-            : link.label
-        }
+        aria-label={showUnread ? `${link.label}, ${unreadCount} unread message${unreadCount === 1 ? "" : "s"}` : link.label}
       >
         <span className="avNavIcon" aria-hidden="true">
           {link.icon}
@@ -232,7 +239,7 @@ export default function AppHeader() {
 
         {showUnread && (
           <span className="avUnreadBadge" title={`${unreadCount} unread`}>
-            {unreadCount > 9 ? "9+" : unreadCount}
+            {unreadLabel}
           </span>
         )}
 
@@ -299,17 +306,23 @@ export default function AppHeader() {
         <button
           type="button"
           onClick={() => setMenuOpen((prev) => !prev)}
-          className="avMobileMenuButton"
+          className={unreadCount > 0 ? "avMobileMenuButton avMobileMenuButtonHasUnread" : "avMobileMenuButton"}
           aria-expanded={menuOpen}
           aria-controls="mobile-header-panel"
-          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-label={
+            menuOpen
+              ? "Close navigation menu"
+              : unreadCount > 0
+                ? `Open navigation menu, ${unreadCount} unread message${unreadCount === 1 ? "" : "s"}`
+                : "Open navigation menu"
+          }
         >
           <span>{menuOpen ? "Close" : "Menu"}</span>
           <span aria-hidden="true">{menuOpen ? "✕" : "☰"}</span>
 
           {unreadCount > 0 && (
-            <span className="avMenuUnreadDot" title={`${unreadCount} unread`}>
-              {unreadCount > 9 ? "9+" : unreadCount}
+            <span className="avMenuUnreadBadge" title={`${unreadCount} unread messages`}>
+              {unreadLabel}
             </span>
           )}
         </button>
@@ -520,6 +533,10 @@ export default function AppHeader() {
             0 12px 24px rgba(124, 58, 237, 0.32);
         }
 
+        .avNavBubbleMessages.avNavBubbleHasUnread {
+          padding-right: 24px;
+        }
+
         .avNavIcon {
           width: 28px;
           height: 28px;
@@ -548,21 +565,26 @@ export default function AppHeader() {
         }
 
         .avUnreadBadge {
-          min-width: 22px;
-          height: 22px;
+          position: absolute;
+          top: -8px;
+          right: -8px;
+          min-width: 24px;
+          height: 24px;
           padding: 0 7px;
           border-radius: 999px;
-          background: linear-gradient(135deg, #ec4899, #8b5cf6);
-          color: white !important;
+          background: linear-gradient(135deg, #ef4444, #ec4899, #8b5cf6);
+          color: #ffffff !important;
           font-size: 12px;
           font-weight: 1000;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 8px 16px rgba(139, 92, 246, 0.35);
-          border: 1px solid rgba(255, 255, 255, 0.35);
-          line-height: 1;
-          flex: 0 0 auto;
+          border: 2px solid rgba(8, 11, 24, 0.96);
+          box-shadow:
+            0 0 0 2px rgba(255, 255, 255, 0.18),
+            0 8px 18px rgba(236, 72, 153, 0.42);
+          z-index: 5;
+          pointer-events: none;
         }
 
         .avDesktopAccount {
@@ -640,24 +662,29 @@ export default function AppHeader() {
           overflow: visible;
         }
 
-        .avMenuUnreadDot {
+        .avMobileMenuButtonHasUnread {
+          padding-right: 20px;
+        }
+
+        .avMenuUnreadBadge {
           position: absolute;
           top: -8px;
           right: -8px;
-          min-width: 22px;
-          height: 22px;
+          min-width: 24px;
+          height: 24px;
           padding: 0 7px;
           border-radius: 999px;
-          background: linear-gradient(135deg, #ec4899, #8b5cf6);
-          color: white;
+          background: linear-gradient(135deg, #ef4444, #ec4899, #8b5cf6);
+          color: #ffffff;
           font-size: 12px;
           font-weight: 1000;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           border: 2px solid rgba(8, 11, 24, 0.96);
-          box-shadow: 0 8px 16px rgba(139, 92, 246, 0.35);
-          line-height: 1;
+          box-shadow:
+            0 0 0 2px rgba(255, 255, 255, 0.18),
+            0 8px 18px rgba(236, 72, 153, 0.42);
           pointer-events: none;
         }
 
@@ -673,6 +700,10 @@ export default function AppHeader() {
 
           .avNavBubble {
             padding: 10px 13px;
+          }
+
+          .avNavBubbleMessages.avNavBubbleHasUnread {
+            padding-right: 24px;
           }
         }
 
@@ -789,6 +820,17 @@ export default function AppHeader() {
             white-space: nowrap;
           }
 
+          .avMobileNav .avNavBubbleMessages.avNavBubbleHasUnread {
+            padding-right: 46px;
+          }
+
+          .avMobileNav .avUnreadBadge {
+            top: 50%;
+            right: 44px;
+            transform: translateY(-50%);
+            border-color: rgba(30, 27, 75, 0.98);
+          }
+
           .avMobileNav .avNavIcon {
             width: 36px;
             height: 36px;
@@ -799,11 +841,6 @@ export default function AppHeader() {
           .avMobileNav .avNavLabel {
             font-size: 16px;
             font-weight: 1000;
-          }
-
-          .avMobileNav .avUnreadBadge {
-            margin-left: auto;
-            margin-right: 8px;
           }
         }
 

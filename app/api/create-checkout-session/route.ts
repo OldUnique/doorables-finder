@@ -47,8 +47,8 @@ function getAppUrl(req: Request) {
 }
 
 function getPlanLabel(plan: PlanKey) {
-  if (plan === "monthly") return "Collector Monthly";
-  if (plan === "yearly") return "Collector Yearly";
+  if (plan === "monthly") return "Seller Plus Monthly";
+  if (plan === "yearly") return "Vault Supporter Yearly";
   return "Founding Collector Bundle";
 }
 

@@ -40,10 +40,10 @@ const nextCards = [
 ];
 
 const trustItems = [
-  { icon: "🚫", label: "No ads. Ever." },
+  { icon: "💜", label: "Free unlimited tracking" },
   { icon: "💜", label: "Fan-made by collectors" },
   { icon: "📱", label: "Built for mobile checking" },
-  { icon: "🔐", label: "Stripe handles checkout" },
+  { icon: "🏷️", label: "Seller/supporter perks" },
 ];
 
 const checklistItems = [
@@ -755,9 +755,9 @@ export default function AboutPage() {
 
             <div className="miniStat">
               <div className="miniLabel">Free plan</div>
-              <div className="miniTitle">Start with 50 saves</div>
+              <div className="miniTitle">Unlimited saves</div>
               <div className="miniText">
-                Try the tracker for free, then upgrade when you are ready for full collector access.
+                Track your collection, wishlist, extras, and public profile for free. Paid options are only for seller tools and supporter perks.
               </div>
             </div>
 
@@ -774,10 +774,10 @@ export default function AboutPage() {
         <section className="promiseStrip">
           <div className="promiseIcon">🚫</div>
           <div>
-            <h2 className="promiseTitle">No ads. Ever. The vault stays clean on purpose.</h2>
+            <h2 className="promiseTitle">Free tracker first. The vault stays clean on purpose.</h2>
             <p className="promiseText">
               Adorable Vault is meant to feel calm and useful, not stuffed with banners, pop-ups, or clutter.
-              The small paid plan helps keep the site collector-focused instead of advertiser-focused.
+              Optional seller tools, supporter perks, affiliate-style buying guides, and collector merch can help fund the site without charging for basic tracking.
             </p>
           </div>
         </section>
@@ -788,9 +788,9 @@ export default function AboutPage() {
               <div className="founderBadge">🔥 Limited founder bonus</div>
               <h2 className="founderTitle">Founding Collector Package with keychain 💜</h2>
               <div className="founderText">
-                For the earliest supporters, Adorable Vault has a special Founding Collector Package that includes full vault access
+                For the earliest supporters, Adorable Vault has a special Founding Collector Package that includes supporter perks
                 plus a limited Adorable Vault keychain while supplies last. It is a fun way to support the site early, help the collector
-                community grow, and get a little physical vault keepsake with your membership.
+                community grow, and get a little physical vault keepsake without locking the basic tracker behind payment.
               </div>
 
               <div className="buttonRow">

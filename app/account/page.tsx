@@ -14,9 +14,8 @@ type ProfileRow = {
   referral_username_used?: string | null;
 };
 
-const FREE_LIMIT = 50;
-const MONTHLY_PRICE_LABEL = "$3/month";
-const YEARLY_PRICE_LABEL = "$15/year";
+const SELLER_PRICE_LABEL = "$3/month";
+const SUPPORTER_PRICE_LABEL = "$15/year";
 
 function cleanUsername(value: string) {
   return value
@@ -79,55 +78,26 @@ function getProfileUrl(username: string) {
 function getFreeVaultMessage(ownedCount: number, isSubscribed: boolean) {
   if (isSubscribed) {
     return {
-      label: "Full Access Active",
-      title: "Unlimited vault unlocked 👑",
-      text: "You can keep building, tracking, sharing, selling, and organizing without the 50-save limit.",
+      label: "Paid Perks Active",
+      title: "Thanks for supporting the vault 👑",
+      text: "Your paid perks are active. Collection tracking stays free and unlimited for every collector.",
       tone: "success",
-    };
-  }
-
-  if (ownedCount >= FREE_LIMIT) {
-    return {
-      label: "Free Vault Full",
-      title: "Your starter shelf is full 💜",
-      text: "Upgrade to keep adding Doorables, unlock unlimited tracking, and use the full collector toolkit.",
-      tone: "danger",
-    };
-  }
-
-  if (ownedCount >= 40) {
-    return {
-      label: "Almost Full",
-      title: "Your vault is getting serious 👀",
-      text: `You have ${FREE_LIMIT - ownedCount} free save${
-        FREE_LIMIT - ownedCount === 1 ? "" : "s"
-      } left. Full access is ready whenever your collection outgrows the starter shelf.`,
-      tone: "warning",
-    };
-  }
-
-  if (ownedCount >= 25) {
-    return {
-      label: "Halfway Hooked",
-      title: "Your vault is filling up nicely ✨",
-      text: "This is the sweet spot where your checklist starts becoming genuinely useful during shopping, trades, and live sales.",
-      tone: "purple",
     };
   }
 
   if (ownedCount > 0) {
     return {
-      label: "Vault Started",
-      title: "You started your collector vault 💜",
-      text: "Keep adding what you own so your checklist is ready the next time you are hunting.",
+      label: "Free Unlimited Vault",
+      title: "Your collector vault is growing 💜",
+      text: `You have ${ownedCount} Doorable${ownedCount === 1 ? "" : "s"} tracked. Keep adding as many as you want for free.`,
       tone: "purple",
     };
   }
 
   return {
-    label: "Fresh Vault",
+    label: "Free Unlimited Vault",
     title: "Start with your first saved Doorable",
-    text: "Add a few favorites to your collection, then the tracker starts showing progress, extras, and what you still need.",
+    text: "Track unlimited Doorables for free. Seller Plus, supporter perks, and founding bundles help keep the site running.",
     tone: "neutral",
   };
 }
@@ -414,9 +384,6 @@ export default function AccountPage() {
   const hasUnsavedUsername = cleanCurrentUsername !== originalUsername;
 
   const completion = totalCount ? Math.round((ownedCount / totalCount) * 100) : 0;
-  const freeUsed = Math.min(ownedCount, FREE_LIMIT);
-  const freePercent = Math.min(100, Math.round((freeUsed / FREE_LIMIT) * 100));
-  const freeLeft = Math.max(0, FREE_LIMIT - freeUsed);
   const profileUrl = cleanCurrentUsername ? `/collector/${cleanCurrentUsername}` : "";
   const profileFullUrl = cleanCurrentUsername ? getProfileUrl(cleanCurrentUsername) : "";
   const vaultMessage = getFreeVaultMessage(ownedCount, isSubscribed);
@@ -485,7 +452,7 @@ export default function AccountPage() {
               <h1 className="heroTitle">Sign in to manage your vault.</h1>
               <p className="heroText">
                 Your account page is where you manage your username, public collector profile,
-                collection visibility, subscription status, referral info, and seller tools.
+                collection visibility, free tracker status, supporter perks, referral info, and seller tools.
               </p>
               <div className="heroActions">
                 <Link href={`/login?next=${encodeURIComponent(safeNextPath())}`} className="primaryButton">
@@ -523,7 +490,7 @@ export default function AccountPage() {
 
           <div className="heroSideCard">
             <div className="sideLabel">{vaultMessage.label}</div>
-            <div className="sideTitle">{isSubscribed ? "Full Access 👑" : "Starter Vault 💜"}</div>
+            <div className="sideTitle">{isSubscribed ? "Paid Perks 👑" : "Free Vault 💜"}</div>
             <div className="sideText">{vaultMessage.text}</div>
           </div>
         </section>
@@ -735,27 +702,22 @@ export default function AccountPage() {
                 <>
                   <div className="freeProgressBox">
                     <div className="progressTop">
-                      <strong>{freeUsed}/50 saved</strong>
-                      <span>{freePercent}%</span>
-                    </div>
-                    <div className="progressTrack">
-                      <div className="progressFill" style={{ width: `${freePercent}%` }} />
+                      <strong>Unlimited free tracking</strong>
+                      <span>∞</span>
                     </div>
                     <div className="helperText">
-                      {freeLeft > 0
-                        ? `${freeLeft} free save${freeLeft === 1 ? "" : "s"} left.`
-                        : "Your free vault is full."}
+                      Track as many Doorables as you want for free. Paid options are for seller tools, supporter perks, and launch bundles.
                     </div>
                   </div>
 
                   <div className="planMiniGrid">
                     <div className="planMini">
-                      <span>Monthly</span>
-                      <strong>{MONTHLY_PRICE_LABEL}</strong>
+                      <span>Seller Plus</span>
+                      <strong>{SELLER_PRICE_LABEL}</strong>
                     </div>
                     <div className="planMini best">
-                      <span>Best Value</span>
-                      <strong>{YEARLY_PRICE_LABEL}</strong>
+                      <span>Supporter</span>
+                      <strong>{SUPPORTER_PRICE_LABEL}</strong>
                     </div>
                   </div>
                 </>
@@ -763,7 +725,7 @@ export default function AccountPage() {
 
               <div className="sideButtons">
                 <Link href="/pricing" className="primaryButton">
-                  {isSubscribed ? "View Plans" : "Upgrade"}
+                  {isSubscribed ? "View Perks" : "Support / Seller Perks"}
                 </Link>
                 <Link href="/collection" className="secondaryButton">
                   Open Collection
@@ -775,7 +737,7 @@ export default function AccountPage() {
               <div className="eyebrow">Referral perks</div>
               <h2 className="panelTitle">Share the vault</h2>
               <p className="mutedText">
-                Your username can be used as a referral username during checkout. Copy a quick invite message and send it to collector friends.
+                Your username can be used as a referral username when someone chooses a paid seller, supporter, or founding bundle. Copy a quick invite message and send it to collector friends.
               </p>
 
               <div className="referralBox">

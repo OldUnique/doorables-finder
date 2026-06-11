@@ -45,9 +45,8 @@ type SeriesProgressItem = {
   isMissingSeries: boolean;
 };
 
-const FREE_LIMIT = 50;
-const MONTHLY_PRICE_LABEL = "$3/month";
-const YEARLY_PRICE_LABEL = "$15/year";
+const SELLER_PLUS_PRICE_LABEL = "$3/month";
+const SUPPORTER_PRICE_LABEL = "$15/year";
 
 function cleanText(value: unknown) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -148,13 +147,13 @@ function getCommunityTier(monthlyMessages: number, monthlyListings: number, mont
 }
 
 function getVaultMilestone(ownedCount: number, isSubscribed: boolean) {
-  if (isSubscribed) return { eyebrow: "👑 Unlimited Vault Active", title: "Your vault can keep growing without a cap.", body: "Keep adding Doorables, notes, extras, public profile updates, marketplace listings, and photo submissions whenever you want." };
-  if (ownedCount >= FREE_LIMIT) return { eyebrow: "💜 Free Vault Full", title: "You hit 50 saved Doorables — the vault did its job.", body: "Upgrade to keep tracking every figure, series, extra, wishlist item, and seller tool without hitting another wall." };
-  if (ownedCount >= 40) return { eyebrow: "🔥 Almost full", title: "Your vault is getting serious.", body: `You have ${FREE_LIMIT - ownedCount} free saves left. This is the perfect time to unlock unlimited before your next hunt or live sale.` };
-  if (ownedCount >= 25) return { eyebrow: "✨ Halfway hooked", title: "You are officially building a real collector vault.", body: "Keep filling it in, check your progress by series, and use the Need/Extras filters before you buy another duplicate." };
+  if (isSubscribed) return { eyebrow: "💎 Paid Perks Active", title: "Your free tracker stays unlimited — thank you for supporting the vault.", body: "Keep tracking without caps. Paid perks help fund seller tools, marketplace improvements, keychains, and new collector features." };
+  if (ownedCount >= 400) return { eyebrow: "👑 Crown Collector", title: "Your vault is huge — and still free to track.", body: "Unlimited tracking is active. Seller Plus, supporter perks, affiliate guides, and merch help keep the tracker free for everyone." };
+  if (ownedCount >= 150) return { eyebrow: "💜 Serious Collector", title: "Your collection is growing fast.", body: "Keep adding Doorables, notes, extras, public profile updates, photo submissions, and series progress without a save limit." };
+  if (ownedCount >= 25) return { eyebrow: "✨ Vault Builder", title: "You are officially building a real collector vault.", body: "Keep filling it in, check your progress by series, and use the Need/Extras filters before you buy another duplicate." };
   if (ownedCount >= 10) return { eyebrow: "💜 Vault started", title: "The useful part is kicking in now.", body: "The more you save, the better this becomes during shopping, trades, Whatnot shows, and blind-box chaos." };
   if (ownedCount > 0) return { eyebrow: "🌱 First shelf started", title: "Add a few more and the magic starts showing.", body: "Try adding your newest favorites first, then use filters to track what you have, need, and can trade." };
-  return { eyebrow: "👀 Start with your favorites", title: "Build your vault before your next Doorables hunt.", body: "Tap + on the Doorables you own. Once your collection is saved, you can stop guessing and start checking." };
+  return { eyebrow: "👀 Start with your favorites", title: "Build your free unlimited vault before your next Doorables hunt.", body: "Tap + on the Doorables you own. Once your collection is saved, you can stop guessing and start checking." };
 }
 
 function getSeriesProgressTheme(percent: number) {
@@ -211,11 +210,11 @@ function LoggedOutCollectionLanding() {
             <h1 className="guestTitle">Stop guessing what you have. Start building your vault.</h1>
             <p className="guestText">
               Save what you own, mark what you still need, organize extras, and check your collection before you buy another duplicate.
-              Free accounts can save up to 50 Doorables before upgrading.
+              Collection tracking is free and unlimited. Optional seller tools and supporter perks help keep the vault running.
             </p>
 
             <div className="guestPills">
-              <span className="guestPill">Free up to 50 saves</span>
+              <span className="guestPill">Free unlimited tracking</span>
               <span className="guestPill">Mobile-friendly hunt list</span>
               <span className="guestPill">Extras + wishlist tracking</span>
               <span className="guestPill">Series progress dopamine</span>
@@ -230,7 +229,7 @@ function LoggedOutCollectionLanding() {
           <div className="guestPreviewCard">
             <div className="mockSearch">Search name, series, rarity, movie...</div>
             <div className="guestStats">
-              <div className="guestStat"><strong>50</strong><span>free saves</span></div>
+              <div className="guestStat"><strong>Free</strong><span>unlimited saves</span></div>
               <div className="guestStat"><strong>Need</strong><span>hunt list</span></div>
               <div className="guestStat"><strong>Extras</strong><span>trade/sell</span></div>
               <div className="guestStat"><strong>Gold</strong><span>complete series</span></div>
@@ -254,7 +253,7 @@ function LoggedOutCollectionLanding() {
 
         <section className="guestGrid">
           <Link href="/demo" className="guestFeature"><div><div className="guestIcon">👀</div><div className="guestFeatureTitle">Preview the vault</div></div><div className="guestFeatureText">See how the tracker works before making an account.</div></Link>
-          <Link href="/login?next=/collection" className="guestFeature"><div><div className="guestIcon">💜</div><div className="guestFeatureTitle">Start free</div></div><div className="guestFeatureText">Create a free account and save up to 50 Doorables.</div></Link>
+          <Link href="/login?next=/collection" className="guestFeature"><div><div className="guestIcon">💜</div><div className="guestFeatureTitle">Start free</div></div><div className="guestFeatureText">Create a free account and track your collection without a save limit.</div></Link>
           <Link href="/marketplace" className="guestFeature"><div><div className="guestIcon">🛍️</div><div className="guestFeatureTitle">Browse marketplace</div></div><div className="guestFeatureText">Look for collector extras and see what others are listing.</div></Link>
           <Link href="/feedback" className="guestFeature"><div><div className="guestIcon">💬</div><div className="guestFeatureTitle">Send feedback</div></div><div className="guestFeatureText">Tell us what to fix, add, clarify, or improve next.</div></Link>
         </section>
@@ -553,16 +552,6 @@ export default function Page() {
       const supabase = getSupabase();
       const qty = Math.max(0, Number(nextQty ?? card.qty ?? 0));
       const note = String(nextNote ?? card.note ?? "");
-      const currentOwnedCount = cards.filter((c) => c.qty > 0).length;
-      const isAddingNewOwned = card.qty <= 0 && qty > 0;
-
-      if (!isSubscribed && isAddingNewOwned && currentOwnedCount >= FREE_LIMIT) {
-        setError(`Free accounts can save up to ${FREE_LIMIT} Doorables. Upgrade for unlimited tracking, marketplace tools, selling extras, and full collector access 💜`);
-        setShowUpgradeModal(true);
-        document.getElementById("upgrade-wall")?.scrollIntoView({ behavior: "smooth", block: "center" });
-        return;
-      }
-
       setSavingId(card.id);
       setError("");
       setNotice("");
@@ -856,9 +845,6 @@ export default function Page() {
   const needCount = cards.filter((c) => c.qty <= 0).length;
   const completion = totalCount ? Math.round((ownedCount / totalCount) * 100) : 0;
   const extrasCount = cards.reduce((sum, card) => sum + Math.max(0, Number(card.qty || 0) - 1), 0);
-  const freeSlotsLeft = Math.max(0, FREE_LIMIT - ownedCount);
-  const freeLimitReached = !isSubscribed && ownedCount >= FREE_LIMIT;
-  const freeSavePercent = Math.min(100, Math.round((ownedCount / FREE_LIMIT) * 100));
   const vaultMilestone = useMemo(() => getVaultMilestone(ownedCount, isSubscribed), [ownedCount, isSubscribed]);
 
   const collectionTier = useMemo(() => getCollectionTier(completion, ownedCount), [completion, ownedCount]);
@@ -1009,10 +995,10 @@ export default function Page() {
 
           {!isSubscribed && (
             <div className="upgradeBox">
-              <div style={{ fontWeight: 1000, marginBottom: 4 }}>{vaultMilestone.eyebrow}</div>
-              <div className="mutedText">You are using {ownedCount}/50 saved Doorables. Upgrade when your vault outgrows the starter shelf.</div>
+              <div style={{ fontWeight: 1000, marginBottom: 4 }}>✨ Free unlimited tracker active</div>
+              <div className="mutedText">Track every Doorable for free. Seller Plus, supporter perks, and Founding bundles help pay for the site.</div>
               <div style={{ marginTop: 10 }}>
-                <Link href="/pricing" className="primaryButton">Unlock Unlimited Vault</Link>
+                <Link href="/pricing" className="primaryButton">View Optional Perks</Link>
               </div>
             </div>
           )}
@@ -1023,11 +1009,8 @@ export default function Page() {
             <div className="hookTitle">{vaultMilestone.title}</div>
             <div className="hookText">{vaultMilestone.body}</div>
             {!isSubscribed && (
-              <div style={{ marginTop: 12 }}>
-                <div className="progressTrack" style={{ background: "#e5e7eb" }}>
-                  <div className="progressFill" style={{ width: `${freeSavePercent}%`, background: freeSavePercent >= 100 ? "linear-gradient(90deg,#f97316,#ec4899)" : freeSavePercent >= 80 ? "linear-gradient(90deg,#f97316,#f59e0b)" : "linear-gradient(90deg,#60a5fa,#c084fc)" }} />
-                </div>
-                <div style={{ color: "#64748b", fontWeight: 900, fontSize: 12, marginTop: 7 }}>{ownedCount}/{FREE_LIMIT} free saves used • {freeSlotsLeft} left</div>
+              <div style={{ marginTop: 12, color: "#64748b", fontWeight: 900, fontSize: 13 }}>
+                Free unlimited collection tracking is active. Paid perks are optional and help fund the vault.
               </div>
             )}
           </div>
@@ -1041,21 +1024,23 @@ export default function Page() {
 
         <section id="upgrade-wall" className="upgradeWall">
           <div>
-            <div className="eyebrow">{isSubscribed ? "👑 Full Access Active" : freeLimitReached ? "💜 Free Vault Full" : "✨ Free Collector Plan"}</div>
-            <div className="upgradeTitle">{isSubscribed ? "Unlimited collector tracking unlocked" : freeLimitReached ? "You reached 50 saved Doorables" : `Save ${freeSlotsLeft} more Doorables for free`}</div>
+            <div className="eyebrow">{isSubscribed ? "💎 Paid Perks Active" : "✨ Free Unlimited Collector Plan"}</div>
+            <div className="upgradeTitle">{isSubscribed ? "Thanks for helping keep Adorable Vault free" : "Track unlimited Doorables for free"}</div>
             <div className="mutedText">
-              {isSubscribed ? "You have unlimited collection tracking, marketplace access, selling tools, photo submissions, public collector features, and full vault access." : freeLimitReached ? "Upgrade to keep adding Doorables, organize unlimited extras, use marketplace tools, and unlock full collector access." : `You are using ${ownedCount}/${FREE_LIMIT} free saved Doorables. Upgrade anytime for unlimited tracking.`}
+              {isSubscribed
+                ? "Your paid perks are active. Collection tracking stays free and unlimited, and your support helps fund marketplace tools, merch, and new features."
+                : "No 50-save cap. No locked basic tracker. The site can still make money through Seller Plus, supporter perks, Founding bundles, affiliate buying guides, and merch."}
             </div>
 
             {!isSubscribed && (
               <div className="planRow">
-                <div className="miniPlan"><span>Monthly</span><strong>{MONTHLY_PRICE_LABEL}</strong></div>
-                <div className="miniPlan best"><span>Best Value</span><strong>{YEARLY_PRICE_LABEL}</strong></div>
+                <div className="miniPlan"><span>Seller Plus</span><strong>{SELLER_PLUS_PRICE_LABEL}</strong></div>
+                <div className="miniPlan best"><span>Supporter</span><strong>{SUPPORTER_PRICE_LABEL}</strong></div>
               </div>
             )}
           </div>
 
-          {!isSubscribed && <Link href="/pricing" className="primaryButton">Upgrade for Full Access</Link>}
+          {!isSubscribed && <Link href="/pricing" className="primaryButton">Support / Seller Plus</Link>}
         </section>
 
         <section className="tierGrid">
@@ -1298,8 +1283,6 @@ export default function Page() {
             const subtleOverlay = item.qty > 0 ? "linear-gradient(rgba(34,197,94,0.08), rgba(34,197,94,0.08))" : "linear-gradient(rgba(168,85,247,0.08), rgba(168,85,247,0.08))";
             const statusText = collectionStatus(item.qty);
             const photoOpen = expandedPhotoCardId === item.id;
-            const canAdd = isSubscribed || item.qty > 0 || ownedCount < FREE_LIMIT;
-
             if (collectionViewMode === "list") {
               return (
                 <div key={item.id} className="listCard" style={{ borderLeft: `6px solid ${rarity.border}` }}>
@@ -1316,7 +1299,6 @@ export default function Page() {
                       <div className="rarityBadge" style={{ background: rarity.badgeBg, color: rarity.badgeText }}>{item.rarity}</div>
                     </div>
 
-                    {!canAdd && <div className="limitBox" style={{ marginTop: 6 }}>Free limit reached. Upgrade to add more.</div>}
 
                     <div className="statusText" style={{ color: statusText === "Need" ? "#7c3aed" : statusText === "Extra" ? "#2563eb" : "#166534", marginTop: 6 }}>
                       {savingId === item.id ? "Saving..." : statusText === "Need" ? "Chase / Need" : statusText}
@@ -1342,7 +1324,7 @@ export default function Page() {
                           className="listQtyInput"
                           aria-label={`Quantity owned for ${item.name}`}
                         />
-                        <button type="button" onClick={() => void saveCard(item, item.qty + 1, item.note)} disabled={savingId === item.id || !canAdd} className="listQtyButton" aria-label={`Increase quantity for ${item.name}`} style={{ opacity: !canAdd ? 0.45 : 1, cursor: !canAdd ? "not-allowed" : "pointer" }}><span aria-hidden="true">+</span></button>
+                        <button type="button" onClick={() => void saveCard(item, item.qty + 1, item.note)} disabled={savingId === item.id} className="listQtyButton" aria-label={`Increase quantity for ${item.name}`}><span aria-hidden="true">+</span></button>
                       </div>
 
                       <input value={item.note} onChange={(e) => setCards((prev) => prev.map((c) => (c.id === item.id ? { ...c, note: e.target.value } : c)))} placeholder="Note..." className="listNoteInput" />
@@ -1365,7 +1347,6 @@ export default function Page() {
                 </div>
 
                 <div className="rarityBadge" style={{ background: rarity.badgeBg, color: rarity.badgeText }}>{item.rarity}</div>
-                {!canAdd && <div className="limitBox">Free limit reached. Upgrade to add more.</div>}
 
                 <div className="qtyRow">
                   <button type="button" onClick={() => void saveCard(item, item.qty - 1, item.note)} disabled={savingId === item.id} className="qtyButton" aria-label={`Decrease quantity for ${item.name}`}><span aria-hidden="true">-</span></button>
@@ -1386,7 +1367,7 @@ export default function Page() {
                     className="qtyInput"
                     aria-label={`Quantity owned for ${item.name}`}
                   />
-                  <button type="button" onClick={() => void saveCard(item, item.qty + 1, item.note)} disabled={savingId === item.id || !canAdd} className="qtyButton" aria-label={`Increase quantity for ${item.name}`} style={{ opacity: !canAdd ? 0.45 : 1, cursor: !canAdd ? "not-allowed" : "pointer" }}><span aria-hidden="true">+</span></button>
+                  <button type="button" onClick={() => void saveCard(item, item.qty + 1, item.note)} disabled={savingId === item.id} className="qtyButton" aria-label={`Increase quantity for ${item.name}`}><span aria-hidden="true">+</span></button>
                 </div>
 
                 <div className="statusText" style={{ color: statusText === "Need" ? "#7c3aed" : statusText === "Extra" ? "#2563eb" : "#166534" }}>
@@ -1427,12 +1408,10 @@ export default function Page() {
         {!isSubscribed && (
           <div className="mobileSticky">
             <div>
-              <div style={{ color: "#ffffff", fontSize: 13, fontWeight: 1000, marginBottom: 7 }}>{ownedCount}/{FREE_LIMIT} free saves used</div>
-              <div className="progressTrack">
-                <div className="progressFill" style={{ width: `${freeSavePercent}%`, background: freeSavePercent >= 80 ? "linear-gradient(90deg,#f97316,#f59e0b)" : undefined }} />
-              </div>
+              <div style={{ color: "#ffffff", fontSize: 13, fontWeight: 1000, marginBottom: 7 }}>Free unlimited tracking active</div>
+              <div style={{ color: "rgba(255,255,255,0.82)", fontSize: 12, fontWeight: 850 }}>Optional perks help keep the vault free.</div>
             </div>
-            <Link href="/pricing" className="secondaryButton">Upgrade</Link>
+            <Link href="/pricing" className="secondaryButton">Perks</Link>
           </div>
         )}
 
@@ -1477,15 +1456,15 @@ export default function Page() {
           <div className="modalOverlay">
             <div className="modal" style={{ textAlign: "center", width: "min(540px, 100%)" }}>
               <button type="button" className="modalClose" onClick={() => setShowUpgradeModal(false)}>×</button>
-              <div style={{ width: 64, height: 64, margin: "0 auto 12px", borderRadius: 22, display: "grid", placeItems: "center", fontSize: 31, background: "linear-gradient(135deg, #ddd6fe, #bfdbfe)" }}>💜</div>
-              <h2 style={{ margin: 0, fontSize: "clamp(1.8rem, 6vw, 2.6rem)", lineHeight: 1, letterSpacing: -1, fontWeight: 1000 }}>Your free vault is full</h2>
-              <div className="mutedText" style={{ marginTop: 13 }}>Free accounts can save up to {FREE_LIMIT} Doorables. Upgrade for unlimited tracking, marketplace tools, selling extras, and full collector access.</div>
+              <div style={{ width: 64, height: 64, margin: "0 auto 12px", borderRadius: 22, display: "grid", placeItems: "center", fontSize: 31, background: "linear-gradient(135deg, #ddd6fe, #bfdbfe)" }}>💸</div>
+              <h2 style={{ margin: 0, fontSize: "clamp(1.8rem, 6vw, 2.6rem)", lineHeight: 1, letterSpacing: -1, fontWeight: 1000 }}>Seller tools are optional</h2>
+              <div className="mutedText" style={{ marginTop: 13 }}>Collection tracking is free and unlimited. Auto-listing extras is a paid seller/supporter perk that helps keep the basic tracker free for everyone.</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 18 }}>
-                <div className="miniPlan"><span>Monthly</span><strong>$3</strong></div>
-                <div className="miniPlan best"><span>Best Value</span><strong>$15</strong></div>
+                <div className="miniPlan"><span>Seller Plus</span><strong>{SELLER_PLUS_PRICE_LABEL}</strong></div>
+                <div className="miniPlan best"><span>Supporter</span><strong>{SUPPORTER_PRICE_LABEL}</strong></div>
               </div>
-              <Link href="/pricing" className="primaryButton" style={{ marginTop: 18, width: "100%" }}>Upgrade for Full Access</Link>
-              <button type="button" className="secondaryButton" style={{ marginTop: 10, width: "100%" }} onClick={() => setShowUpgradeModal(false)}>Maybe later</button>
+              <Link href="/pricing" className="primaryButton" style={{ marginTop: 18, width: "100%" }}>View Optional Perks</Link>
+              <button type="button" className="secondaryButton" style={{ marginTop: 10, width: "100%" }} onClick={() => setShowUpgradeModal(false)}>Keep Tracking Free</button>
             </div>
           </div>
         )}

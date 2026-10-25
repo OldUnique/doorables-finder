@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Script from "next/script";
 import { useEffect, useMemo, useState } from "react";
 import { getSupabase } from "../lib/supabase";
 
@@ -19,10 +20,7 @@ type HomeStats = {
   extras: number;
   total: number;
   progress: number;
-  listings: number;
 };
-
-type PlanKey = "monthly" | "yearly" | "founding";
 
 const ADMIN_EMAILS = [
   "riffeljosh80@gmail.com",
@@ -31,22 +29,17 @@ const ADMIN_EMAILS = [
   "dntuttle1@gmail.com",
 ];
 
-const FREE_LIMIT = 50;
+const DEFAULT_ANNOUNCEMENT_TITLE = "A Quick Update from Adorable Vault 💜";
 
-const DEFAULT_ANNOUNCEMENT_TITLE = "Vault Update: Mobile Glow-Up + Collector Tools 💜";
+const DEFAULT_ANNOUNCEMENT_BODY = `I want to sincerely apologize for how long it has taken me to get everything set up and working the way it should. I truly appreciate your patience and support while I continue improving the website.
 
-const DEFAULT_ANNOUNCEMENT_BODY = `Adorable Vault is getting cleaner, faster, and easier to use on your phone.
+I’m happy to share that Adorable Vault is now free to use. I want it to remain a welcoming and accessible place where collectors can organize their collections without having to pay.
 
-Recent updates include:
-• cleaner mobile collection browsing
-• better card and list layouts
-• centered collection photos
-• desktop image hover zoom
-• improved public profile sharing
-• smoother feedback tools
-• marketplace and selling features continuing to grow
+I am also starting another business, so some updates may happen more gradually than I originally planned. Adorable Vault is still important to me, and I will continue making as much time for it as possible while improving the site step by step.
 
-Thank you to every collector testing features, sending feedback, and helping shape this into a better collector tool. More updates are coming soon 💜`;
+To help cover website costs while keeping it free, you may occasionally see a few carefully placed ads. I will do my best to keep them limited and avoid disruptive pop-ups or clutter.
+
+Thank you for your understanding, patience, and continued support. I’m grateful to have you here and excited to keep building Adorable Vault with you 💜`;
 
 function formatNumber(value: number) {
   return value.toLocaleString();
@@ -63,6 +56,50 @@ function displayDate(value?: string | null) {
   });
 }
 
+type AdSlotProps = {
+  slot?: string;
+  label?: string;
+};
+
+function AdSlot({ slot, label = "Advertisement" }: AdSlotProps) {
+  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
+
+  useEffect(() => {
+    if (!client || !slot) return;
+
+    try {
+      const adsWindow = window as Window & { adsbygoogle?: Record<string, unknown>[] };
+      (adsWindow.adsbygoogle = adsWindow.adsbygoogle || []).push({});
+    } catch {
+      // Ad blockers or delayed AdSense loading should never break the page.
+    }
+  }, [client, slot]);
+
+  if (!client || !slot) {
+    return (
+      <div className="adPlaceholder" aria-label="Advertisement placeholder">
+        <span>{label}</span>
+        <strong>Ad space reserved</strong>
+        <small>Add your AdSense client and slot IDs in the site environment variables.</small>
+      </div>
+    );
+  }
+
+  return (
+    <div className="adWrap" aria-label={label}>
+      <div className="adLabel">{label}</div>
+      <ins
+        className="adsbygoogle"
+        style={{ display: "block" }}
+        data-ad-client={client}
+        data-ad-slot={slot}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
+    </div>
+  );
+}
+
 export default function HomePage() {
   const [userEmail, setUserEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -72,16 +109,12 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
-  const [checkoutError, setCheckoutError] = useState("");
   const [stats, setStats] = useState<HomeStats>({
     owned: 0,
     needed: 0,
     extras: 0,
     total: 0,
     progress: 0,
-    listings: 0,
   });
 
   const isAdmin = useMemo(
@@ -91,10 +124,10 @@ export default function HomePage() {
 
   useEffect(() => {
     document.title =
-      "Adorable Vault | Doorables Collection Tracker, Checklist & Marketplace";
+      "Adorable Vault | Free Doorables Collection Tracker & Checklist";
 
     const description =
-      "Adorable Vault helps Doorables collectors track owned figures, wishlist items, extras, series progress, public collector profiles, and marketplace listings in one clean, ad-free vault.";
+      "Adorable Vault is a free Doorables collection tracker for organizing owned figures, wishlist items, extras, series progress, notes, and public collector profiles in one easy-to-use vault.";
 
     function setMeta(name: string, content: string) {
       let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
@@ -130,7 +163,7 @@ export default function HomePage() {
     setMeta("description", description);
     setMeta(
       "keywords",
-      "Doorables tracker, Doorables collection tracker, Doorables checklist, Doorables wishlist, Doorables inventory, Doorables rarity tracker, Doorables marketplace, Doorables trading, Doorables extras, buy sell trade Doorables, Adorable Vault, MyDoorables"
+      "free Doorables tracker, Doorables collection tracker, Doorables checklist, Doorables wishlist, Doorables inventory, Doorables rarity tracker, Doorables extras tracker, Adorable Vault, MyDoorables"
     );
     setMeta("robots", "index, follow");
     setProperty("og:title", "Adorable Vault | Doorables Collection Tracker");
@@ -177,17 +210,12 @@ export default function HomePage() {
         owned = ownedIds.size;
       }
 
-      const { count: listingCount } = await supabase
-        .from("marketplace_listings")
-        .select("id", { count: "exact", head: true });
-
       setStats({
         owned,
         needed: Math.max(total - owned, 0),
         extras,
         total,
         progress: total ? Math.round((owned / total) * 100) : 0,
-        listings: listingCount ?? 0,
       });
     } catch {
       // Optional stats should not crash the homepage.
@@ -211,12 +239,11 @@ export default function HomePage() {
       if (user?.id) {
         const { data: profile } = await supabase
           .from("users")
-          .select("username, is_subscribed")
+          .select("username")
           .eq("id", user.id)
           .maybeSingle();
 
         setUsername(String(profile?.username ?? ""));
-        setIsSubscribed(!!profile?.is_subscribed);
       }
 
       await loadHomeStats(user?.id);
@@ -301,48 +328,16 @@ export default function HomePage() {
     }
   }
 
-  async function handleCheckout(plan: PlanKey) {
-    try {
-      setCheckoutError("");
-      setLoadingPlan(plan);
-
-      const res = await fetch("/api/create-checkout-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ plan }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Unable to start checkout.");
-      }
-
-      if (!data?.url) {
-        throw new Error("Stripe checkout URL was not returned.");
-      }
-
-      window.location.href = data.url;
-    } catch (error) {
-      setCheckoutError(error instanceof Error ? error.message : "Something went wrong starting checkout.");
-      setLoadingPlan(null);
-    }
-  }
 
   const announcementText = body.trim() || DEFAULT_ANNOUNCEMENT_BODY;
   const announcementTitle = title.trim() || DEFAULT_ANNOUNCEMENT_TITLE;
   const announcementDate = displayDate(announcement?.updated_at);
 
   const hasPersonalStats = stats.total > 0 && (stats.owned > 0 || stats.extras > 0);
-  const displayOwned = hasPersonalStats ? formatNumber(stats.owned) : "50";
+  const displayOwned = hasPersonalStats ? formatNumber(stats.owned) : "Free";
   const displayNeeded = hasPersonalStats ? formatNumber(stats.needed) : "Need";
   const displayExtras = hasPersonalStats ? formatNumber(stats.extras) : "Extras";
-  const displayProgress = hasPersonalStats ? `${stats.progress}%` : "Free";
-  const freeUsed = Math.min(stats.owned, FREE_LIMIT);
-  const freePercent = Math.min(100, Math.round((freeUsed / FREE_LIMIT) * 100));
-  const remainingFree = Math.max(0, FREE_LIMIT - freeUsed);
+  const displayProgress = hasPersonalStats ? `${stats.progress}%` : "Ready";
 
   return (
     <main className="page">
@@ -1274,6 +1269,63 @@ export default function HomePage() {
           display: none;
         }
 
+
+        .adSection {
+          margin-bottom: 18px;
+        }
+
+        .adWrap,
+        .adPlaceholder {
+          min-height: 110px;
+          border-radius: 24px;
+          border: 1px solid rgba(255,255,255,0.16);
+          background: rgba(15,23,42,0.62);
+          box-shadow: 0 18px 42px rgba(0,0,0,0.24);
+          overflow: hidden;
+        }
+
+        .adWrap {
+          padding: 10px;
+        }
+
+        .adLabel {
+          margin-bottom: 7px;
+          color: rgba(255,255,255,0.52);
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          text-align: center;
+          text-transform: uppercase;
+        }
+
+        .adPlaceholder {
+          display: grid;
+          place-items: center;
+          align-content: center;
+          gap: 5px;
+          padding: 18px;
+          text-align: center;
+          color: rgba(255,255,255,0.82);
+        }
+
+        .adPlaceholder span {
+          color: rgba(255,255,255,0.50);
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .adPlaceholder strong {
+          color: #fde68a;
+        }
+
+        .adPlaceholder small {
+          max-width: 620px;
+          color: rgba(255,255,255,0.62);
+          line-height: 1.45;
+        }
+
         @media (max-width: 1180px) {
           .priceGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1809,9 +1861,19 @@ export default function HomePage() {
       `}</style>
 
       <div className="shell">
+        {process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID && (
+          <Script
+            id="adsense-script"
+            async
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}`}
+          />
+        )}
+
         <div className="topRibbon">
-          🚫 No ads. Ever.
-          <span>Adorable Vault stays clean, calm, and collector-focused with a small fee instead of clutter.</span>
+          💜 Adorable Vault is now free to use.
+          <span>A few carefully placed ads help cover website costs without charging collectors.</span>
         </div>
 
         <section className="hero">
@@ -1819,21 +1881,21 @@ export default function HomePage() {
             <div className="badge">✨ Fan-made collector vault ✨</div>
 
             <h1 className="headline">
-              Know what you have. Find what you need. Trade your extras faster.
+              Know what you have. Find what you need. Enjoy collecting without the chaos.
             </h1>
 
             <div className="heroText">
               Welcome{username ? ` back, ${username}` : ""}! Adorable Vault is the collector hub for
               tracking Doorables, building your wishlist, organizing duplicates, sharing your profile,
-              and keeping the buying/trading chaos under control.
+              and keeping your collection easy to understand—all for free.
             </div>
 
             <div className="trustRow">
-              <span className="trustPill gold">No ads. Ever.</span>
-              <span className="trustPill">Free up to 50 saves</span>
+              <span className="trustPill gold">Free for collectors</span>
+              <span className="trustPill">Unlimited tracking</span>
               <span className="trustPill">Preview first</span>
               <span className="trustPill">A–Z collection browsing</span>
-              <span className="trustPill">Marketplace tools</span>
+              <span className="trustPill">Wishlist & extras tools</span>
             </div>
 
             <div className="heroActions">
@@ -1848,8 +1910,8 @@ export default function HomePage() {
               <Link href="/collection" className="actionCard alt">
                 <span className="actionIcon">💜</span>
                 <span>
-                  <span className="actionTitle">Start tracking free</span>
-                  <span className="actionSub">Save up to 50 Doorables before upgrading.</span>
+                  <span className="actionTitle">Start your collection</span>
+                  <span className="actionSub">Track your Doorables without a subscription.</span>
                 </span>
               </Link>
             </div>
@@ -1874,7 +1936,7 @@ export default function HomePage() {
             <div className="previewStats">
               <div className="miniStat">
                 <div className="miniStatValue">{displayOwned}</div>
-                <div className="miniStatLabel">{hasPersonalStats ? "Owned" : "Free saves"}</div>
+                <div className="miniStatLabel">{hasPersonalStats ? "Owned" : "Free access"}</div>
               </div>
               <div className="miniStat">
                 <div className="miniStatValue">{displayNeeded}</div>
@@ -1886,7 +1948,7 @@ export default function HomePage() {
               </div>
               <div className="miniStat">
                 <div className="miniStatValue">{displayProgress}</div>
-                <div className="miniStatLabel">{hasPersonalStats ? "Complete" : "Starter plan"}</div>
+                <div className="miniStatLabel">{hasPersonalStats ? "Complete" : "Collector vault"}</div>
               </div>
             </div>
 
@@ -1924,56 +1986,41 @@ export default function HomePage() {
               </div>
             </div>
 
-            {isSubscribed ? (
-              <div className="progressPanel">
-                <div className="progressTop">
-                  <div>
-                    <div style={{ fontWeight: 1000, fontSize: 18 }}>Full Access Active 👑</div>
-                    <div style={{ color: "#d8b4fe", fontWeight: 900, marginTop: 4 }}>
-                      Unlimited tracking and marketplace tools are unlocked.
-                    </div>
+            <div className="progressPanel">
+              <div className="progressTop">
+                <div>
+                  <div style={{ fontWeight: 1000, fontSize: 18 }}>Free collector access 💜</div>
+                  <div style={{ color: "#d8b4fe", fontWeight: 900, marginTop: 4 }}>
+                    Track your full collection, wishlist, extras, notes, and progress without a subscription.
                   </div>
-                  <div style={{ color: "#fde68a", fontWeight: 1000 }}>Unlocked</div>
                 </div>
-                <div className="progressTrack">
-                  <div className="progressFill" style={{ width: "100%" }} />
-                </div>
+                <div style={{ color: "#fde68a", fontWeight: 1000 }}>Free</div>
               </div>
-            ) : (
-              <div className="progressPanel">
-                <div className="progressTop">
-                  <div>
-                    <div style={{ fontWeight: 1000, fontSize: 18 }}>Free collector plan</div>
-                    <div style={{ color: "#d8b4fe", fontWeight: 900, marginTop: 4 }}>
-                      {hasPersonalStats ? `${remainingFree} free saves left` : "Start free, then upgrade when you need more."}
-                    </div>
-                  </div>
-                  <div style={{ color: "#fde68a", fontWeight: 1000 }}>
-                    {hasPersonalStats ? `${freeUsed}/50` : "0/50"}
-                  </div>
-                </div>
-                <div className="progressTrack">
-                  <div className="progressFill" style={{ width: `${hasPersonalStats ? freePercent : 0}%` }} />
-                </div>
+              <div className="progressTrack">
+                <div className="progressFill" style={{ width: "100%" }} />
               </div>
-            )}
+            </div>
           </aside>
         </section>
 
         <section className="launchStrip">
           <div>
-            <div className="launchBadge">💜 Always Ad-Free</div>
-            <h2 className="launchTitle">Built for collectors, not advertisers.</h2>
+            <div className="launchBadge">💜 Free for the community</div>
+            <h2 className="launchTitle">A free collector tool supported by limited ads.</h2>
             <div className="launchText">
-              No banners, pop-ups, or sponsored clutter. The small subscription fee keeps Adorable Vault
-              clean and focused on the tools collectors actually use: tracking, wishlists, extras,
-              profile sharing, and marketplace connections.
+              Adorable Vault no longer requires a paid plan. A few thoughtfully placed ads help cover hosting
+              and maintenance while the collection tracker, wishlist, extras, notes, and profile tools stay free.
+              The goal is to avoid disruptive pop-ups and keep the site comfortable to use.
             </div>
           </div>
 
-          <Link href="/pricing" className="launchButton">
-            See Plans
+          <Link href="/collection" className="launchButton">
+            Open Your Vault
           </Link>
+        </section>
+
+        <section className="adSection">
+          <AdSlot slot={process.env.NEXT_PUBLIC_ADSENSE_HOME_TOP_SLOT} />
         </section>
 
         <section className="section">
@@ -2010,22 +2057,22 @@ export default function HomePage() {
               <div className="featureLink">View demo →</div>
             </Link>
 
-            <Link href="/sell" className="featureCard">
+            <Link href="/collection" className="featureCard">
               <div className="featureIcon">🔁</div>
               <div className="featureTitle">Organize extras</div>
               <div className="featureText">
-                Turn duplicates into cleaner sell/trade opportunities without starting from scratch.
+                Keep track of duplicates separately so you always know what is available in your collection.
               </div>
-              <div className="featureLink">List extras →</div>
+              <div className="featureLink">Track extras →</div>
             </Link>
 
-            <Link href="/marketplace" className="featureCard">
-              <div className="featureIcon">🛍️</div>
-              <div className="featureTitle">Browse marketplace</div>
+            <Link href="/profile" className="featureCard">
+              <div className="featureIcon">🌟</div>
+              <div className="featureTitle">Share your collection</div>
               <div className="featureText">
-                Find collector listings, check extras, and connect with other collectors directly.
+                Create a public collector profile that makes your collection and progress easy to share.
               </div>
-              <div className="featureLink">Browse listings →</div>
+              <div className="featureLink">View profile tools →</div>
             </Link>
           </div>
         </section>
@@ -2037,8 +2084,7 @@ export default function HomePage() {
               <h2 className="sectionTitle">A simple flow that actually makes sense.</h2>
             </div>
             <div className="sectionText">
-              Adorable Vault is made to feel quick on your phone and useful when you are actually shopping,
-              selling, or trading.
+              Adorable Vault is made to feel quick on your phone and useful when you are shopping, opening new figures, or checking your collection on the go.
             </div>
           </div>
 
@@ -2066,9 +2112,9 @@ export default function HomePage() {
             <div className="roadmapCard">
               <div className="roadmapNumber">3</div>
               <div>
-                <div className="roadmapTitle">Share or sell</div>
+                <div className="roadmapTitle">Review and share</div>
                 <div className="roadmapText">
-                  Use public profiles and marketplace tools to make your collection easier to share.
+                  Review your progress and use your public profile to share your collection with friends.
                 </div>
               </div>
             </div>
@@ -2146,7 +2192,7 @@ export default function HomePage() {
               </div>
               <div className="miniListItem">
                 <span>🚫</span>
-                <span>No ad clutter, no pop-up chaos, and no distracting banners.</span>
+                <span>Ads are kept limited and placed carefully, with no intention of using disruptive pop-ups.</span>
               </div>
               <div className="miniListItem">
                 <span>📱</span>
@@ -2163,93 +2209,42 @@ export default function HomePage() {
         <section className="section">
           <div className="sectionHeader">
             <div>
-              <div className="eyebrow">Plans</div>
-              <h2 className="sectionTitle">
-                Start free, then unlock the full collector vault.
-              </h2>
+              <div className="eyebrow">Free access</div>
+              <h2 className="sectionTitle">The full collector vault is free to use.</h2>
             </div>
 
             <div className="sectionText">
-              Free accounts can save up to 50 Doorables. Paid plans unlock unlimited tracking,
-              marketplace tools, selling extras, messaging, and full collector features — while keeping
-              the site ad-free.
+              There are no paid plans or checkout buttons on this page. Carefully placed advertising helps
+              cover hosting and maintenance so collectors can keep using the tracker for free.
             </div>
           </div>
 
-          {checkoutError && <div className="errorBox">{checkoutError}</div>}
+          <section className="adSection">
+            <AdSlot slot={process.env.NEXT_PUBLIC_ADSENSE_HOME_MIDDLE_SLOT} />
+          </section>
 
-          <div className="priceGrid">
-            <Link href="/collection" className="priceCard free">
-              <div style={{ fontWeight: 1000 }}>Starter</div>
-              <div className="price">
-                $0 <span>/ free</span>
-              </div>
-              <div className="finePrint">
-                Save up to 50 Doorables and try the tracker before upgrading.
-              </div>
-              <div className="planButton">Start Tracking</div>
-            </Link>
-
-            <button
-              type="button"
-              className="priceCard"
-              onClick={() => void handleCheckout("monthly")}
-              disabled={loadingPlan === "monthly"}
-            >
-              <div style={{ fontWeight: 1000 }}>Collector Monthly</div>
-              <div className="price">
-                $3 <span>/ month</span>
-              </div>
-              <div className="finePrint">
-                Unlimited tracking, marketplace tools, and full collector access with flexible billing.
-              </div>
-              <div className="planButton">
-                {loadingPlan === "monthly" ? "Starting checkout..." : "Start Monthly ✨"}
-              </div>
-            </button>
-
-            <button
-              type="button"
-              className="priceCard best"
-              onClick={() => void handleCheckout("yearly")}
-              disabled={loadingPlan === "yearly"}
-            >
+          <div className="workflowGrid">
+            <div className="roadmapCard">
+              <div className="roadmapNumber">✓</div>
               <div>
-                <span className="tag">Most popular</span>
-                <span className="saveTag">Save $21/year</span>
+                <div className="roadmapTitle">No subscription</div>
+                <div className="roadmapText">Use the collection tracker without choosing a monthly or yearly plan.</div>
               </div>
-              <div style={{ fontWeight: 1000 }}>Collector Yearly</div>
-              <div className="price">
-                $15 <span>/ year</span>
-              </div>
-              <div className="finePrint">
-                Best value for collectors who want the full Doorables vault all year.
-              </div>
-              <div className="planButton yearly">
-                {loadingPlan === "yearly" ? "Starting checkout..." : "Get Best Deal 🚀"}
-              </div>
-            </button>
-
-            <button
-              type="button"
-              className="priceCard founding"
-              onClick={() => void handleCheckout("founding")}
-              disabled={loadingPlan === "founding"}
-            >
+            </div>
+            <div className="roadmapCard">
+              <div className="roadmapNumber">∞</div>
               <div>
-                <span className="tag">Limited launch</span>
+                <div className="roadmapTitle">Keep tracking</div>
+                <div className="roadmapText">Organize owned figures, wishlist items, extras, notes, and progress.</div>
               </div>
-              <div style={{ fontWeight: 1000 }}>Founding Collector</div>
-              <div className="price">
-                $20 <span>/ year</span>
+            </div>
+            <div className="roadmapCard">
+              <div className="roadmapNumber">♡</div>
+              <div>
+                <div className="roadmapTitle">Community supported</div>
+                <div className="roadmapText">Limited ads help pay for the website while keeping access free.</div>
               </div>
-              <div className="finePrint">
-                One full year of access plus a limited edition Adorable Vault keychain while supplies last.
-              </div>
-              <div className="planButton founding">
-                {loadingPlan === "founding" ? "Starting checkout..." : "Get Bundle + Keychain 💜"}
-              </div>
-            </button>
+            </div>
           </div>
         </section>
 
@@ -2258,20 +2253,24 @@ export default function HomePage() {
             <div className="eyebrow">Fan-made disclaimer</div>
             <h2 className="sectionTitle">Made by collectors, for collectors.</h2>
             <div className="sectionText">
-              Adorable Vault is a fan-made collector tracking and marketplace tool. It is not affiliated with,
+              Adorable Vault is a fan-made collection tracking tool. It is not affiliated with,
               sponsored by, or endorsed by Disney or Just Play. Character names and references are used only
               to help collectors organize and identify their collections.
             </div>
           </div>
 
           <div className="whiteCard">
-            <div className="eyebrow">Marketplace note</div>
-            <h2 className="sectionTitle">Collectors connect directly.</h2>
+            <div className="eyebrow">Advertising note</div>
+            <h2 className="sectionTitle">Ads help keep the vault free.</h2>
             <div className="sectionText">
-              Adorable Vault helps collectors connect, but buyers and sellers handle payment, pickup,
-              shipping, item condition, refunds, and completed transactions directly.
+              Advertising may be provided by third-party networks such as Google AdSense. Ads do not represent
+              an endorsement, and the site will aim to keep placements limited, clear, and separate from collection tools.
             </div>
           </div>
+        </section>
+
+        <section className="adSection">
+          <AdSlot slot={process.env.NEXT_PUBLIC_ADSENSE_HOME_BOTTOM_SLOT} />
         </section>
 
         <section className="finalCta">
@@ -2286,7 +2285,7 @@ export default function HomePage() {
               Preview First 👀
             </Link>
             <Link href="/collection" className="secondaryButton">
-              Start Free Tracking
+              Start Tracking
             </Link>
           </div>
         </section>
@@ -2303,3 +2302,4 @@ export default function HomePage() {
     </main>
   );
 }
+

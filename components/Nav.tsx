@@ -12,7 +12,6 @@ const navItems = [
   { href: "/sell", label: "Sell", icon: "🏷️" },
   { href: "/marketplace", label: "Marketplace", icon: "🛍️" },
   { href: "/messages", label: "Messages", icon: "✉️" },
-  { href: "/pricing", label: "Plans", icon: "👑" },
   { href: "/feedback", label: "Feedback", icon: "💬" },
 ];
 

@@ -253,7 +253,6 @@ export default function RootLayout({
 
               <nav className="footerLinks" aria-label="Footer navigation">
                 <a href="/about">About</a>
-                <a href="/pricing">Plans</a>
                 <a href="/feedback">Feedback</a>
                 <a href="/demo">Demo</a>
               </nav>

@@ -75,15 +75,7 @@ function AdSlot({ slot, label = "Advertisement" }: AdSlotProps) {
     }
   }, [client, slot]);
 
-  if (!client || !slot) {
-    return (
-      <div className="adPlaceholder" aria-label="Advertisement placeholder">
-        <span>{label}</span>
-        <strong>Ad space reserved</strong>
-        <small>Add your AdSense client and slot IDs in the site environment variables.</small>
-      </div>
-    );
-  }
+  if (!client || !slot) return null;
 
   return (
     <div className="adWrap" aria-label={label}>

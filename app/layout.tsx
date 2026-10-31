@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import Nav from "../components/Nav";
 import { Analytics } from "@vercel/analytics/next";
+import Script from "next/script";
+
+const ADSENSE_CLIENT_ID =
+  process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "ca-pub-5461396984327450";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.mydoorables.com"),
@@ -54,6 +58,9 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  other: {
+    "google-adsense-account": ADSENSE_CLIENT_ID,
+  },
 };
 
 export const viewport: Viewport = {
@@ -71,6 +78,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <Script
+          id="adsense-script"
+          async
+          strategy="afterInteractive"
+          crossOrigin="anonymous"
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`}
+        />
         <style>{`
           :root {
             color-scheme: dark;

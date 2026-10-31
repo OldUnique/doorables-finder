@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Script from "next/script";
 import { useEffect, useMemo, useState } from "react";
 import { getSupabase } from "../lib/supabase";
 
@@ -62,7 +61,7 @@ type AdSlotProps = {
 };
 
 function AdSlot({ slot, label = "Advertisement" }: AdSlotProps) {
-  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
+  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "ca-pub-5461396984327450";
 
   useEffect(() => {
     if (!client || !slot) return;
@@ -75,14 +74,9 @@ function AdSlot({ slot, label = "Advertisement" }: AdSlotProps) {
     }
   }, [client, slot]);
 
+  // No ad unit configured yet: render nothing (Auto ads can still place ads).
   if (!client || !slot) {
-    return (
-      <div className="adPlaceholder" aria-label="Advertisement placeholder">
-        <span>{label}</span>
-        <strong>Ad space reserved</strong>
-        <small>Add your AdSense client and slot IDs in the site environment variables.</small>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -1861,15 +1855,6 @@ export default function HomePage() {
       `}</style>
 
       <div className="shell">
-        {process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID && (
-          <Script
-            id="adsense-script"
-            async
-            strategy="afterInteractive"
-            crossOrigin="anonymous"
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}`}
-          />
-        )}
 
         <div className="topRibbon">
           💜 Adorable Vault is now free to use.

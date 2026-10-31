@@ -1,42 +1,45 @@
-# Doorables Merged Paid App
+# Adorable Vault (mydoorables.com)
 
-This merges:
-- your local Doorables app UI
-- profiles
-- favorites / want / collection quantities
-- marketplace board
-- compare mode
-- pricing / paywall starter
-- Stripe checkout starter
-- Supabase schema starter
+A free, fan-made Disney Doorables collection tracker: checklist by series, wishlist and extras, a collector marketplace, public collector profiles, and optional paid plans.
 
-## What this is
-A **merged starter** so your app structure is together in one project.
+Live site: https://www.mydoorables.com
 
-## What is real already
-- local Doorables app UI works
-- pricing page exists
-- Stripe checkout session route exists
-- Stripe webhook scaffold exists
-- Supabase schema starter exists
+## Stack
 
-## What is still mock/local
-- app access gate is demo logic only
-- subscription status is not yet synced from Stripe
-- login page is placeholder
-- marketplace inside /app is still local browser state
-- promo codes are schema only, no redemption UI yet
+- Next.js 15 (App Router), React 18, TypeScript
+- Supabase (database and auth). The figure catalog lives in the `doorables` table; schema starters are in `supabase/schema.sql` and `marketplace_setup.sql`.
+- Stripe for subscriptions (`app/api/checkout`, `app/api/create-checkout-session`, webhooks in `app/api/stripe/webhook` and `app/api/stripe-webhook`)
+- Resend for feedback emails (`app/api/send-feedback`)
+- Google AdSense (loaded in `app/layout.tsx`, ad units in `app/HomeClient.tsx`, `public/ads.txt`)
+- Hosted on Vercel; pushes to `main` deploy to production.
 
-## Best next steps
-1. Run `npm install`
-2. Copy `.env.example` to `.env.local`
-3. Create Stripe prices
-4. Create Supabase project
-5. Run `supabase/schema.sql`
-6. Wire login and subscription status into `/app/page.tsx`
+## Project layout
 
-## Local dev
+- `app/` routes. Most pages are client components; each public route has a small `layout.tsx` that sets its title, description and canonical URL via `lib/seo.ts`.
+- `app/sitemap.ts`, `app/robots.ts` for search engines.
+- `components/Nav.tsx` site navigation.
+- `lib/supabase.ts` Supabase clients.
+- `data/doorables.ts` reference list of figures (not imported by the app; the live catalog is in Supabase).
+
+## Environment variables
+
+Set these in Vercel (or `.env.local` for local dev):
+
+| Variable | Used for |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase client (required to build) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-side admin and webhook writes |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe checkout and webhooks |
+| `STRIPE_MONTHLY_PRICE_ID`, `STRIPE_YEARLY_PRICE_ID`, `STRIPE_FOUNDING_PRICE_ID` | Plan prices |
+| `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL` | Checkout redirect URLs |
+| `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `FEEDBACK_TO_EMAIL` | Feedback emails |
+| `NEXT_PUBLIC_ADSENSE_CLIENT_ID` | AdSense publisher ID (`ca-pub-...`) |
+| `NEXT_PUBLIC_ADSENSE_HOME_TOP_SLOT`, `NEXT_PUBLIC_ADSENSE_HOME_MIDDLE_SLOT`, `NEXT_PUBLIC_ADSENSE_HOME_BOTTOM_SLOT` | Homepage ad unit IDs |
+
+## Local development
+
 ```bash
-npm install
-npm run dev
+npm ci
+npm run dev     # http://localhost:3000
+npm run build   # production build
 ```

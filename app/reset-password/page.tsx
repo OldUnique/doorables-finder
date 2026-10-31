@@ -83,8 +83,7 @@ export default function ResetPasswordPage() {
     <main
       style={{
         minHeight: "100vh",
-        background:
-          "radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%), radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%), linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%)",
+        background: "transparent",
         padding: 24,
         color: "white",
       }}
@@ -96,7 +95,7 @@ export default function ResetPasswordPage() {
         }
 
         .hero {
-          background: linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
+          background: linear-gradient(135deg, rgba(48, 18, 70, 0.92), rgba(147, 51, 234, 0.88));
           border-radius: 28px;
           padding: 24px;
           box-shadow: 0 20px 40px rgba(0,0,0,0.30);

@@ -67,7 +67,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#24105f",
+  themeColor: "#2a0f4d",
 };
 
 export default function RootLayout({
@@ -88,16 +88,22 @@ export default function RootLayout({
         <style>{`
           :root {
             color-scheme: dark;
-            --vault-bg: #020617;
-            --vault-purple: #7c3aed;
-            --vault-pink: #ec4899;
-            --vault-blue: #2563eb;
+            --vault-bg: #2a0f4d;
+            --vault-plum: #3a1563;
+            --vault-berry: #5b1d6e;
+            --vault-purple: #a855f7;
+            --vault-pink: #f472b6;
+            --vault-rose: #fda4af;
+            --vault-peach: #fdba74;
+            --vault-lilac: #c4b5fd;
+            --vault-blue: #818cf8;
             --vault-gold: #fde68a;
             --vault-text: #ffffff;
-            --vault-muted: rgba(255, 255, 255, 0.74);
-            --vault-card: rgba(255, 255, 255, 0.94);
-            --vault-border: rgba(255, 255, 255, 0.14);
-            --vault-shadow: 0 18px 44px rgba(0, 0, 0, 0.32);
+            --vault-muted: rgba(255, 255, 255, 0.8);
+            --vault-card: rgba(255, 255, 255, 0.96);
+            --vault-border: rgba(255, 255, 255, 0.18);
+            --vault-shadow: 0 18px 44px rgba(26, 6, 48, 0.4);
+            --vault-accent: linear-gradient(135deg, #f472b6, #a855f7);
           }
 
           * {
@@ -116,11 +122,7 @@ export default function RootLayout({
             margin: 0;
             min-height: 100vh;
             color: var(--vault-text);
-            background:
-              radial-gradient(circle at 10% 0%, rgba(236, 72, 153, 0.22), transparent 30%),
-              radial-gradient(circle at 90% 4%, rgba(59, 130, 246, 0.24), transparent 32%),
-              radial-gradient(circle at 60% 100%, rgba(168, 85, 247, 0.18), transparent 34%),
-              linear-gradient(135deg, #020617 0%, #172554 45%, #1d1d68 100%);
+            background: transparent;
             font-family:
               Inter,
               ui-sans-serif,
@@ -132,21 +134,90 @@ export default function RootLayout({
             overflow-x: hidden;
           }
 
-          body::before {
-            content: "";
+          /* Soft, warm, fixed backdrop shared by every page (CSS only). */
+          .siteBackdrop {
             position: fixed;
             inset: 0;
-            z-index: -2;
+            z-index: -1;
             pointer-events: none;
+            overflow: hidden;
+            background:
+              radial-gradient(ellipse 80% 55% at 85% 105%, rgba(253, 186, 116, 0.30), transparent 70%),
+              radial-gradient(ellipse 60% 45% at 10% 75%, rgba(236, 72, 153, 0.20), transparent 70%),
+              linear-gradient(165deg, #2c0f52 0%, #44166e 36%, #5e1c72 68%, #3d1258 100%);
+          }
+
+          .siteBackdrop::before,
+          .siteBackdrop::after {
+            content: "";
+            position: absolute;
+            width: 90vmax;
+            height: 90vmax;
+            border-radius: 50%;
+            will-change: transform;
+          }
+
+          .siteBackdrop::before {
+            top: -45vmax;
+            left: -35vmax;
+            background: radial-gradient(circle, rgba(251, 113, 133, 0.50) 0%, rgba(244, 114, 182, 0.18) 38%, transparent 66%);
+            animation: vaultDriftA 26s ease-in-out infinite alternate;
+          }
+
+          .siteBackdrop::after {
+            top: -30vmax;
+            right: -45vmax;
+            background: radial-gradient(circle, rgba(196, 181, 253, 0.42) 0%, rgba(167, 139, 250, 0.14) 40%, transparent 66%);
+            animation: vaultDriftB 32s ease-in-out infinite alternate;
+          }
+
+          .siteSparkles {
+            position: absolute;
+            inset: 0;
             background-image:
-              radial-gradient(2px 2px at 18% 22%, rgba(255, 255, 255, 0.45) 35%, transparent 36%),
-              radial-gradient(1.5px 1.5px at 78% 16%, rgba(255, 255, 255, 0.36) 35%, transparent 36%),
-              radial-gradient(1.8px 1.8px at 48% 72%, rgba(255, 255, 255, 0.28) 35%, transparent 36%),
-              linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-            background-size: auto, auto, auto, 48px 48px, 48px 48px;
-            opacity: 0.62;
-            mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.98), transparent 86%);
+              radial-gradient(1.6px 1.6px at 12% 18%, rgba(255, 255, 255, 0.85) 40%, transparent 50%),
+              radial-gradient(1.2px 1.2px at 28% 62%, rgba(255, 240, 200, 0.7) 40%, transparent 50%),
+              radial-gradient(2px 2px at 46% 12%, rgba(255, 255, 255, 0.75) 40%, transparent 50%),
+              radial-gradient(1.4px 1.4px at 64% 44%, rgba(253, 230, 138, 0.7) 40%, transparent 50%),
+              radial-gradient(1.8px 1.8px at 82% 24%, rgba(255, 255, 255, 0.8) 40%, transparent 50%),
+              radial-gradient(1.2px 1.2px at 90% 70%, rgba(249, 168, 212, 0.75) 40%, transparent 50%),
+              radial-gradient(1.5px 1.5px at 8% 84%, rgba(255, 255, 255, 0.6) 40%, transparent 50%),
+              radial-gradient(1.3px 1.3px at 56% 88%, rgba(196, 181, 253, 0.7) 40%, transparent 50%);
+            opacity: 0.75;
+            animation: vaultTwinkle 6s ease-in-out infinite alternate;
+          }
+
+          @keyframes vaultDriftA {
+            from { transform: translate3d(0, 0, 0) scale(1); }
+            to { transform: translate3d(8vmax, 6vmax, 0) scale(1.08); }
+          }
+
+          @keyframes vaultDriftB {
+            from { transform: translate3d(0, 0, 0) scale(1.05); }
+            to { transform: translate3d(-7vmax, 9vmax, 0) scale(0.96); }
+          }
+
+          @keyframes vaultTwinkle {
+            from { opacity: 0.45; }
+            to { opacity: 0.85; }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .siteBackdrop::before,
+            .siteBackdrop::after,
+            .siteSparkles {
+              animation: none;
+            }
+          }
+
+          ::selection {
+            background: rgba(244, 114, 182, 0.45);
+            color: #ffffff;
+          }
+
+          :focus-visible {
+            outline: 3px solid var(--vault-gold);
+            outline-offset: 2px;
           }
 
           a {
@@ -197,7 +268,7 @@ export default function RootLayout({
           .siteFooter {
             color: rgba(255, 255, 255, 0.76);
             border-top: 1px solid rgba(255, 255, 255, 0.12);
-            background: rgba(2, 6, 23, 0.62);
+            background: rgba(30, 9, 52, 0.55);
             backdrop-filter: blur(16px);
           }
 
@@ -274,6 +345,10 @@ export default function RootLayout({
         <a href="#main-content" className="skipLink">
           Skip to content
         </a>
+
+        <div className="siteBackdrop" aria-hidden="true">
+          <div className="siteSparkles" />
+        </div>
 
         <div className="siteFrame">
           <Nav />

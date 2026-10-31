@@ -811,11 +811,7 @@ const pageStyles = `
   .accountPage {
     min-height: 100vh;
     color: white;
-    background:
-      radial-gradient(circle at 8% 4%, rgba(168, 85, 247, 0.42) 0%, transparent 28%),
-      radial-gradient(circle at 88% 10%, rgba(59, 130, 246, 0.30) 0%, transparent 27%),
-      radial-gradient(circle at 70% 94%, rgba(236, 72, 153, 0.22) 0%, transparent 30%),
-      linear-gradient(180deg, #030712 0%, #080b1f 45%, #020617 100%);
+    background: transparent;
     overflow-x: hidden;
   }
 
@@ -868,7 +864,7 @@ const pageStyles = `
     display: grid;
     place-items: center;
     font-size: 31px;
-    background: linear-gradient(135deg, #ec4899, #7c3aed, #2563eb);
+    background: linear-gradient(135deg, #f472b6, #a855f7, #818cf8);
   }
 
   .hero {
@@ -877,7 +873,7 @@ const pageStyles = `
     margin-bottom: 18px;
     background:
       radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
-      linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
+      linear-gradient(135deg, rgba(58, 24, 84, 0.94), rgba(88,28,135,0.86));
     border: 1px solid rgba(255,255,255,0.16);
     box-shadow: 0 26px 64px rgba(0,0,0,0.36);
     display: grid;
@@ -930,7 +926,7 @@ const pageStyles = `
     border-radius: 999px;
     padding: 9px 12px;
     color: rgba(255,255,255,0.92);
-    background: rgba(15,23,42,0.54);
+    background: rgba(44, 14, 72, 0.54);
     border: 1px solid rgba(255,255,255,0.16);
     font-size: 13px;
     font-weight: 850;
@@ -944,7 +940,7 @@ const pageStyles = `
   .heroSideCard {
     border-radius: 24px;
     padding: 18px;
-    background: rgba(15,23,42,0.58);
+    background: rgba(44, 14, 72, 0.58);
     border: 1px solid rgba(255,255,255,0.14);
     box-shadow: 0 14px 28px rgba(0,0,0,0.20);
   }
@@ -1033,7 +1029,7 @@ const pageStyles = `
     display: grid;
     place-items: center;
     border-radius: 16px;
-    background: linear-gradient(135deg, #ede9fe, #bfdbfe);
+    background: linear-gradient(135deg, #ede9fe, #fbcfe8);
     font-size: 23px;
     margin-bottom: 12px;
   }
@@ -1082,7 +1078,7 @@ const pageStyles = `
     border-radius: 999px;
     display: grid;
     place-items: center;
-    background: linear-gradient(135deg, #4f46e5, #a855f7);
+    background: linear-gradient(135deg, #a855f7, #ec4899);
     color: white;
     font-weight: 1000;
   }
@@ -1315,8 +1311,8 @@ const pageStyles = `
   .primaryButton {
     border: 1px solid transparent;
     color: white !important;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
-    box-shadow: 0 14px 28px rgba(79,70,229,0.24);
+    background: linear-gradient(135deg, #a855f7, #ec4899);
+    box-shadow: 0 14px 28px rgba(168, 85, 247, 0.24);
   }
 
   .saveButton {
@@ -1354,7 +1350,7 @@ const pageStyles = `
 
   .quickCard:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 24px rgba(79,70,229,0.12);
+    box-shadow: 0 12px 24px rgba(168, 85, 247, 0.12);
   }
 
   .quickIcon {
@@ -1364,7 +1360,7 @@ const pageStyles = `
     display: grid;
     place-items: center;
     font-size: 24px;
-    background: linear-gradient(135deg, #ede9fe, #bfdbfe);
+    background: linear-gradient(135deg, #ede9fe, #fbcfe8);
   }
 
   .quickCard strong,
@@ -1431,7 +1427,7 @@ const pageStyles = `
   .progressFill {
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
+    background: linear-gradient(90deg, #fda4af, #c084fc, #f0abfc);
   }
 
   .planMiniGrid {

@@ -580,11 +580,7 @@ export default function MessagesPage() {
       <style jsx>{`
         .messagesPage {
           min-height: 100vh;
-          background:
-            radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%),
-            radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%),
-            radial-gradient(circle at 70% 80%, rgba(236,72,153,0.16) 0%, rgba(236,72,153,0) 24%),
-            linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%);
+          background: transparent;
           padding: 16px;
           color: #ffffff;
         }
@@ -597,7 +593,7 @@ export default function MessagesPage() {
         .hero {
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
-            linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
+            linear-gradient(135deg, rgba(48, 18, 70, 0.92), rgba(147, 51, 234, 0.88));
           border-radius: 28px;
           padding: 24px;
           box-shadow: 0 20px 40px rgba(0,0,0,0.30);
@@ -652,9 +648,9 @@ export default function MessagesPage() {
 
         .bubblePrimary,
         .bubblePrimary:visited {
-          background: linear-gradient(135deg, #60a5fa, #8b5cf6);
+          background: linear-gradient(135deg, #c084fc, #f472b6);
           color: #ffffff !important;
-          box-shadow: 0 14px 28px rgba(79,70,229,0.34);
+          box-shadow: 0 14px 28px rgba(168, 85, 247, 0.34);
         }
 
         .bubbleLight,
@@ -928,7 +924,7 @@ export default function MessagesPage() {
 
         .messageMine {
           justify-self: end;
-          background: linear-gradient(135deg, #2563eb, #7c3aed);
+          background: linear-gradient(135deg, #9333ea, #db2777);
           color: #ffffff;
           border-bottom-right-radius: 6px;
         }

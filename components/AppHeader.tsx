@@ -364,7 +364,7 @@ export default function AppHeader() {
           backdrop-filter: blur(18px);
           background:
             radial-gradient(circle at 10% 0%, rgba(236, 72, 153, 0.2), transparent 26%),
-            radial-gradient(circle at 90% 0%, rgba(59, 130, 246, 0.2), transparent 26%),
+            radial-gradient(circle at 90% 0%, rgba(196, 140, 255, 0.2), transparent 26%),
             linear-gradient(135deg, rgba(8, 11, 24, 0.98), rgba(32, 17, 68, 0.95), rgba(30, 41, 99, 0.95));
           border-bottom: 1px solid rgba(255, 255, 255, 0.12);
           box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
@@ -410,7 +410,7 @@ export default function AppHeader() {
             radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.36), transparent 26%),
             linear-gradient(135deg, #7c3aed, #2563eb);
           box-shadow:
-            0 12px 24px rgba(79, 70, 229, 0.3),
+            0 12px 24px rgba(168, 85, 247, 0.3),
             inset 0 0 0 1px rgba(255, 255, 255, 0.22);
           overflow: hidden;
           flex: 0 0 auto;
@@ -462,7 +462,7 @@ export default function AppHeader() {
           line-height: 1.05;
           font-weight: 1000;
           letter-spacing: -0.4px;
-          background: linear-gradient(90deg, #fde68a, #f9a8d4, #93c5fd);
+          background: linear-gradient(90deg, #fde68a, #f9a8d4, #c4b5fd);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           white-space: nowrap;
@@ -520,7 +520,7 @@ export default function AppHeader() {
         }
 
         .avNavBubbleActive {
-          background: linear-gradient(135deg, rgba(236, 72, 153, 0.98), rgba(124, 58, 237, 0.96), rgba(59, 130, 246, 0.96));
+          background: linear-gradient(135deg, rgba(236, 72, 153, 0.98), rgba(124, 58, 237, 0.96), rgba(196, 140, 255, 0.96));
           border-color: rgba(255, 255, 255, 0.32);
           box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.15),
@@ -716,7 +716,7 @@ export default function AppHeader() {
             border: none;
             background:
               radial-gradient(circle at 15% 12%, rgba(168, 85, 247, 0.26), transparent 34%),
-              rgba(2, 6, 23, 0.78);
+              rgba(30, 9, 52, 0.78);
             backdrop-filter: blur(8px);
             cursor: pointer;
           }

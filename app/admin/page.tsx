@@ -38,7 +38,7 @@ export default function AdminPage() {
 
   return (
     <main>
-      <div style={{ background: "linear-gradient(135deg, rgba(91,33,182,0.9), rgba(29,78,216,0.85))", padding: 24, borderRadius: 24, marginBottom: 16 }}>
+      <div style={{ background: "linear-gradient(135deg, rgba(91,33,182,0.9), rgba(147, 51, 234, 0.85))", padding: 24, borderRadius: 24, marginBottom: 16 }}>
         <div style={{ fontSize: 34, fontWeight: 800 }}>Admin 👑</div>
       </div>
 

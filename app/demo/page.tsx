@@ -328,11 +328,7 @@ export default function DemoVaultPage() {
         .page {
           min-height: 100vh;
           color: white;
-          background:
-            radial-gradient(circle at 8% 4%, rgba(168,85,247,0.42) 0%, transparent 28%),
-            radial-gradient(circle at 88% 8%, rgba(59,130,246,0.30) 0%, transparent 26%),
-            radial-gradient(circle at 72% 96%, rgba(236,72,153,0.24) 0%, transparent 28%),
-            linear-gradient(180deg, #030712 0%, #080b1f 44%, #020617 100%);
+          background: transparent;
           overflow-x: hidden;
         }
 
@@ -384,7 +380,7 @@ export default function DemoVaultPage() {
           color: #fef3c7;
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 30%),
-            linear-gradient(135deg, rgba(236,72,153,0.32), rgba(79,70,229,0.32));
+            linear-gradient(135deg, rgba(236,72,153,0.32), rgba(168, 85, 247, 0.32));
           border: 1px solid rgba(255,255,255,0.20);
           box-shadow: 0 18px 42px rgba(0,0,0,0.24);
           display: flex;
@@ -440,7 +436,7 @@ export default function DemoVaultPage() {
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 32%),
             radial-gradient(circle at bottom left, rgba(236,72,153,0.18), transparent 38%),
-            linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
+            linear-gradient(135deg, rgba(58, 24, 84, 0.94), rgba(88,28,135,0.86));
           display: grid;
           align-content: center;
         }
@@ -450,7 +446,7 @@ export default function DemoVaultPage() {
           background:
             radial-gradient(circle at top right, rgba(250,204,21,0.18), transparent 34%),
             radial-gradient(circle at bottom left, rgba(236,72,153,0.18), transparent 36%),
-            linear-gradient(135deg, rgba(15,23,42,0.78), rgba(88,28,135,0.80));
+            linear-gradient(135deg, rgba(44, 14, 72, 0.78), rgba(88,28,135,0.80));
         }
 
         .badge {
@@ -498,7 +494,7 @@ export default function DemoVaultPage() {
           font-size: 12px;
           font-weight: 1000;
           color: rgba(255,255,255,0.96);
-          background: rgba(15,23,42,0.62);
+          background: rgba(44, 14, 72, 0.62);
           border: 1px solid rgba(255,255,255,0.24);
           box-shadow: 0 10px 20px rgba(0,0,0,0.18);
         }
@@ -528,7 +524,7 @@ export default function DemoVaultPage() {
           color: white !important;
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.13), transparent 34%),
-            linear-gradient(135deg, rgba(15,23,42,0.58), rgba(79,70,229,0.64));
+            linear-gradient(135deg, rgba(44, 14, 72, 0.58), rgba(168, 85, 247, 0.64));
           border: 1px solid rgba(255,255,255,0.22);
           box-shadow: 0 16px 34px rgba(0,0,0,0.24);
           transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
@@ -543,7 +539,7 @@ export default function DemoVaultPage() {
         .heroLink.alt {
           background:
             radial-gradient(circle at top right, rgba(250,204,21,0.16), transparent 36%),
-            linear-gradient(135deg, rgba(88,28,135,0.66), rgba(15,23,42,0.66));
+            linear-gradient(135deg, rgba(88,28,135,0.66), rgba(44, 14, 72, 0.66));
         }
 
         .heroLinkIcon {
@@ -610,7 +606,7 @@ export default function DemoVaultPage() {
           padding: 18px;
           background:
             radial-gradient(circle at top right, rgba(236,72,153,0.24), transparent 36%),
-            linear-gradient(135deg, rgba(88,28,135,0.88), rgba(15,23,42,0.95));
+            linear-gradient(135deg, rgba(88,28,135,0.88), rgba(44, 14, 72, 0.95));
           border: 1px solid rgba(217,70,239,0.38);
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
         }
@@ -633,7 +629,7 @@ export default function DemoVaultPage() {
         .progressFill {
           height: 100%;
           border-radius: inherit;
-          background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
+          background: linear-gradient(90deg, #fda4af, #c084fc, #f0abfc);
         }
 
         .whiteCard {
@@ -818,7 +814,7 @@ export default function DemoVaultPage() {
 
         .seriesCard.active {
           border-color: #4f46e5;
-          box-shadow: 0 12px 24px rgba(79,70,229,0.18);
+          box-shadow: 0 12px 24px rgba(168, 85, 247, 0.18);
           background: linear-gradient(180deg, #ffffff, #f5f3ff);
         }
 
@@ -1103,7 +1099,7 @@ export default function DemoVaultPage() {
           color: white;
           background:
             radial-gradient(circle at top right, rgba(34,211,238,0.18), transparent 32%),
-            linear-gradient(135deg, rgba(15,23,42,0.92), rgba(49,46,129,0.88));
+            linear-gradient(135deg, rgba(44, 14, 72, 0.92), rgba(104, 36, 128, 0.88));
         }
 
         .marketCard {
@@ -1142,7 +1138,7 @@ export default function DemoVaultPage() {
           padding: 30px;
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.13), transparent 32%),
-            linear-gradient(135deg, rgba(79,70,229,0.88), rgba(147,51,234,0.86));
+            linear-gradient(135deg, rgba(147, 51, 234, 0.88), rgba(147,51,234,0.86));
           border: 1px solid rgba(255,255,255,0.16);
         }
 
@@ -1193,7 +1189,7 @@ export default function DemoVaultPage() {
 
         .secondaryButton {
           color: white !important;
-          background: linear-gradient(90deg, #4f46e5, #a855f7);
+          background: linear-gradient(90deg, #a855f7, #ec4899);
           border: 1px solid rgba(255,255,255,0.45);
           box-shadow: 0 16px 34px rgba(124,58,237,0.50);
         }
@@ -1536,7 +1532,7 @@ export default function DemoVaultPage() {
             gap: 8px;
             padding: 8px;
             border-radius: 18px;
-            background: rgba(15,23,42,0.9);
+            background: rgba(44, 14, 72, 0.9);
             border: 1px solid rgba(255,255,255,0.14);
             backdrop-filter: blur(14px);
             box-shadow: 0 18px 40px rgba(0,0,0,0.36);
@@ -1552,7 +1548,7 @@ export default function DemoVaultPage() {
           }
 
           .mobileSticky .primaryButton {
-            background: linear-gradient(135deg, #ec4899, #7c3aed, #2563eb);
+            background: linear-gradient(135deg, #f472b6, #a855f7, #818cf8);
             color: #ffffff !important;
             border: 1px solid rgba(255,255,255,0.38);
             box-shadow: 0 12px 28px rgba(124,58,237,0.44);

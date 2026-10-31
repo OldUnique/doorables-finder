@@ -83,11 +83,7 @@ export default function AboutPage() {
         .page {
           min-height: 100vh;
           color: white;
-          background:
-            radial-gradient(circle at 8% 4%, rgba(168, 85, 247, 0.42) 0%, transparent 28%),
-            radial-gradient(circle at 88% 10%, rgba(59, 130, 246, 0.30) 0%, transparent 27%),
-            radial-gradient(circle at 70% 94%, rgba(236, 72, 153, 0.22) 0%, transparent 30%),
-            linear-gradient(180deg, #030712 0%, #080b1f 45%, #020617 100%);
+          background: transparent;
           overflow-x: hidden;
         }
 
@@ -148,7 +144,7 @@ export default function AboutPage() {
           border-radius: 32px;
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
-            linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
+            linear-gradient(135deg, rgba(58, 24, 84, 0.94), rgba(88,28,135,0.86));
         }
 
         .heroCard {
@@ -214,7 +210,7 @@ export default function AboutPage() {
           border-radius: 999px;
           padding: 8px 11px;
           color: rgba(255,255,255,0.95);
-          background: rgba(15,23,42,0.58);
+          background: rgba(44, 14, 72, 0.58);
           border: 1px solid rgba(255,255,255,0.20);
           font-size: 12px;
           font-weight: 1000;
@@ -257,7 +253,7 @@ export default function AboutPage() {
 
         .secondaryButton,
         .secondaryButton:visited {
-          background: linear-gradient(90deg, #4f46e5, #a855f7);
+          background: linear-gradient(90deg, #a855f7, #ec4899);
           color: #ffffff !important;
           border: 1px solid rgba(255,255,255,0.45);
           box-shadow: 0 16px 34px rgba(124,58,237,0.50);
@@ -273,7 +269,7 @@ export default function AboutPage() {
         .miniStat {
           border-radius: 24px;
           padding: 17px;
-          background: rgba(15,23,42,0.62);
+          background: rgba(44, 14, 72, 0.62);
           border: 1px solid rgba(255,255,255,0.14);
           box-shadow: 0 14px 28px rgba(0,0,0,0.22);
         }
@@ -308,7 +304,7 @@ export default function AboutPage() {
           color: #111827;
           background:
             radial-gradient(circle at top right, rgba(168,85,247,0.18), transparent 32%),
-            radial-gradient(circle at bottom left, rgba(59,130,246,0.14), transparent 32%),
+            radial-gradient(circle at bottom left, rgba(196, 140, 255, 0.14), transparent 32%),
             linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
           display: grid;
           grid-template-columns: auto 1fr;
@@ -482,7 +478,7 @@ export default function AboutPage() {
           border-radius: 24px;
           padding: 18px;
           min-height: 190px;
-          background: rgba(15,23,42,0.78);
+          background: rgba(44, 14, 72, 0.78);
           border: 1px solid rgba(255,255,255,0.12);
           box-shadow: 0 16px 34px rgba(0,0,0,0.24);
         }
@@ -494,7 +490,7 @@ export default function AboutPage() {
           display: grid;
           place-items: center;
           font-size: 30px;
-          background: linear-gradient(135deg, #ede9fe, #bfdbfe);
+          background: linear-gradient(135deg, #ede9fe, #fbcfe8);
           margin-bottom: 14px;
         }
 
@@ -568,7 +564,7 @@ export default function AboutPage() {
           padding: 30px;
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.13), transparent 32%),
-            linear-gradient(135deg, rgba(79,70,229,0.88), rgba(147,51,234,0.86));
+            linear-gradient(135deg, rgba(147, 51, 234, 0.88), rgba(147,51,234,0.86));
           border: 1px solid rgba(255,255,255,0.16);
           box-shadow: 0 22px 46px rgba(0,0,0,0.28);
         }

@@ -665,11 +665,7 @@ const pageStyles = `
   .page {
     min-height: 100vh;
     color: white;
-    background:
-      radial-gradient(circle at 8% 4%, rgba(168,85,247,0.42) 0%, transparent 28%),
-      radial-gradient(circle at 88% 10%, rgba(59,130,246,0.30) 0%, transparent 27%),
-      radial-gradient(circle at 70% 94%, rgba(236,72,153,0.22) 0%, transparent 30%),
-      linear-gradient(180deg, #030712 0%, #080b1f 45%, #020617 100%);
+    background: transparent;
     overflow-x: hidden;
   }
 
@@ -754,7 +750,7 @@ const pageStyles = `
     font-weight: 1000;
     line-height: 0.95;
     letter-spacing: -0.8px;
-    background: linear-gradient(90deg, #fef3c7, #f0abfc, #bfdbfe);
+    background: linear-gradient(90deg, #fef3c7, #f0abfc, #ddd6fe);
     -webkit-background-clip: text;
     color: transparent;
   }
@@ -797,7 +793,7 @@ const pageStyles = `
     padding: 28px;
     background:
       radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
-      linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
+      linear-gradient(135deg, rgba(58, 24, 84, 0.94), rgba(88,28,135,0.86));
     display: grid;
     align-content: center;
     gap: 17px;
@@ -842,7 +838,7 @@ const pageStyles = `
   .benefit {
     border-radius: 19px;
     padding: 13px;
-    background: rgba(15,23,42,0.55);
+    background: rgba(44, 14, 72, 0.55);
     border: 1px solid rgba(255,255,255,0.14);
   }
 
@@ -898,7 +894,7 @@ const pageStyles = `
     border-radius: 18px;
     display: grid;
     place-items: center;
-    background: linear-gradient(135deg, #ede9fe, #bfdbfe);
+    background: linear-gradient(135deg, #ede9fe, #fbcfe8);
     font-size: 30px;
   }
 
@@ -925,7 +921,7 @@ const pageStyles = `
     height: 100%;
     width: 62%;
     border-radius: inherit;
-    background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
+    background: linear-gradient(90deg, #fda4af, #c084fc, #f0abfc);
   }
 
   .authCard {
@@ -957,9 +953,9 @@ const pageStyles = `
   }
 
   .modeButtonActive {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: linear-gradient(135deg, #a855f7, #ec4899);
     color: white;
-    box-shadow: 0 10px 18px rgba(79,70,229,0.22);
+    box-shadow: 0 10px 18px rgba(168, 85, 247, 0.22);
   }
 
   .formTitle {
@@ -1039,9 +1035,9 @@ const pageStyles = `
 
   .primaryButton,
   .primaryButton:visited {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: linear-gradient(135deg, #a855f7, #ec4899);
     color: white;
-    box-shadow: 0 14px 26px rgba(79,70,229,0.26);
+    box-shadow: 0 14px 26px rgba(168, 85, 247, 0.26);
   }
 
   .secondaryButton,

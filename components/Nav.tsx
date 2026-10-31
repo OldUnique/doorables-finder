@@ -28,7 +28,7 @@ const styles: Record<string, CSSProperties> = {
     zIndex: 1000,
     color: "white",
     background:
-      "radial-gradient(circle at 16% 0%, rgba(236, 72, 153, 0.24), transparent 34%), radial-gradient(circle at 84% 0%, rgba(59, 130, 246, 0.28), transparent 34%), linear-gradient(135deg, rgba(17, 24, 39, 0.96), rgba(49, 46, 129, 0.94))",
+      "radial-gradient(circle at 16% 0%, rgba(236, 72, 153, 0.24), transparent 34%), radial-gradient(circle at 84% 0%, rgba(196, 140, 255, 0.28), transparent 34%), linear-gradient(135deg, rgba(52, 18, 78, 0.94), rgba(104, 36, 128, 0.92))",
     borderBottom: "1px solid rgba(255, 255, 255, 0.14)",
     boxShadow: "0 14px 34px rgba(0, 0, 0, 0.28)",
     backdropFilter: "blur(18px)",
@@ -59,7 +59,7 @@ const styles: Record<string, CSSProperties> = {
     placeItems: "center",
     fontSize: 25,
     background:
-      "radial-gradient(circle at 30% 20%, #fef3c7, transparent 34%), linear-gradient(135deg, #ec4899, #7c3aed 52%, #2563eb)",
+      "radial-gradient(circle at 30% 20%, #fef3c7, transparent 34%), linear-gradient(135deg, #f9a8d4, #ec4899 40%, #a855f7)",
     border: "1px solid rgba(255, 255, 255, 0.25)",
     boxShadow: "0 14px 28px rgba(124, 58, 237, 0.36)",
   },
@@ -154,7 +154,7 @@ function pillStyle(active = false, mobile = false): CSSProperties {
     fontSize: mobile ? 14 : 13,
     fontWeight: 950,
     background: active
-      ? "radial-gradient(circle at top left, rgba(253, 230, 138, 0.24), transparent 42%), linear-gradient(135deg, rgba(124, 58, 237, 0.98), rgba(37, 99, 235, 0.78))"
+      ? "radial-gradient(circle at top left, rgba(253, 230, 138, 0.24), transparent 42%), linear-gradient(135deg, rgba(124, 58, 237, 0.98), rgba(219, 39, 119, 0.78))"
       : "rgba(255, 255, 255, 0.11)",
     border: active
       ? "1px solid rgba(253, 230, 138, 0.62)"
@@ -174,10 +174,10 @@ function accountStyle(
 ): CSSProperties {
   const accountBackground =
     variant === "account"
-      ? "linear-gradient(135deg, #4f46e5, #7c3aed)"
+      ? "linear-gradient(135deg, #a855f7, #ec4899)"
       : variant === "signup"
         ? "linear-gradient(135deg, #f59e0b, #ec4899, #7c3aed)"
-        : "linear-gradient(135deg, #ec4899, #7c3aed, #2563eb)";
+        : "linear-gradient(135deg, #f472b6, #a855f7, #818cf8)";
 
   return {
     minHeight: mobile ? 50 : 43,

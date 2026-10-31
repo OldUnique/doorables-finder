@@ -6,7 +6,7 @@
 .page {
   min-height: 100vh;
   padding: 24px;
-  background: linear-gradient(135deg, #0f172a, #1e3a8a);
+  background: transparent;
   color: white;
 }
 
@@ -16,7 +16,7 @@
 }
 
 .hero {
-  background: linear-gradient(135deg, #111827, #4338ca);
+  background: linear-gradient(135deg, #3b1450, #7e22ce);
   border-radius: 24px;
   padding: 28px;
   margin-bottom: 20px;
@@ -169,7 +169,7 @@
 .overlayCard {
   max-width: 520px;
   width: 100%;
-  background: linear-gradient(135deg, #111827, #4338ca);
+  background: linear-gradient(135deg, #3b1450, #7e22ce);
   color: white;
   border-radius: 24px;
   padding: 28px;

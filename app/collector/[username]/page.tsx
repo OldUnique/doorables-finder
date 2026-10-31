@@ -586,10 +586,7 @@ export default function PublicCollectorPage() {
     .page {
       min-height: 100vh;
       color: white;
-      background:
-        radial-gradient(circle at 8% 4%, rgba(168,85,247,0.42) 0%, transparent 28%),
-        radial-gradient(circle at 88% 10%, rgba(59,130,246,0.30) 0%, transparent 27%),
-        linear-gradient(180deg, #030712 0%, #080b1f 45%, #020617 100%);
+      background: transparent;
       overflow-x: hidden;
     }
 
@@ -608,7 +605,7 @@ export default function PublicCollectorPage() {
       place-items: center;
       padding: 22px;
       color: white;
-      background: radial-gradient(circle at top, #312e81 0%, #0f172a 45%, #020617 100%);
+      background: transparent;
     }
 
     .loadingCard,
@@ -636,7 +633,7 @@ export default function PublicCollectorPage() {
       margin-bottom: 18px;
       background:
         radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
-        linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
+        linear-gradient(135deg, rgba(58, 24, 84, 0.94), rgba(88,28,135,0.86));
       border: 1px solid rgba(255,255,255,0.16);
       box-shadow: 0 26px 64px rgba(0,0,0,0.36);
     }
@@ -693,7 +690,7 @@ export default function PublicCollectorPage() {
       min-width: 310px;
       border-radius: 24px;
       padding: 18px;
-      background: rgba(15,23,42,0.58);
+      background: rgba(44, 14, 72, 0.58);
       border: 1px solid rgba(255,255,255,0.14);
       box-shadow: 0 14px 28px rgba(0,0,0,0.20);
     }
@@ -750,7 +747,7 @@ export default function PublicCollectorPage() {
       margin-top: 20px;
       border-radius: 24px;
       padding: 16px;
-      background: rgba(15,23,42,0.45);
+      background: rgba(44, 14, 72, 0.45);
       border: 1px solid rgba(255,255,255,0.13);
     }
 
@@ -1035,7 +1032,7 @@ export default function PublicCollectorPage() {
       padding: 10px 16px;
       border-radius: 999px;
       border: 1px solid rgba(255,255,255,0.24);
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      background: linear-gradient(135deg, #a855f7, #ec4899);
       color: white;
       font-weight: 1000;
       cursor: pointer;
@@ -1404,10 +1401,10 @@ export default function PublicCollectorPage() {
 
                 const actionBg =
                   item.qty > 1
-                    ? "linear-gradient(135deg,#2563eb,#60a5fa)"
+                    ? "linear-gradient(135deg,#a855f7, #f0abfc)"
                     : item.qty <= 0 || item.wanted
                       ? "linear-gradient(135deg,#7c3aed,#c084fc)"
-                      : "linear-gradient(135deg,#4f46e5,#7c3aed)";
+                      : "linear-gradient(135deg,#a855f7, #ec4899)";
 
                 if (viewMode === "list") {
                   return (

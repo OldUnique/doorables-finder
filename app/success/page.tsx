@@ -102,11 +102,7 @@ export default function SuccessPage() {
         .page {
           min-height: 100vh;
           color: white;
-          background:
-            radial-gradient(circle at 8% 4%, rgba(168, 85, 247, 0.44) 0%, transparent 28%),
-            radial-gradient(circle at 88% 8%, rgba(59, 130, 246, 0.32) 0%, transparent 26%),
-            radial-gradient(circle at 72% 96%, rgba(236, 72, 153, 0.26) 0%, transparent 28%),
-            linear-gradient(180deg, #030712 0%, #080b1f 44%, #020617 100%);
+          background: transparent;
           overflow-x: hidden;
         }
 
@@ -159,7 +155,7 @@ export default function SuccessPage() {
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 34%),
             radial-gradient(circle at bottom left, rgba(236,72,153,0.20), transparent 38%),
-            linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
+            linear-gradient(135deg, rgba(58, 24, 84, 0.94), rgba(88,28,135,0.86));
           border: 1px solid rgba(255,255,255,0.16);
           box-shadow: 0 28px 76px rgba(0,0,0,0.42);
           display: grid;
@@ -179,14 +175,14 @@ export default function SuccessPage() {
           padding: 28px;
           background:
             radial-gradient(circle at top right, rgba(250,204,21,0.14), transparent 32%),
-            rgba(15,23,42,0.36);
+            rgba(44, 14, 72, 0.36);
           display: grid;
           align-content: center;
         }
 
         .sidePanel {
           padding: 20px;
-          background: rgba(15,23,42,0.42);
+          background: rgba(44, 14, 72, 0.42);
         }
 
         .successIcon {
@@ -265,7 +261,7 @@ export default function SuccessPage() {
           color: white !important;
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.13), transparent 34%),
-            linear-gradient(135deg, rgba(15,23,42,0.56), rgba(79,70,229,0.60));
+            linear-gradient(135deg, rgba(44, 14, 72, 0.56), rgba(168, 85, 247, 0.60));
           border: 1px solid rgba(255,255,255,0.20);
           box-shadow: 0 14px 28px rgba(0,0,0,0.22);
           transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
@@ -280,7 +276,7 @@ export default function SuccessPage() {
         .actionCard.primary {
           background:
             radial-gradient(circle at top right, rgba(250,204,21,0.16), transparent 34%),
-            linear-gradient(135deg, rgba(236,72,153,0.70), rgba(79,70,229,0.70));
+            linear-gradient(135deg, rgba(236,72,153,0.70), rgba(168, 85, 247, 0.70));
         }
 
         .actionIcon {

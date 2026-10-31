@@ -1035,10 +1035,7 @@ const pageStyles = `
     min-height: 100vh;
     padding: 24px;
     color: white;
-    background:
-      radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%),
-      radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%),
-      linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%);
+    background: transparent;
   }
 
   .centerPage {
@@ -1059,7 +1056,7 @@ const pageStyles = `
     flex-wrap: wrap;
     background:
       radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 30%),
-      linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
+      linear-gradient(135deg, rgba(48, 18, 70, 0.92), rgba(147, 51, 234, 0.88));
     border-radius: 28px;
     padding: 24px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.30);
@@ -1177,7 +1174,7 @@ const pageStyles = `
     width: min(560px, 100%);
     text-align: center;
     color: white;
-    background: linear-gradient(135deg,#111827,#4338ca);
+    background: linear-gradient(135deg,#3b1450, #7e22ce);
     padding: 28px;
   }
 
@@ -1426,7 +1423,7 @@ const pageStyles = `
   .modalOverlay {
     position: fixed;
     inset: 0;
-    background: rgba(2,6,23,0.78);
+    background: rgba(30,9,52,0.78);
     backdrop-filter: blur(10px);
     z-index: 1000;
     padding: 16px;

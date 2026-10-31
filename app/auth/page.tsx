@@ -78,7 +78,7 @@ export default function AuthPage() {
           border-radius: 32px;
           padding: 34px;
           color: white;
-          background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(29, 78, 216, 0.86));
+          background: linear-gradient(145deg, rgba(44, 14, 72, 0.96), rgba(147, 51, 234, 0.86));
           box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
           border: 1px solid rgba(255, 255, 255, 0.08);
         }
@@ -228,7 +228,7 @@ export default function AuthPage() {
           font-weight: 950;
           font-size: 16px;
           color: white;
-          background: linear-gradient(135deg, #2563eb, #60a5fa);
+          background: linear-gradient(135deg, #a855f7, #f0abfc);
           box-shadow: 0 18px 30px rgba(37, 99, 235, 0.24);
           opacity: 1;
           margin-top: 18px;

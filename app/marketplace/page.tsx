@@ -394,10 +394,7 @@ export default function MarketplacePage() {
             place-items: center;
             padding: 24px;
             color: white;
-            background:
-              radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%),
-              radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%),
-              linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%);
+            background: transparent;
           }
 
           .loadingCard {
@@ -425,11 +422,7 @@ export default function MarketplacePage() {
           padding: 24px;
           padding-bottom: 118px;
           color: white;
-          background:
-            radial-gradient(circle at 20% 20%, rgba(168,85,247,0.30) 0%, rgba(168,85,247,0) 22%),
-            radial-gradient(circle at 80% 10%, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 22%),
-            radial-gradient(circle at 75% 88%, rgba(236,72,153,0.16) 0%, rgba(236,72,153,0) 24%),
-            linear-gradient(180deg, #09090f 0%, #111827 45%, #020617 100%);
+          background: transparent;
         }
 
         .marketplacePage a,
@@ -455,7 +448,7 @@ export default function MarketplacePage() {
         .hero {
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 34%),
-            linear-gradient(135deg, rgba(17,24,39,0.92), rgba(67,56,202,0.88));
+            linear-gradient(135deg, rgba(48, 18, 70, 0.92), rgba(147, 51, 234, 0.88));
           border-radius: 30px;
           padding: 24px;
           margin-bottom: 18px;
@@ -650,7 +643,7 @@ export default function MarketplacePage() {
           border: none;
           border-radius: 999px;
           padding: 12px 14px;
-          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          background: linear-gradient(135deg, #a855f7, #ec4899);
           color: #ffffff;
           font-weight: 950;
           cursor: pointer;
@@ -870,9 +863,9 @@ export default function MarketplacePage() {
 
         .bubblePrimary,
         .bubblePrimary:visited {
-          background: linear-gradient(135deg, #60a5fa, #8b5cf6);
+          background: linear-gradient(135deg, #c084fc, #f472b6);
           color: white !important;
-          box-shadow: 0 12px 22px rgba(79,70,229,0.28);
+          box-shadow: 0 12px 22px rgba(168, 85, 247, 0.28);
         }
 
         .bubbleLight,
@@ -969,7 +962,7 @@ export default function MarketplacePage() {
         }
 
         .toggleButtonActive {
-          background: linear-gradient(135deg, #60a5fa, #8b5cf6);
+          background: linear-gradient(135deg, #c084fc, #f472b6);
           color: white;
           border-color: transparent;
         }
@@ -1246,7 +1239,7 @@ export default function MarketplacePage() {
             gap: 8px;
             padding: 8px;
             border-radius: 18px;
-            background: rgba(15,23,42,0.90);
+            background: rgba(44, 14, 72, 0.90);
             border: 1px solid rgba(255,255,255,0.14);
             backdrop-filter: blur(14px);
             box-shadow: 0 18px 40px rgba(0,0,0,0.36);

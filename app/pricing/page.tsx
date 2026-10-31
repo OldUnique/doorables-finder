@@ -86,11 +86,7 @@ export default function PricingPage() {
         .page {
           min-height: 100vh;
           color: white;
-          background:
-            radial-gradient(circle at 8% 4%, rgba(168, 85, 247, 0.42) 0%, transparent 28%),
-            radial-gradient(circle at 88% 10%, rgba(59, 130, 246, 0.30) 0%, transparent 27%),
-            radial-gradient(circle at 70% 94%, rgba(236, 72, 153, 0.22) 0%, transparent 30%),
-            linear-gradient(180deg, #030712 0%, #080b1f 45%, #020617 100%);
+          background: transparent;
           overflow-x: hidden;
         }
 
@@ -142,7 +138,7 @@ export default function PricingPage() {
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 34%),
             radial-gradient(circle at bottom left, rgba(236,72,153,0.18), transparent 38%),
-            linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
+            linear-gradient(135deg, rgba(58, 24, 84, 0.94), rgba(88,28,135,0.86));
           border: 1px solid rgba(255,255,255,0.16);
           box-shadow: 0 26px 64px rgba(0,0,0,0.36);
         }
@@ -209,7 +205,7 @@ export default function PricingPage() {
 
         .secondaryButton {
           color: white !important;
-          background: linear-gradient(90deg, #4f46e5, #a855f7);
+          background: linear-gradient(90deg, #a855f7, #ec4899);
           border: 1px solid rgba(255,255,255,0.45);
           box-shadow: 0 16px 34px rgba(124,58,237,0.50);
         }
@@ -518,7 +514,7 @@ export default function PricingPage() {
           justify-content: center;
           box-sizing: border-box;
           color: white;
-          box-shadow: 0 14px 28px rgba(79,70,229,0.22);
+          box-shadow: 0 14px 28px rgba(168, 85, 247, 0.22);
           font-family: inherit;
         }
 
@@ -531,7 +527,7 @@ export default function PricingPage() {
         }
 
         .buttonMonthly {
-          background: linear-gradient(135deg, #2563eb, #7c3aed);
+          background: linear-gradient(135deg, #9333ea, #db2777);
         }
 
         .buttonYearly {
@@ -812,7 +808,7 @@ export default function PricingPage() {
             gap: 8px;
             padding: 8px;
             border-radius: 18px;
-            background: rgba(15,23,42,0.9);
+            background: rgba(44, 14, 72, 0.9);
             border: 1px solid rgba(255,255,255,0.14);
             backdrop-filter: blur(14px);
             box-shadow: 0 18px 40px rgba(0,0,0,0.36);
@@ -838,7 +834,7 @@ export default function PricingPage() {
           }
 
           .mobileSticky .stickyFree {
-            background: linear-gradient(135deg, #ec4899, #7c3aed, #2563eb);
+            background: linear-gradient(135deg, #f472b6, #a855f7, #818cf8);
             box-shadow: 0 12px 28px rgba(124,58,237,0.44);
           }
         }

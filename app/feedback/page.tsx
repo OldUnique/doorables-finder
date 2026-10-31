@@ -691,11 +691,7 @@ export default function FeedbackPage() {
         .page {
           min-height: 100vh;
           color: white;
-          background:
-            radial-gradient(circle at 8% 4%, rgba(168, 85, 247, 0.42) 0%, transparent 28%),
-            radial-gradient(circle at 88% 10%, rgba(59, 130, 246, 0.30) 0%, transparent 27%),
-            radial-gradient(circle at 70% 94%, rgba(236, 72, 153, 0.22) 0%, transparent 30%),
-            linear-gradient(180deg, #030712 0%, #080b1f 45%, #020617 100%);
+          background: transparent;
           overflow-x: hidden;
         }
 
@@ -738,7 +734,7 @@ export default function FeedbackPage() {
           margin-bottom: 18px;
           background:
             radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 34%),
-            linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
+            linear-gradient(135deg, rgba(58, 24, 84, 0.94), rgba(88,28,135,0.86));
           border: 1px solid rgba(255,255,255,0.16);
           box-shadow: 0 26px 64px rgba(0,0,0,0.36);
           display: grid;
@@ -812,7 +808,7 @@ export default function FeedbackPage() {
         .statBubble {
           border-radius: 22px;
           padding: 14px;
-          background: rgba(15,23,42,0.58);
+          background: rgba(44, 14, 72, 0.58);
           border: 1px solid rgba(255,255,255,0.14);
           box-shadow: 0 14px 28px rgba(0,0,0,0.20);
           text-align: center;
@@ -987,9 +983,9 @@ export default function FeedbackPage() {
 
         .primaryButton {
           border: none;
-          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          background: linear-gradient(135deg, #a855f7, #ec4899);
           color: white;
-          box-shadow: 0 14px 28px rgba(79,70,229,0.24);
+          box-shadow: 0 14px 28px rgba(168, 85, 247, 0.24);
         }
 
         .primaryButton:disabled {
@@ -1105,10 +1101,10 @@ export default function FeedbackPage() {
         }
 
         .filterButtonActive {
-          background: linear-gradient(135deg, #60a5fa, #8b5cf6);
+          background: linear-gradient(135deg, #c084fc, #f472b6);
           color: white;
           border-color: transparent;
-          box-shadow: 0 12px 22px rgba(79,70,229,0.18);
+          box-shadow: 0 12px 22px rgba(168, 85, 247, 0.18);
         }
 
         .postGrid {

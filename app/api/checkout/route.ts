@@ -1,7 +1,20 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+let stripeClient: Stripe | null = null;
+
+function getStripe() {
+  if (stripeClient) return stripeClient;
+
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+
+  if (!secretKey) {
+    throw new Error("Missing STRIPE_SECRET_KEY environment variable.");
+  }
+
+  stripeClient = new Stripe(secretKey);
+  return stripeClient;
+}
 
 export async function POST(req: Request) {
   try {
@@ -10,12 +23,6 @@ export async function POST(req: Request) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
     const monthlyPriceId = process.env.STRIPE_MONTHLY_PRICE_ID;
     const yearlyPriceId = process.env.STRIPE_YEARLY_PRICE_ID;
-
-console.log("Stripe key prefix:", process.env.STRIPE_SECRET_KEY?.slice(0, 8));
-console.log("Monthly env price:", process.env.STRIPE_MONTHLY_PRICE_ID);
-console.log("Yearly env price:", process.env.STRIPE_YEARLY_PRICE_ID);
-console.log("Plan received:", plan);
-console.log("Using priceId:", priceId);
 
     console.log("Checkout request plan:", plan);
     console.log("APP URL exists:", !!appUrl);
@@ -58,6 +65,7 @@ console.log("Using priceId:", priceId);
 
     console.log("Selected price ID:", priceId);
 
+    const stripe = getStripe();
     const price = await stripe.prices.retrieve(priceId);
     console.log("Stripe price retrieved:", {
       id: price.id,

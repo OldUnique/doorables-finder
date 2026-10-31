@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import HomeClient from "./HomeClient";
 import { pageMetadata } from "../lib/seo";
+import { getHomeShowcase } from "../lib/homeShowcase";
+
+// Refresh catalog stats and photos at most once an hour.
+export const revalidate = 3600;
 
 export const metadata: Metadata = pageMetadata({
   title: "Adorable Vault | Doorables Collection Tracker",
@@ -10,6 +14,7 @@ export const metadata: Metadata = pageMetadata({
   absoluteTitle: true,
 });
 
-export default function HomePage() {
-  return <HomeClient />;
+export default async function HomePage() {
+  const showcase = await getHomeShowcase();
+  return <HomeClient showcase={showcase} />;
 }

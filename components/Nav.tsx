@@ -88,8 +88,9 @@ const styles: Record<string, CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 6,
     flexWrap: "wrap",
+    minWidth: 0,
   },
   rightActions: {
     display: "flex",
@@ -146,7 +147,7 @@ function pillStyle(active = false, mobile = false): CSSProperties {
     alignItems: "center",
     justifyContent: mobile ? "flex-start" : "center",
     gap: 8,
-    padding: mobile ? "11px 12px" : "9px 12px",
+    padding: mobile ? "11px 12px" : "9px 13px",
     borderRadius: mobile ? 17 : 999,
     color: "white",
     textDecoration: "none",
@@ -219,10 +220,13 @@ export default function Nav() {
   const pathname = usePathname() || "/";
   const [menuOpen, setMenuOpen] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
+  const [showIcons, setShowIcons] = useState(true);
 
   useEffect(() => {
     const check = () => {
-      setIsCompact(window.innerWidth <= 920);
+      // Hamburger menu below 1180px so the desktop links never wrap onto a second row.
+      setIsCompact(window.innerWidth < 1180);
+      setShowIcons(window.innerWidth >= 1440);
     };
 
     check();
@@ -286,7 +290,7 @@ export default function Nav() {
                   style={pillStyle(active)}
                   aria-current={active ? "page" : undefined}
                 >
-                  <span style={styles.navIcon}>{item.icon}</span>
+                  {showIcons ? <span style={styles.navIcon}>{item.icon}</span> : null}
                   <span>{item.label}</span>
                 </Link>
               );

@@ -344,6 +344,12 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
+    // Allow deep links like /collection?series=Series%2016 from the homepage.
+    const seriesFromUrl = new URLSearchParams(window.location.search).get("series");
+    if (seriesFromUrl) setSeriesFilter(seriesFromUrl);
+  }, []);
+
+  useEffect(() => {
     setPage(1);
   }, [search, seriesFilter, subcategoryFilter, rarityFilter, movieFilter, collectionFilter, collectionViewMode, isMobile]);
 

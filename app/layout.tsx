@@ -202,44 +202,67 @@ export default function RootLayout({
           }
 
           .footerShell {
-            max-width: 1500px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 18px 24px;
-            display: flex;
+            padding: 26px 24px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
             align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            flex-wrap: wrap;
-            font-size: 12px;
+            gap: 16px 24px;
+            font-size: 13px;
             line-height: 1.5;
             font-weight: 800;
+          }
+
+          .footerTitle {
+            color: #ffffff;
+            font-size: 17px;
+            font-weight: 1000;
+          }
+
+          .footerTag {
+            margin-top: 4px;
+            max-width: 420px;
+            color: rgba(255, 255, 255, 0.66);
           }
 
           .footerLinks {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
             flex-wrap: wrap;
           }
 
           .footerLinks a {
-            color: rgba(255, 255, 255, 0.82);
+            padding: 8px 13px;
+            border-radius: 999px;
+            color: rgba(255, 255, 255, 0.88);
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.14);
             text-decoration: none;
             font-weight: 950;
           }
 
           .footerLinks a:hover {
             color: #fde68a;
-            text-decoration: underline;
-            text-underline-offset: 4px;
+            border-color: rgba(253, 230, 138, 0.5);
+          }
+
+          .footerFine {
+            grid-column: 1 / -1;
+            padding-top: 14px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            font-weight: 700;
           }
 
           @media (max-width: 920px) {
             .footerShell {
-              padding: 16px 12px;
-              display: grid;
+              padding: 22px 16px 110px;
+              grid-template-columns: 1fr;
               text-align: center;
-              justify-content: center;
+              justify-items: center;
             }
 
             .footerLinks {
@@ -261,16 +284,25 @@ export default function RootLayout({
 
           <footer className="siteFooter">
             <div className="footerShell">
-              <div>
-                💜 Adorable Vault — fan-made collector tools for tracking, trading, and showcasing.
+              <div className="footerBrand">
+                <div className="footerTitle">💜 Adorable Vault</div>
+                <div className="footerTag">
+                  Free, fan-made tools for tracking, trading, and showcasing your Disney Doorables.
+                </div>
               </div>
 
               <nav className="footerLinks" aria-label="Footer navigation">
-                <a href="/about">About</a>
-                <a href="/pricing">Plans</a>
-                <a href="/feedback">Feedback</a>
+                <a href="/collection">Collection</a>
+                <a href="/marketplace">Marketplace</a>
                 <a href="/demo">Demo</a>
+                <a href="/about">About</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/feedback">Feedback</a>
               </nav>
+
+              <div className="footerFine">
+                © {new Date().getFullYear()} Adorable Vault · Not affiliated with Disney or Just Play.
+              </div>
             </div>
           </footer>
         </div>

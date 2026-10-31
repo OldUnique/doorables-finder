@@ -423,7 +423,7 @@ export default function Page() {
             id: String(d.id ?? ""),
             name: cleanText(d.name ?? d.character_name ?? d.title) || "Unknown",
             series: cleanText(d.series),
-            rarity: cleanText(d.rarity) || "Common",
+            rarity: cleanText(d.rarity) || "Unknown",
             subcategory: cleanText(d.subcategory),
             movie: cleanText(d.movie),
             image: String(d.image_url ?? "").trim(),

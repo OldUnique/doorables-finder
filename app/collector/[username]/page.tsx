@@ -332,7 +332,7 @@ export default function PublicCollectorPage() {
             id: String(d.id ?? ""),
             name: cleanText(d.name) || "Unknown",
             series: cleanText(d.series) || "Unknown Series",
-            rarity: cleanText(d.rarity) || "Common",
+            rarity: cleanText(d.rarity) || "Unknown",
             image: String(d.image_url ?? ""),
             qty,
             note: String(row?.custom_tag ?? ""),

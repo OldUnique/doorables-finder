@@ -1,0 +1,2290 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { getSupabase } from "../lib/supabase";
+
+type Announcement = {
+  id: number;
+  title: string;
+  body: string;
+  is_active: boolean;
+  updated_by: string | null;
+  updated_at: string | null;
+};
+
+type HomeStats = {
+  owned: number;
+  needed: number;
+  extras: number;
+  total: number;
+  progress: number;
+};
+
+const ADMIN_EMAILS = [
+  "riffeljosh80@gmail.com",
+  "rffeljosh80@gmail.com",
+  "jjowens@ktc.edu",
+  "dntuttle1@gmail.com",
+];
+
+const DEFAULT_ANNOUNCEMENT_TITLE = "A Quick Update from Adorable Vault 💜";
+
+const DEFAULT_ANNOUNCEMENT_BODY = `I want to sincerely apologize for how long it has taken me to get everything set up and working the way it should. I truly appreciate your patience and support while I continue improving the website.
+
+I’m happy to share that Adorable Vault is now free to use. I want it to remain a welcoming and accessible place where collectors can organize their collections without having to pay.
+
+I am also starting another business, so some updates may happen more gradually than I originally planned. Adorable Vault is still important to me, and I will continue making as much time for it as possible while improving the site step by step.
+
+To help cover website costs while keeping it free, you may occasionally see a few carefully placed ads. I will do my best to keep them limited and avoid disruptive pop-ups or clutter.
+
+Thank you for your understanding, patience, and continued support. I’m grateful to have you here and excited to keep building Adorable Vault with you 💜`;
+
+function formatNumber(value: number) {
+  return value.toLocaleString();
+}
+
+function displayDate(value?: string | null) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+type AdSlotProps = {
+  slot?: string;
+  label?: string;
+};
+
+function AdSlot({ slot, label = "Advertisement" }: AdSlotProps) {
+  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "ca-pub-5461396984327450";
+
+  useEffect(() => {
+    if (!client || !slot) return;
+
+    try {
+      const adsWindow = window as Window & { adsbygoogle?: Record<string, unknown>[] };
+      (adsWindow.adsbygoogle = adsWindow.adsbygoogle || []).push({});
+    } catch {
+      // Ad blockers or delayed AdSense loading should never break the page.
+    }
+  }, [client, slot]);
+
+  // No ad unit configured yet: render nothing (Auto ads can still place ads).
+  if (!client || !slot) {
+    return null;
+  }
+
+  return (
+    <div className="adWrap" aria-label={label}>
+      <div className="adLabel">{label}</div>
+      <ins
+        className="adsbygoogle"
+        style={{ display: "block" }}
+        data-ad-client={client}
+        data-ad-slot={slot}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
+    </div>
+  );
+}
+
+export default function HomePage() {
+  const [userEmail, setUserEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const [title, setTitle] = useState(DEFAULT_ANNOUNCEMENT_TITLE);
+  const [body, setBody] = useState(DEFAULT_ANNOUNCEMENT_BODY);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [stats, setStats] = useState<HomeStats>({
+    owned: 0,
+    needed: 0,
+    extras: 0,
+    total: 0,
+    progress: 0,
+  });
+
+  const isAdmin = useMemo(
+    () => ADMIN_EMAILS.includes(userEmail.toLowerCase()),
+    [userEmail]
+  );
+
+  useEffect(() => {
+    document.title =
+      "Adorable Vault | Free Doorables Collection Tracker & Checklist";
+
+    const description =
+      "Adorable Vault is a free Doorables collection tracker for organizing owned figures, wishlist items, extras, series progress, notes, and public collector profiles in one easy-to-use vault.";
+
+    function setMeta(name: string, content: string) {
+      let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+      if (!tag) {
+        tag = document.createElement("meta");
+        tag.name = name;
+        document.head.appendChild(tag);
+      }
+      tag.content = content;
+    }
+
+    function setProperty(property: string, content: string) {
+      let tag = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement | null;
+      if (!tag) {
+        tag = document.createElement("meta");
+        tag.setAttribute("property", property);
+        document.head.appendChild(tag);
+      }
+      tag.content = content;
+    }
+
+    function setCanonical(href: string) {
+      let tag = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+      if (!tag) {
+        tag = document.createElement("link");
+        tag.rel = "canonical";
+        document.head.appendChild(tag);
+      }
+      tag.href = href;
+    }
+
+    setCanonical("https://www.mydoorables.com/");
+    setMeta("description", description);
+    setMeta(
+      "keywords",
+      "free Doorables tracker, Doorables collection tracker, Doorables checklist, Doorables wishlist, Doorables inventory, Doorables rarity tracker, Doorables extras tracker, Adorable Vault, MyDoorables"
+    );
+    setMeta("robots", "index, follow");
+    setProperty("og:title", "Adorable Vault | Doorables Collection Tracker");
+    setProperty("og:description", description);
+    setProperty("og:type", "website");
+    setProperty("og:url", "https://www.mydoorables.com/");
+    setProperty("og:site_name", "Adorable Vault");
+  }, []);
+
+  useEffect(() => {
+    void loadPage();
+  }, []);
+
+  async function loadHomeStats(userId?: string) {
+    try {
+      const supabase = getSupabase();
+
+      const { data: doorables } = await supabase.from("doorables").select("id");
+      const total = doorables?.length ?? 0;
+
+      let owned = 0;
+      let extras = 0;
+
+      if (userId) {
+        const { data: userRows } = await supabase
+          .from("user_doorables")
+          .select("doorable_id, qty_owned")
+          .eq("user_id", userId);
+
+        const ownedIds = new Set<string>();
+
+        (userRows ?? []).forEach((row: any) => {
+          const qty = Number(row?.qty_owned ?? 0);
+
+          if (qty > 0 && row?.doorable_id) {
+            ownedIds.add(String(row.doorable_id));
+          }
+
+          if (qty > 1) {
+            extras += qty - 1;
+          }
+        });
+
+        owned = ownedIds.size;
+      }
+
+      setStats({
+        owned,
+        needed: Math.max(total - owned, 0),
+        extras,
+        total,
+        progress: total ? Math.round((owned / total) * 100) : 0,
+      });
+    } catch {
+      // Optional stats should not crash the homepage.
+    }
+  }
+
+  async function loadPage() {
+    try {
+      setLoading(true);
+      setMessage("");
+
+      const supabase = getSupabase();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      const email = String(user?.email ?? "").toLowerCase();
+      setUserEmail(email);
+
+      if (user?.id) {
+        const { data: profile } = await supabase
+          .from("users")
+          .select("username")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        setUsername(String(profile?.username ?? ""));
+      }
+
+      await loadHomeStats(user?.id);
+
+      const { data, error } = await supabase
+        .from("site_announcements")
+        .select("*")
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error && !String(error.message).toLowerCase().includes("no rows")) {
+        setMessage(error.message);
+      }
+
+      if (data) {
+        const row = data as Announcement;
+        setAnnouncement(row);
+        setTitle(String(row.title ?? DEFAULT_ANNOUNCEMENT_TITLE));
+        setBody(String(row.body ?? DEFAULT_ANNOUNCEMENT_BODY));
+      }
+
+      setLoading(false);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not load homepage.");
+      setLoading(false);
+    }
+  }
+
+  async function saveAnnouncement() {
+    try {
+      setSaving(true);
+      setMessage("");
+
+      const supabase = getSupabase();
+
+      const payload = {
+        title: title.trim() || DEFAULT_ANNOUNCEMENT_TITLE,
+        body,
+        is_active: true,
+        updated_by: userEmail || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (announcement?.id) {
+        const { data, error } = await supabase
+          .from("site_announcements")
+          .update(payload)
+          .eq("id", announcement.id)
+          .select()
+          .single();
+
+        if (error) {
+          setMessage(error.message);
+          setSaving(false);
+          return;
+        }
+
+        setAnnouncement(data as Announcement);
+      } else {
+        const { data, error } = await supabase
+          .from("site_announcements")
+          .insert([payload])
+          .select()
+          .single();
+
+        if (error) {
+          setMessage(error.message);
+          setSaving(false);
+          return;
+        }
+
+        setAnnouncement(data as Announcement);
+      }
+
+      setMessage("Announcement saved.");
+      setSaving(false);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not save announcement.");
+      setSaving(false);
+    }
+  }
+
+
+  const announcementText = body.trim() || DEFAULT_ANNOUNCEMENT_BODY;
+  const announcementTitle = title.trim() || DEFAULT_ANNOUNCEMENT_TITLE;
+  const announcementDate = displayDate(announcement?.updated_at);
+
+  const hasPersonalStats = stats.total > 0 && (stats.owned > 0 || stats.extras > 0);
+  const displayOwned = hasPersonalStats ? formatNumber(stats.owned) : "Free";
+  const displayNeeded = hasPersonalStats ? formatNumber(stats.needed) : "Need";
+  const displayExtras = hasPersonalStats ? formatNumber(stats.extras) : "Extras";
+  const displayProgress = hasPersonalStats ? `${stats.progress}%` : "Ready";
+
+  return (
+    <main className="page">
+      <style jsx>{`
+        .page {
+          min-height: 100vh;
+          color: white;
+          background:
+            radial-gradient(circle at 8% 4%, rgba(168, 85, 247, 0.42) 0%, transparent 28%),
+            radial-gradient(circle at 88% 8%, rgba(59, 130, 246, 0.30) 0%, transparent 26%),
+            radial-gradient(circle at 72% 96%, rgba(236, 72, 153, 0.24) 0%, transparent 28%),
+            linear-gradient(180deg, #030712 0%, #080b1f 44%, #020617 100%);
+          overflow-x: hidden;
+        }
+
+        .page::before {
+          content: "";
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          background-image:
+            radial-gradient(2px 2px at 18% 22%, rgba(255,255,255,0.72) 35%, transparent 36%),
+            radial-gradient(1.5px 1.5px at 78% 16%, rgba(255,255,255,0.58) 35%, transparent 36%),
+            radial-gradient(1.8px 1.8px at 48% 72%, rgba(255,255,255,0.48) 35%, transparent 36%),
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+          background-size: auto, auto, auto, 46px 46px, 46px 46px;
+          opacity: 0.7;
+          mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 78%);
+        }
+
+        .page a,
+        .page a:visited,
+        .page a:hover,
+        .page a:active,
+        .featureCard,
+        .featureCard:visited,
+        .featureCard:hover,
+        .featureCard:active,
+        .actionCard,
+        .actionCard:visited,
+        .actionCard:hover,
+        .actionCard:active,
+        .primaryButton,
+        .secondaryButton,
+        .launchButton,
+        .previewLink,
+        .mobileSticky a {
+          color: inherit;
+          text-decoration: none !important;
+          text-decoration-line: none !important;
+          -webkit-text-decoration-line: none !important;
+          border-bottom: none !important;
+        }
+
+        .shell {
+          position: relative;
+          z-index: 1;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 22px;
+          padding-bottom: 110px;
+        }
+
+        .topRibbon {
+          margin-bottom: 14px;
+          border-radius: 999px;
+          padding: 11px 16px;
+          color: #fef3c7;
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 30%),
+            linear-gradient(135deg, rgba(236,72,153,0.32), rgba(79,70,229,0.32));
+          border: 1px solid rgba(255,255,255,0.20);
+          box-shadow: 0 18px 42px rgba(0,0,0,0.24);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+          text-align: center;
+          font-weight: 1000;
+          line-height: 1.35;
+        }
+
+        .topRibbon span {
+          color: rgba(255,255,255,0.9);
+          font-weight: 900;
+        }
+
+        .hero {
+          display: grid;
+          grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+          gap: 20px;
+          align-items: stretch;
+          margin-bottom: 18px;
+        }
+
+        .heroCard,
+        .vaultPreview,
+        .whiteCard,
+        .featureCard,
+        .priceCard,
+        .finalCta,
+        .launchStrip,
+        .roadmapCard,
+        .testimonialCard {
+          border-radius: 32px;
+          border: 1px solid rgba(255,255,255,0.16);
+          box-shadow: 0 26px 64px rgba(0,0,0,0.36);
+        }
+
+        .heroCard {
+          padding: 34px;
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.14), transparent 32%),
+            radial-gradient(circle at bottom left, rgba(236,72,153,0.18), transparent 38%),
+            linear-gradient(135deg, rgba(30,41,59,0.95), rgba(88,28,135,0.86));
+          display: grid;
+          align-content: center;
+        }
+
+        .badge {
+          display: inline-flex;
+          width: fit-content;
+          align-items: center;
+          gap: 8px;
+          padding: 9px 13px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.15);
+          color: #fde68a;
+          font-size: 13px;
+          font-weight: 1000;
+          margin-bottom: 16px;
+        }
+
+        .headline {
+          margin: 0;
+          font-size: clamp(2.35rem, 5.6vw, 4.75rem);
+          line-height: 0.93;
+          letter-spacing: -2px;
+          font-weight: 1000;
+          text-wrap: balance;
+        }
+
+        .heroText {
+          margin-top: 18px;
+          color: rgba(255,255,255,0.92);
+          font-size: 17px;
+          line-height: 1.65;
+          max-width: 720px;
+        }
+
+        .trustRow {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 9px;
+          margin-top: 16px;
+        }
+
+        .trustPill {
+          border-radius: 999px;
+          padding: 8px 11px;
+          font-size: 12px;
+          font-weight: 1000;
+          color: rgba(255,255,255,0.96);
+          background: rgba(15,23,42,0.62);
+          border: 1px solid rgba(255,255,255,0.24);
+          box-shadow: 0 10px 20px rgba(0,0,0,0.18);
+        }
+
+        .trustPill.gold {
+          color: #fef3c7;
+          background: rgba(126,34,206,0.58);
+          border-color: rgba(253,224,71,0.38);
+        }
+
+        .heroActions {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-top: 24px;
+        }
+
+        .actionCard,
+        .actionCard:visited {
+          display: grid;
+          grid-template-columns: 50px 1fr;
+          gap: 12px;
+          align-items: center;
+          min-height: 88px;
+          border-radius: 24px;
+          padding: 14px;
+          color: white !important;
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.13), transparent 34%),
+            linear-gradient(135deg, rgba(15,23,42,0.58), rgba(79,70,229,0.64));
+          border: 1px solid rgba(255,255,255,0.22);
+          box-shadow: 0 16px 34px rgba(0,0,0,0.24);
+          transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .actionCard:hover {
+          transform: translateY(-2px);
+          border-color: rgba(255,255,255,0.42);
+          box-shadow: 0 22px 42px rgba(0,0,0,0.30), 0 0 26px rgba(168,85,247,0.20);
+        }
+
+        .actionCard.alt {
+          background:
+            radial-gradient(circle at top right, rgba(250,204,21,0.16), transparent 36%),
+            linear-gradient(135deg, rgba(88,28,135,0.66), rgba(15,23,42,0.66));
+        }
+
+        .actionIcon {
+          width: 50px;
+          height: 50px;
+          border-radius: 18px;
+          display: grid;
+          place-items: center;
+          font-size: 27px;
+          line-height: 1;
+          color: #312e81;
+          background: linear-gradient(135deg, #ffffff, #fef3c7);
+          box-shadow: 0 12px 24px rgba(255,255,255,0.12);
+        }
+
+        .actionTitle {
+          display: block;
+          font-weight: 1000;
+          line-height: 1.12;
+          color: white;
+        }
+
+        .actionSub {
+          display: block;
+          margin-top: 4px;
+          color: rgba(255,255,255,0.76);
+          font-size: 12px;
+          font-weight: 850;
+          line-height: 1.28;
+        }
+
+        .vaultPreview {
+          padding: 18px;
+          background:
+            radial-gradient(circle at top right, rgba(250,204,21,0.18), transparent 34%),
+            radial-gradient(circle at bottom left, rgba(236,72,153,0.18), transparent 36%),
+            linear-gradient(135deg, rgba(15,23,42,0.78), rgba(88,28,135,0.80));
+          display: grid;
+          gap: 13px;
+        }
+
+        .previewHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .previewLabel {
+          color: #fde68a;
+          font-size: 13px;
+          font-weight: 1000;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+        }
+
+        .previewLink,
+        .previewLink:visited {
+          color: #312e81 !important;
+          background: linear-gradient(90deg, #ffffff, #fef3c7);
+          border-radius: 999px;
+          padding: 9px 12px;
+          font-size: 12px;
+          font-weight: 1000;
+          white-space: nowrap;
+        }
+
+        .mockSearch {
+          min-height: 48px;
+          border-radius: 17px;
+          padding: 12px 14px;
+          color: rgba(255,255,255,0.82);
+          font-weight: 900;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.16);
+        }
+
+        .previewStats {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 9px;
+        }
+
+        .miniStat {
+          border-radius: 18px;
+          padding: 12px;
+          background: rgba(255,255,255,0.11);
+          border: 1px solid rgba(255,255,255,0.14);
+          min-height: 74px;
+        }
+
+        .miniStatValue {
+          font-size: 25px;
+          font-weight: 1000;
+          color: #ffffff;
+          line-height: 1;
+          margin-bottom: 6px;
+        }
+
+        .miniStatLabel {
+          color: rgba(255,255,255,0.78);
+          font-size: 11px;
+          font-weight: 900;
+          line-height: 1.24;
+        }
+
+        .mockCards {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+
+        .mockCard {
+          min-height: 205px;
+          border-radius: 22px;
+          padding: 12px;
+          color: #2f1458;
+          border: 4px solid #7c3aed;
+          background:
+            linear-gradient(rgba(0,0,0,0.07), rgba(0,0,0,0.07)),
+            #e6d2ff;
+          box-shadow: 0 14px 28px rgba(0,0,0,0.18), 0 0 18px rgba(124,58,237,0.20);
+        }
+
+        .mockCard.gold {
+          color: #403000;
+          border-color: #d4a500;
+          background:
+            linear-gradient(rgba(0,0,0,0.07), rgba(0,0,0,0.07)),
+            #f8ef9b;
+        }
+
+        .mockImage {
+          height: 92px;
+          border-radius: 18px;
+          display: grid;
+          place-items: center;
+          background: rgba(255,255,255,0.88);
+          font-size: 40px;
+          margin-bottom: 11px;
+        }
+
+        .mockCardTop {
+          display: flex;
+          align-items: start;
+          justify-content: space-between;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+
+        .mockTitle {
+          font-size: 16px;
+          font-weight: 1000;
+          line-height: 1.08;
+        }
+
+        .mockBadge {
+          border-radius: 999px;
+          padding: 5px 8px;
+          font-size: 10px;
+          font-weight: 1000;
+          white-space: nowrap;
+          background: #c084fc;
+          color: #2f1458;
+        }
+
+        .mockCard.gold .mockBadge {
+          background: #f2d64c;
+          color: #403000;
+        }
+
+        .mockSub {
+          font-size: 12px;
+          font-weight: 900;
+          opacity: 0.78;
+        }
+
+        .mockChipRow {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 10px;
+        }
+
+        .mockChip {
+          border-radius: 999px;
+          padding: 5px 8px;
+          background: rgba(255,255,255,0.68);
+          font-size: 11px;
+          font-weight: 1000;
+        }
+
+        .progressPanel {
+          border-radius: 24px;
+          padding: 17px;
+          background:
+            radial-gradient(circle at top right, rgba(236,72,153,0.24), transparent 36%),
+            linear-gradient(135deg, rgba(88,28,135,0.88), rgba(15,23,42,0.95));
+          border: 1px solid rgba(217,70,239,0.38);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+        }
+
+        .progressTop {
+          display: flex;
+          justify-content: space-between;
+          align-items: end;
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+
+        .progressTrack {
+          height: 10px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.16);
+          overflow: hidden;
+        }
+
+        .progressFill {
+          height: 100%;
+          border-radius: inherit;
+          background: linear-gradient(90deg, #60a5fa, #c084fc, #f0abfc);
+        }
+
+        .launchStrip {
+          margin-bottom: 18px;
+          padding: 20px;
+          color: #111827;
+          background:
+            radial-gradient(circle at top right, rgba(250,204,21,0.36), transparent 32%),
+            radial-gradient(circle at bottom left, rgba(236,72,153,0.22), transparent 34%),
+            linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          border: 1px solid rgba(255,255,255,0.62);
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 14px;
+          align-items: center;
+        }
+
+        .launchBadge {
+          display: inline-flex;
+          align-items: center;
+          width: fit-content;
+          gap: 8px;
+          margin-bottom: 9px;
+          border-radius: 999px;
+          padding: 7px 11px;
+          color: #5b21b6;
+          background: #ede9fe;
+          border: 1px solid #ddd6fe;
+          font-size: 12px;
+          font-weight: 1000;
+        }
+
+        .launchTitle {
+          color: #312e81;
+          font-size: clamp(1.45rem, 3vw, 2.15rem);
+          line-height: 1.05;
+          font-weight: 1000;
+          letter-spacing: -0.7px;
+          margin-bottom: 5px;
+        }
+
+        .launchText {
+          color: #475569;
+          line-height: 1.6;
+          font-size: 14px;
+          font-weight: 820;
+          max-width: 830px;
+        }
+
+        .launchButton,
+        .launchButton:visited {
+          min-height: 52px;
+          border-radius: 999px;
+          padding: 13px 17px;
+          color: white !important;
+          background: linear-gradient(135deg, #ec4899, #8b5cf6);
+          font-weight: 1000;
+          box-shadow: 0 14px 28px rgba(236,72,153,0.26);
+          white-space: nowrap;
+        }
+
+        .section {
+          margin-bottom: 18px;
+        }
+
+        .sectionHeader {
+          margin: 26px 0 12px;
+          display: flex;
+          align-items: end;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .eyebrow {
+          color: #fef08a;
+          font-size: 13px;
+          font-weight: 1000;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-bottom: 6px;
+        }
+
+        .sectionTitle {
+          margin: 0;
+          font-size: clamp(1.42rem, 3vw, 2.25rem);
+          line-height: 1.05;
+          letter-spacing: -0.9px;
+          font-weight: 1000;
+        }
+
+        .sectionText {
+          max-width: 700px;
+          color: rgba(255,255,255,0.82);
+          line-height: 1.6;
+          font-size: 14px;
+          font-weight: 800;
+        }
+
+        .featureGrid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 14px;
+        }
+
+        .featureCard,
+        .featureCard:visited {
+          min-height: 226px;
+          padding: 18px;
+          color: white !important;
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.08), transparent 34%),
+            rgba(15,23,42,0.78);
+          transition: transform 0.16s ease, border-color 0.16s ease;
+        }
+
+        .featureCard:hover {
+          transform: translateY(-3px);
+          border-color: rgba(255,255,255,0.28);
+        }
+
+        .featureIcon {
+          width: 58px;
+          height: 58px;
+          border-radius: 20px;
+          display: grid;
+          place-items: center;
+          font-size: 30px;
+          line-height: 1;
+          color: #312e81;
+          background: linear-gradient(135deg, #ede9fe, #bfdbfe);
+          margin-bottom: 14px;
+        }
+
+        .featureTitle {
+          color: #fde68a;
+          font-size: 18px;
+          line-height: 1.1;
+          font-weight: 1000;
+          margin-bottom: 9px;
+        }
+
+        .featureText {
+          color: rgba(255,255,255,0.86);
+          line-height: 1.55;
+          font-size: 14px;
+          margin-bottom: 12px;
+          font-weight: 800;
+        }
+
+        .featureLink {
+          color: #ffffff !important;
+          font-weight: 1000;
+          font-size: 13px;
+          display: inline-flex;
+          padding: 8px 11px;
+          border-radius: 999px;
+          background: rgba(99,102,241,0.55);
+          border: 1px solid rgba(255,255,255,0.18);
+        }
+
+        .workflowGrid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 14px;
+        }
+
+        .roadmapCard {
+          min-height: 180px;
+          padding: 20px;
+          color: #111827;
+          background:
+            radial-gradient(circle at top right, rgba(196,181,253,0.42), transparent 34%),
+            linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+          border: 1px solid rgba(255,255,255,0.62);
+        }
+
+        .roadmapNumber {
+          width: 42px;
+          height: 42px;
+          border-radius: 16px;
+          display: grid;
+          place-items: center;
+          color: white;
+          background: linear-gradient(135deg, #ec4899, #7c3aed);
+          font-weight: 1000;
+          margin-bottom: 12px;
+          box-shadow: 0 12px 22px rgba(124,58,237,0.24);
+        }
+
+        .roadmapTitle {
+          color: #312e81;
+          font-size: 20px;
+          font-weight: 1000;
+          margin-bottom: 7px;
+          line-height: 1.08;
+        }
+
+        .roadmapText {
+          color: #475569;
+          line-height: 1.55;
+          font-size: 14px;
+          font-weight: 800;
+        }
+
+        .splitGrid {
+          display: grid;
+          grid-template-columns: 1.05fr 0.95fr;
+          gap: 18px;
+          align-items: stretch;
+        }
+
+        .whiteCard {
+          background:
+            radial-gradient(circle at top right, rgba(196,181,253,0.22), transparent 34%),
+            linear-gradient(180deg, #ffffff, #f8fafc);
+          color: #111827;
+          border: 1px solid rgba(255,255,255,0.60);
+          padding: 24px;
+        }
+
+        .whiteCard .eyebrow {
+          color: #7c3aed;
+        }
+
+        .whiteCard .sectionTitle {
+          color: #111827;
+        }
+
+        .whiteCard .sectionText {
+          color: #4b5563;
+        }
+
+        .announcementBody {
+          margin-top: 15px;
+          padding: 18px;
+          border-radius: 21px;
+          background:
+            linear-gradient(#ffffff, #ffffff) padding-box,
+            linear-gradient(135deg, #c4b5fd, #bfdbfe) border-box;
+          border: 1px solid transparent;
+          white-space: pre-wrap;
+          word-break: break-word;
+          min-height: 112px;
+          line-height: 1.7;
+          font-size: 15px;
+          color: #374151;
+          font-weight: 750;
+        }
+
+        .adminBox {
+          margin-top: 18px;
+          padding-top: 16px;
+          border-top: 1px solid #e5e7eb;
+        }
+
+        .adminTip {
+          margin-bottom: 10px;
+          border-radius: 16px;
+          padding: 12px;
+          color: #3730a3;
+          background: #eef2ff;
+          border: 1px solid #c7d2fe;
+          font-size: 13px;
+          line-height: 1.45;
+          font-weight: 850;
+        }
+
+        .field {
+          width: 100%;
+          border: 1px solid #d1d5db;
+          border-radius: 16px;
+          padding: 12px 14px;
+          font-size: 15px;
+          color: #111827;
+          background: white;
+          box-sizing: border-box;
+          outline: none;
+        }
+
+        .field:focus {
+          border-color: #8b5cf6;
+          box-shadow: 0 0 0 4px rgba(139,92,246,0.12);
+        }
+
+        .textarea {
+          min-height: 200px;
+          resize: vertical;
+          white-space: pre-wrap;
+          line-height: 1.6;
+          margin-top: 10px;
+        }
+
+        .saveButton {
+          margin-top: 10px;
+          padding: 12px 18px;
+          border-radius: 14px;
+          border: none;
+          cursor: pointer;
+          font-weight: 950;
+          color: white;
+          background: linear-gradient(90deg, #4f46e5, #7c3aed);
+          box-shadow: 0 10px 18px rgba(79,70,229,0.28);
+        }
+
+        .miniList {
+          display: grid;
+          gap: 10px;
+          margin-top: 16px;
+        }
+
+        .miniListItem {
+          display: grid;
+          grid-template-columns: 34px 1fr;
+          gap: 10px;
+          align-items: start;
+          padding: 12px;
+          border-radius: 17px;
+          background: #f8fafc;
+          border: 1px solid #e5e7eb;
+          color: #374151;
+          line-height: 1.45;
+          font-weight: 850;
+        }
+
+        .priceGrid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 16px;
+        }
+
+        .priceCard {
+          position: relative;
+          overflow: hidden;
+          text-align: left;
+          padding: 24px;
+          color: white;
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.10), transparent 34%),
+            rgba(15,23,42,0.78);
+          cursor: pointer;
+          transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+          min-height: 270px;
+        }
+
+        .priceCard:hover {
+          transform: translateY(-3px);
+          border-color: rgba(255,255,255,0.28);
+          box-shadow: 0 22px 48px rgba(0,0,0,0.30);
+        }
+
+        .priceCard:disabled {
+          opacity: 0.72;
+          cursor: wait;
+        }
+
+        .priceCard.free {
+          cursor: default;
+          display: block;
+        }
+
+        .priceCard.best {
+          background:
+            radial-gradient(circle at top right, rgba(244,114,182,0.28), transparent 36%),
+            linear-gradient(135deg, rgba(88,28,135,0.92), rgba(15,23,42,0.95));
+          border-color: rgba(217,70,239,0.46);
+        }
+
+        .priceCard.founding {
+          background:
+            radial-gradient(circle at top right, rgba(250,204,21,0.22), transparent 36%),
+            radial-gradient(circle at bottom left, rgba(236,72,153,0.28), transparent 40%),
+            linear-gradient(135deg, rgba(131,24,67,0.94), rgba(49,46,129,0.96));
+          border-color: rgba(244,114,182,0.60);
+        }
+
+        .tag {
+          display: inline-flex;
+          margin-bottom: 10px;
+          border-radius: 999px;
+          padding: 7px 12px;
+          font-size: 12px;
+          font-weight: 1000;
+          background: linear-gradient(90deg, #f59e0b, #f472b6);
+          color: white;
+        }
+
+        .saveTag {
+          display: inline-flex;
+          margin-left: 8px;
+          border-radius: 999px;
+          padding: 7px 12px;
+          font-size: 12px;
+          font-weight: 1000;
+          background: rgba(255,255,255,0.14);
+          border: 1px solid rgba(255,255,255,0.18);
+          color: white;
+        }
+
+        .price {
+          font-size: 46px;
+          font-weight: 1000;
+          margin: 12px 0;
+          line-height: 0.95;
+        }
+
+        .price span {
+          color: rgba(255,255,255,0.74);
+          font-size: 18px;
+        }
+
+        .finePrint {
+          color: rgba(255,255,255,0.84);
+          line-height: 1.55;
+          font-size: 15px;
+          margin-bottom: 18px;
+          font-weight: 800;
+        }
+
+        .planButton {
+          width: 100%;
+          min-height: 50px;
+          border-radius: 17px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 1000;
+          color: white !important;
+          background: linear-gradient(135deg, #2563eb, #8b5cf6);
+          border: 1px solid rgba(255,255,255,0.22);
+          box-shadow: 0 12px 24px rgba(79,70,229,0.28);
+        }
+
+        .planButton.yearly {
+          background: linear-gradient(135deg, #f59e0b, #f97316);
+          box-shadow: 0 12px 24px rgba(249,115,22,0.30);
+        }
+
+        .planButton.founding {
+          background: linear-gradient(135deg, #ec4899, #8b5cf6);
+          box-shadow: 0 12px 26px rgba(236,72,153,0.34);
+        }
+
+        .errorBox {
+          margin-bottom: 14px;
+          border-radius: 18px;
+          padding: 14px;
+          background: rgba(254,226,226,0.96);
+          color: #991b1b;
+          font-weight: 900;
+        }
+
+        .primaryButton,
+        .secondaryButton,
+        .primaryButton:visited,
+        .secondaryButton:visited {
+          min-height: 52px;
+          border-radius: 999px;
+          padding: 14px 20px;
+          font-weight: 1000;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+
+        .primaryButton {
+          background: linear-gradient(90deg, #ffffff, #fef3c7);
+          color: #312e81 !important;
+          border: 1px solid rgba(255,255,255,0.55);
+          box-shadow: 0 18px 40px rgba(255,255,255,0.22) !important;
+        }
+
+        .secondaryButton {
+          background: linear-gradient(90deg, #4f46e5, #a855f7);
+          color: #ffffff !important;
+          border: 1px solid rgba(255,255,255,0.45);
+          box-shadow: 0 16px 34px rgba(124,58,237,0.50) !important;
+        }
+
+        .ctaButtons {
+          display: flex;
+          gap: 11px;
+          flex-wrap: wrap;
+          margin-top: 22px;
+        }
+
+        .finalCta {
+          text-align: center;
+          margin: 22px 0 96px;
+          padding: 30px;
+          background:
+            radial-gradient(circle at top right, rgba(255,255,255,0.13), transparent 32%),
+            linear-gradient(135deg, rgba(79,70,229,0.88), rgba(147,51,234,0.86));
+        }
+
+        .mobileSticky {
+          display: none;
+        }
+
+
+        .adSection {
+          margin-bottom: 18px;
+        }
+
+        .adWrap,
+        .adPlaceholder {
+          min-height: 110px;
+          border-radius: 24px;
+          border: 1px solid rgba(255,255,255,0.16);
+          background: rgba(15,23,42,0.62);
+          box-shadow: 0 18px 42px rgba(0,0,0,0.24);
+          overflow: hidden;
+        }
+
+        .adWrap {
+          padding: 10px;
+        }
+
+        .adLabel {
+          margin-bottom: 7px;
+          color: rgba(255,255,255,0.52);
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          text-align: center;
+          text-transform: uppercase;
+        }
+
+        .adPlaceholder {
+          display: grid;
+          place-items: center;
+          align-content: center;
+          gap: 5px;
+          padding: 18px;
+          text-align: center;
+          color: rgba(255,255,255,0.82);
+        }
+
+        .adPlaceholder span {
+          color: rgba(255,255,255,0.50);
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .adPlaceholder strong {
+          color: #fde68a;
+        }
+
+        .adPlaceholder small {
+          max-width: 620px;
+          color: rgba(255,255,255,0.62);
+          line-height: 1.45;
+        }
+
+        @media (max-width: 1180px) {
+          .priceGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .featureGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
+        @media (max-width: 980px) {
+          .shell {
+            padding: 12px;
+            padding-bottom: 92px;
+          }
+
+          .topRibbon {
+            border-radius: 20px;
+            padding: 10px 12px;
+            font-size: 12px;
+            display: grid;
+            gap: 3px;
+          }
+
+          .topRibbon span {
+            display: block;
+            font-size: 11px;
+          }
+
+          .hero,
+          .splitGrid {
+            grid-template-columns: 1fr;
+          }
+
+          .hero {
+            gap: 12px;
+            margin-bottom: 12px;
+          }
+
+          .heroCard,
+          .vaultPreview,
+          .launchStrip,
+          .whiteCard,
+          .featureCard,
+          .priceCard,
+          .finalCta,
+          .roadmapCard {
+            border-radius: 22px;
+          }
+
+          .heroCard {
+            padding: 18px;
+          }
+
+          .badge {
+            margin-bottom: 11px;
+            padding: 7px 10px;
+            font-size: 12px;
+          }
+
+          .headline {
+            font-size: clamp(1.85rem, 9.4vw, 2.75rem);
+            line-height: 0.98;
+            letter-spacing: -1.3px;
+          }
+
+          .heroText {
+            margin-top: 12px;
+            font-size: 14px;
+            line-height: 1.45;
+          }
+
+          .trustRow {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+          }
+
+          .trustRow::-webkit-scrollbar {
+            display: none;
+          }
+
+          .trustPill {
+            flex: 0 0 auto;
+            font-size: 11px;
+            padding: 7px 10px;
+          }
+
+          .heroActions {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 14px;
+          }
+
+          .actionCard,
+          .actionCard:visited {
+            aspect-ratio: 1 / 1;
+            min-height: 0;
+            padding: 12px 10px;
+            border-radius: 20px;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            text-align: center;
+            align-content: center;
+            justify-items: center;
+          }
+
+          .actionCard > span:last-child {
+            display: grid;
+            gap: 4px;
+            justify-items: center;
+          }
+
+          .actionIcon {
+            width: 50px;
+            height: 50px;
+            border-radius: 16px;
+            font-size: 26px;
+            margin: 0 auto;
+          }
+
+          .actionTitle {
+            font-size: 14px;
+            line-height: 1.2;
+          }
+
+          .actionSub {
+            display: none;
+          }
+
+          .vaultPreview {
+            padding: 13px;
+            gap: 10px;
+          }
+
+          .previewHeader {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+          }
+
+          .previewLabel {
+            font-size: 11px;
+          }
+
+          .previewHeader div[style] {
+            display: none;
+          }
+
+          .previewLink {
+            padding: 8px 10px;
+            font-size: 11px;
+          }
+
+          .mockSearch {
+            min-height: 42px;
+            padding: 10px 12px;
+            border-radius: 14px;
+            font-size: 12px;
+          }
+
+          .previewStats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 7px;
+          }
+
+          .miniStat {
+            min-height: 60px;
+            padding: 9px 7px;
+            border-radius: 14px;
+            text-align: center;
+          }
+
+          .miniStatValue {
+            font-size: 18px;
+            margin-bottom: 4px;
+          }
+
+          .miniStatLabel {
+            font-size: 9.5px;
+          }
+
+          .mockCards {
+            display: none;
+          }
+
+          .progressPanel {
+            padding: 12px;
+            border-radius: 18px;
+          }
+
+          .progressTop {
+            margin-bottom: 9px;
+          }
+
+          .launchStrip {
+            grid-template-columns: 1fr;
+            padding: 15px;
+            gap: 10px;
+            margin-bottom: 12px;
+          }
+
+          .launchBadge {
+            padding: 7px 10px;
+            font-size: 11px;
+            margin-bottom: 8px;
+          }
+
+          .launchTitle {
+            font-size: clamp(1.35rem, 7vw, 1.85rem);
+            letter-spacing: -0.6px;
+          }
+
+          .launchText {
+            font-size: 13px;
+            line-height: 1.5;
+          }
+
+          .launchButton {
+            width: 100%;
+            box-sizing: border-box;
+            justify-content: center;
+            min-height: 44px;
+            padding: 11px 14px;
+            font-size: 13px;
+          }
+
+          .section {
+            margin-bottom: 12px;
+          }
+
+          .sectionHeader {
+            display: grid;
+            margin: 16px 0 10px;
+            gap: 7px;
+          }
+
+          .eyebrow {
+            font-size: 11px;
+            margin-bottom: 4px;
+          }
+
+          .sectionTitle {
+            font-size: clamp(1.25rem, 6vw, 1.6rem);
+            letter-spacing: -0.5px;
+          }
+
+          .sectionText {
+            font-size: 12.5px;
+            line-height: 1.45;
+          }
+
+          .featureGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+          }
+
+          .featureCard,
+          .featureCard:visited {
+            min-height: 0;
+            aspect-ratio: 1 / 1;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+          }
+
+          .featureIcon {
+            width: 46px;
+            height: 46px;
+            border-radius: 16px;
+            font-size: 24px;
+            margin-bottom: 8px;
+          }
+
+          .featureTitle {
+            font-size: 15px;
+            margin-bottom: 6px;
+            line-height: 1.15;
+          }
+
+          .featureText {
+            display: none;
+          }
+
+          .featureLink {
+            padding: 7px 10px;
+            font-size: 11px;
+            align-self: flex-start;
+          }
+
+          .workflowGrid {
+            grid-template-columns: 1fr;
+            gap: 10px;
+          }
+
+          .roadmapCard {
+            min-height: 0;
+            padding: 14px;
+            display: grid;
+            grid-template-columns: 44px 1fr;
+            gap: 11px;
+            align-items: start;
+          }
+
+          .roadmapNumber {
+            margin-bottom: 0;
+          }
+
+          .roadmapTitle {
+            font-size: 16px;
+            margin-bottom: 5px;
+          }
+
+          .roadmapText {
+            font-size: 12.5px;
+            line-height: 1.45;
+          }
+
+          .splitGrid {
+            gap: 12px;
+          }
+
+          .whiteCard {
+            padding: 15px;
+          }
+
+          .announcementBody {
+            margin-top: 11px;
+            padding: 13px;
+            border-radius: 17px;
+            min-height: 0;
+            max-height: 220px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.55;
+          }
+
+          .adminBox {
+            margin-top: 13px;
+            padding-top: 13px;
+          }
+
+          .adminTip {
+            font-size: 12px;
+            border-radius: 14px;
+            padding: 10px;
+          }
+
+          .field {
+            font-size: 14px;
+            padding: 11px 12px;
+            border-radius: 14px;
+          }
+
+          .textarea {
+            min-height: 160px;
+          }
+
+          .saveButton {
+            width: 100%;
+            min-height: 44px;
+          }
+
+          .miniList {
+            gap: 8px;
+            margin-top: 12px;
+          }
+
+          .miniListItem {
+            grid-template-columns: 28px 1fr;
+            padding: 10px;
+            border-radius: 14px;
+            font-size: 12.5px;
+          }
+
+          .priceGrid {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding-bottom: 6px;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+          }
+
+          .priceGrid::-webkit-scrollbar {
+            display: none;
+          }
+
+          .priceCard {
+            flex: 0 0 82%;
+            min-height: 0;
+            padding: 17px;
+            scroll-snap-align: start;
+          }
+
+          .price {
+            font-size: 34px;
+            margin: 8px 0;
+          }
+
+          .price span {
+            font-size: 14px;
+          }
+
+          .finePrint {
+            font-size: 12.5px;
+            line-height: 1.42;
+            margin-bottom: 13px;
+          }
+
+          .tag,
+          .saveTag {
+            font-size: 10px;
+            padding: 6px 9px;
+          }
+
+          .planButton {
+            min-height: 44px;
+            border-radius: 14px;
+            font-size: 13px;
+          }
+
+          .finalCta {
+            display: none;
+          }
+
+          .mobileSticky {
+            position: fixed;
+            z-index: 60;
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 18px;
+            background: rgba(15,23,42,0.9);
+            border: 1px solid rgba(255,255,255,0.14);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 18px 40px rgba(0,0,0,0.36);
+          }
+
+          .mobileSticky a {
+            min-height: 42px;
+            border-radius: 15px;
+            padding: 10px 12px;
+            font-size: 12.5px;
+            color: #ffffff !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+          }
+
+          .mobileSticky .primaryButton {
+            background: linear-gradient(135deg, #ec4899, #7c3aed, #2563eb);
+            color: #ffffff !important;
+            border: 1px solid rgba(255,255,255,0.38);
+            box-shadow: 0 12px 28px rgba(124,58,237,0.44);
+          }
+
+          .mobileSticky .secondaryButton {
+            background: linear-gradient(135deg, #f59e0b, #f97316);
+            color: #ffffff !important;
+            border: 1px solid rgba(255,255,255,0.38);
+            box-shadow: 0 12px 28px rgba(249,115,22,0.34);
+          }
+        }
+
+        @media (max-width: 560px) {
+          .previewHeader {
+            grid-template-columns: 1fr;
+          }
+
+          .previewLink {
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+          }
+
+          .priceCard {
+            flex-basis: 88%;
+          }
+
+          .ctaButtons {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+          }
+
+          .primaryButton,
+          .secondaryButton {
+            width: 100%;
+            box-sizing: border-box;
+          }
+        }
+
+        @media (max-width: 390px) {
+          .headline {
+            font-size: 1.72rem;
+          }
+
+          .heroActions,
+          .featureGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .actionCard,
+          .featureCard {
+            padding: 10px;
+          }
+
+          .actionTitle,
+          .featureTitle {
+            font-size: 13px;
+          }
+
+          .featureLink {
+            font-size: 10px;
+            padding: 6px 8px;
+          }
+
+          .topRibbon {
+            font-size: 11px;
+          }
+
+          .mobileSticky {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+
+      <div className="shell">
+
+        <div className="topRibbon">
+          💜 Adorable Vault is now free to use.
+          <span>A few carefully placed ads help cover website costs without charging collectors.</span>
+        </div>
+
+        <section className="hero">
+          <div className="heroCard">
+            <div className="badge">✨ Fan-made collector vault ✨</div>
+
+            <h1 className="headline">
+              Know what you have. Find what you need. Enjoy collecting without the chaos.
+            </h1>
+
+            <div className="heroText">
+              Welcome{username ? ` back, ${username}` : ""}! Adorable Vault is the collector hub for
+              tracking Doorables, building your wishlist, organizing duplicates, sharing your profile,
+              and keeping your collection easy to understand—all for free.
+            </div>
+
+            <div className="trustRow">
+              <span className="trustPill gold">Free for collectors</span>
+              <span className="trustPill">Unlimited tracking</span>
+              <span className="trustPill">Preview first</span>
+              <span className="trustPill">A–Z collection browsing</span>
+              <span className="trustPill">Wishlist & extras tools</span>
+            </div>
+
+            <div className="heroActions">
+              <Link href="/demo" className="actionCard">
+                <span className="actionIcon">👀</span>
+                <span>
+                  <span className="actionTitle">Preview the vault</span>
+                  <span className="actionSub">Try the collector flow before signing up.</span>
+                </span>
+              </Link>
+
+              <Link href="/collection" className="actionCard alt">
+                <span className="actionIcon">💜</span>
+                <span>
+                  <span className="actionTitle">Start your collection</span>
+                  <span className="actionSub">Track your Doorables without a subscription.</span>
+                </span>
+              </Link>
+            </div>
+          </div>
+
+          <aside className="vaultPreview">
+            <div className="previewHeader">
+              <div>
+                <div className="previewLabel">Inside the vault</div>
+                <div style={{ color: "rgba(255,255,255,0.82)", fontWeight: 850, marginTop: 4 }}>
+                  A cleaner collector dashboard at a glance.
+                </div>
+              </div>
+
+              <Link href="/demo" className="previewLink">
+                Open Preview →
+              </Link>
+            </div>
+
+            <div className="mockSearch">Search name, series, rarity, movie...</div>
+
+            <div className="previewStats">
+              <div className="miniStat">
+                <div className="miniStatValue">{displayOwned}</div>
+                <div className="miniStatLabel">{hasPersonalStats ? "Owned" : "Free access"}</div>
+              </div>
+              <div className="miniStat">
+                <div className="miniStatValue">{displayNeeded}</div>
+                <div className="miniStatLabel">Wishlist</div>
+              </div>
+              <div className="miniStat">
+                <div className="miniStatValue">{displayExtras}</div>
+                <div className="miniStatLabel">Extras</div>
+              </div>
+              <div className="miniStat">
+                <div className="miniStatValue">{displayProgress}</div>
+                <div className="miniStatLabel">{hasPersonalStats ? "Complete" : "Collector vault"}</div>
+              </div>
+            </div>
+
+            <div className="mockCards">
+              <div className="mockCard">
+                <div className="mockImage">💜</div>
+                <div className="mockCardTop">
+                  <div>
+                    <div className="mockTitle">Collection Item</div>
+                    <div className="mockSub">Series • Rarity • Movie</div>
+                  </div>
+                  <div className="mockBadge">Have</div>
+                </div>
+                <div className="mockChipRow">
+                  <span className="mockChip">Owned</span>
+                  <span className="mockChip">Qty 1</span>
+                  <span className="mockChip">Note saved</span>
+                </div>
+              </div>
+
+              <div className="mockCard gold">
+                <div className="mockImage">💎</div>
+                <div className="mockCardTop">
+                  <div>
+                    <div className="mockTitle">Wishlist Item</div>
+                    <div className="mockSub">Search • Filter • Track</div>
+                  </div>
+                  <div className="mockBadge">Need</div>
+                </div>
+                <div className="mockChipRow">
+                  <span className="mockChip">Need</span>
+                  <span className="mockChip">Qty 0</span>
+                  <span className="mockChip">Wishlist</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="progressPanel">
+              <div className="progressTop">
+                <div>
+                  <div style={{ fontWeight: 1000, fontSize: 18 }}>Free collector access 💜</div>
+                  <div style={{ color: "#d8b4fe", fontWeight: 900, marginTop: 4 }}>
+                    Track your full collection, wishlist, extras, notes, and progress without a subscription.
+                  </div>
+                </div>
+                <div style={{ color: "#fde68a", fontWeight: 1000 }}>Free</div>
+              </div>
+              <div className="progressTrack">
+                <div className="progressFill" style={{ width: "100%" }} />
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        <section className="launchStrip">
+          <div>
+            <div className="launchBadge">💜 Free for the community</div>
+            <h2 className="launchTitle">A free collector tool supported by limited ads.</h2>
+            <div className="launchText">
+              Adorable Vault no longer requires a paid plan. A few thoughtfully placed ads help cover hosting
+              and maintenance while the collection tracker, wishlist, extras, notes, and profile tools stay free.
+              The goal is to avoid disruptive pop-ups and keep the site comfortable to use.
+            </div>
+          </div>
+
+          <Link href="/collection" className="launchButton">
+            Open Your Vault
+          </Link>
+        </section>
+
+        <section className="adSection">
+          <AdSlot slot={process.env.NEXT_PUBLIC_ADSENSE_HOME_TOP_SLOT} />
+        </section>
+
+        <section className="section">
+          <div className="sectionHeader">
+            <div>
+              <div className="eyebrow">Why collectors need it</div>
+              <h2 className="sectionTitle">
+                Stop asking “Do I already have this one?”
+              </h2>
+            </div>
+
+            <div className="sectionText">
+              Built for live sales, store runs, trades, blind openings, duplicate clean-up,
+              and the collector panic of trying to remember 500 tiny figures from memory.
+            </div>
+          </div>
+
+          <div className="featureGrid">
+            <Link href="/collection" className="featureCard">
+              <div className="featureIcon">💜</div>
+              <div className="featureTitle">Track your vault</div>
+              <div className="featureText">
+                Mark owned, needed, extras, notes, rarity, movie, series, and progress in one place.
+              </div>
+              <div className="featureLink">Open tracker →</div>
+            </Link>
+
+            <Link href="/demo" className="featureCard">
+              <div className="featureIcon">👀</div>
+              <div className="featureTitle">Preview first</div>
+              <div className="featureText">
+                See how the tracker works before signing up or saving your own collection.
+              </div>
+              <div className="featureLink">View demo →</div>
+            </Link>
+
+            <Link href="/collection" className="featureCard">
+              <div className="featureIcon">🔁</div>
+              <div className="featureTitle">Organize extras</div>
+              <div className="featureText">
+                Keep track of duplicates separately so you always know what is available in your collection.
+              </div>
+              <div className="featureLink">Track extras →</div>
+            </Link>
+
+            <Link href="/profile" className="featureCard">
+              <div className="featureIcon">🌟</div>
+              <div className="featureTitle">Share your collection</div>
+              <div className="featureText">
+                Create a public collector profile that makes your collection and progress easy to share.
+              </div>
+              <div className="featureLink">View profile tools →</div>
+            </Link>
+          </div>
+        </section>
+
+        <section className="section">
+          <div className="sectionHeader">
+            <div>
+              <div className="eyebrow">How it works</div>
+              <h2 className="sectionTitle">A simple flow that actually makes sense.</h2>
+            </div>
+            <div className="sectionText">
+              Adorable Vault is made to feel quick on your phone and useful when you are shopping, opening new figures, or checking your collection on the go.
+            </div>
+          </div>
+
+          <div className="workflowGrid">
+            <div className="roadmapCard">
+              <div className="roadmapNumber">1</div>
+              <div>
+                <div className="roadmapTitle">Search fast</div>
+                <div className="roadmapText">
+                  Search by name, series, rarity, movie, or notes so you can find the right item quickly.
+                </div>
+              </div>
+            </div>
+
+            <div className="roadmapCard">
+              <div className="roadmapNumber">2</div>
+              <div>
+                <div className="roadmapTitle">Tap to track</div>
+                <div className="roadmapText">
+                  Mark Have, Need, or Extra without digging through a spreadsheet or photo album.
+                </div>
+              </div>
+            </div>
+
+            <div className="roadmapCard">
+              <div className="roadmapNumber">3</div>
+              <div>
+                <div className="roadmapTitle">Review and share</div>
+                <div className="roadmapText">
+                  Review your progress and use your public profile to share your collection with friends.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="splitGrid section">
+          <div className="whiteCard">
+            <div className="eyebrow">Vault news</div>
+            <h2 className="sectionTitle">
+              {loading ? DEFAULT_ANNOUNCEMENT_TITLE : announcementTitle}
+            </h2>
+            <div className="sectionText">
+              Updates, feature drops, collector notes, launch news, and what is being improved next.
+              {announcementDate ? ` Last updated ${announcementDate}.` : ""}
+            </div>
+
+            <div className="announcementBody">{announcementText}</div>
+
+            {isAdmin && (
+              <div className="adminBox">
+                <div style={{ fontWeight: 950, marginBottom: 8 }}>
+                  Admin homepage update box
+                </div>
+
+                <div className="adminTip">
+                  Update this whenever you want a fresh homepage post. Edit the title and body, then tap save.
+                  It updates the public Vault News box without touching the rest of the page.
+                </div>
+
+                <input
+                  className="field"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Announcement title"
+                />
+
+                <textarea
+                  className="field textarea"
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder="Paste this week’s update here..."
+                />
+
+                <button
+                  type="button"
+                  className="saveButton"
+                  onClick={() => void saveAnnouncement()}
+                  disabled={saving}
+                >
+                  {saving ? "Saving..." : "Save Homepage Update"}
+                </button>
+              </div>
+            )}
+
+            {message && (
+              <div style={{ marginTop: 10, fontSize: 13, color: "#6b7280" }}>
+                {message}
+              </div>
+            )}
+          </div>
+
+          <div className="whiteCard">
+            <div className="eyebrow">Collector promise</div>
+            <h2 className="sectionTitle">Clean, useful, and community-shaped.</h2>
+            <div className="sectionText">
+              The goal is simple: make the best collector tool possible without making the site feel noisy,
+              spammy, or hard to use.
+            </div>
+
+            <div className="miniList">
+              <div className="miniListItem">
+                <span>✅</span>
+                <span>Track owned, needed, and extra Doorables in one clean place.</span>
+              </div>
+              <div className="miniListItem">
+                <span>🚫</span>
+                <span>Ads are kept limited and placed carefully, with no intention of using disruptive pop-ups.</span>
+              </div>
+              <div className="miniListItem">
+                <span>📱</span>
+                <span>Designed to be usable on your phone during shopping, shows, and trades.</span>
+              </div>
+              <div className="miniListItem">
+                <span>💬</span>
+                <span>Feedback helps shape what gets fixed, improved, and added next.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="section">
+          <div className="sectionHeader">
+            <div>
+              <div className="eyebrow">Free access</div>
+              <h2 className="sectionTitle">The full collector vault is free to use.</h2>
+            </div>
+
+            <div className="sectionText">
+              There are no paid plans or checkout buttons on this page. Carefully placed advertising helps
+              cover hosting and maintenance so collectors can keep using the tracker for free.
+            </div>
+          </div>
+
+          <section className="adSection">
+            <AdSlot slot={process.env.NEXT_PUBLIC_ADSENSE_HOME_MIDDLE_SLOT} />
+          </section>
+
+          <div className="workflowGrid">
+            <div className="roadmapCard">
+              <div className="roadmapNumber">✓</div>
+              <div>
+                <div className="roadmapTitle">No subscription</div>
+                <div className="roadmapText">Use the collection tracker without choosing a monthly or yearly plan.</div>
+              </div>
+            </div>
+            <div className="roadmapCard">
+              <div className="roadmapNumber">∞</div>
+              <div>
+                <div className="roadmapTitle">Keep tracking</div>
+                <div className="roadmapText">Organize owned figures, wishlist items, extras, notes, and progress.</div>
+              </div>
+            </div>
+            <div className="roadmapCard">
+              <div className="roadmapNumber">♡</div>
+              <div>
+                <div className="roadmapTitle">Community supported</div>
+                <div className="roadmapText">Limited ads help pay for the website while keeping access free.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="splitGrid section">
+          <div className="whiteCard">
+            <div className="eyebrow">Fan-made disclaimer</div>
+            <h2 className="sectionTitle">Made by collectors, for collectors.</h2>
+            <div className="sectionText">
+              Adorable Vault is a fan-made collection tracking tool. It is not affiliated with,
+              sponsored by, or endorsed by Disney or Just Play. Character names and references are used only
+              to help collectors organize and identify their collections.
+            </div>
+          </div>
+
+          <div className="whiteCard">
+            <div className="eyebrow">Advertising note</div>
+            <h2 className="sectionTitle">Ads help keep the vault free.</h2>
+            <div className="sectionText">
+              Advertising may be provided by third-party networks such as Google AdSense. Ads do not represent
+              an endorsement, and the site will aim to keep placements limited, clear, and separate from collection tools.
+            </div>
+          </div>
+        </section>
+
+        <section className="adSection">
+          <AdSlot slot={process.env.NEXT_PUBLIC_ADSENSE_HOME_BOTTOM_SLOT} />
+        </section>
+
+        <section className="finalCta">
+          <div className="eyebrow">Ready to organize the chaos?</div>
+          <h2 className="sectionTitle">Open your vault and start tracking 💜</h2>
+          <div className="sectionText" style={{ margin: "10px auto 0" }}>
+            Save what you own, find what you need, and turn collection chaos into something you can actually use.
+          </div>
+
+          <div className="ctaButtons" style={{ justifyContent: "center" }}>
+            <Link href="/demo" className="primaryButton">
+              Preview First 👀
+            </Link>
+            <Link href="/collection" className="secondaryButton">
+              Start Tracking
+            </Link>
+          </div>
+        </section>
+      </div>
+
+      <div className="mobileSticky">
+        <Link href="/demo" className="primaryButton">
+          👀 Preview
+        </Link>
+        <Link href="/collection" className="secondaryButton">
+          💜 Start Free
+        </Link>
+      </div>
+    </main>
+  );
+}
+

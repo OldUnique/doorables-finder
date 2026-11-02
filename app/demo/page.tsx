@@ -1645,7 +1645,7 @@ export default function DemoVaultPage() {
             <div className="trustRow">
               <span className="trustPill gold">100% free demo</span>
               <span className="trustPill">No sign-up needed</span>
-              <span className="trustPill">Free up to 50 saves</span>
+              <span className="trustPill">Unlimited saves, 100% free</span>
               <span className="trustPill">A–Z browsing</span>
               <span className="trustPill">Mobile-friendly</span>
               <span className="trustPill">Marketplace tools</span>
@@ -1656,15 +1656,15 @@ export default function DemoVaultPage() {
                 <span className="heroLinkIcon">💜</span>
                 <span>
                   <span className="heroLinkTitle">Start your real vault free</span>
-                  <span className="heroLinkSub">Save up to 50 Doorables free</span>
+                  <span className="heroLinkSub">Unlimited saves, 100% free</span>
                 </span>
               </Link>
 
-              <Link href="/pricing" className="heroLink alt">
-                <span className="heroLinkIcon">👑</span>
+              <Link href="/marketplace" className="heroLink alt">
+                <span className="heroLinkIcon">🛍️</span>
                 <span>
-                  <span className="heroLinkTitle">Unlock full access</span>
-                  <span className="heroLinkSub">Unlimited tracking + marketplace tools</span>
+                  <span className="heroLinkTitle">Browse the Marketplace</span>
+                  <span className="heroLinkSub">Free for every collector</span>
                 </span>
               </Link>
             </div>
@@ -2019,7 +2019,7 @@ export default function DemoVaultPage() {
             {[
               { icon: "💜", title: "Sparkle Sample Extra", price: "$4.00", meta: "Shipping or local pickup • Message seller" },
               { icon: "💎", title: "Golden Sample ISO", price: "Message for price", meta: "Wishlist style listing • Collector to collector" },
-              { icon: "👑", title: "Exclusive Gem Bundle", price: "$8.00", meta: "Sample marketplace card • Full access feature" },
+              { icon: "👑", title: "Exclusive Gem Bundle", price: "$8.00", meta: "Sample marketplace card • Free feature" },
             ].map((item) => (
               <div key={item.title} className="marketCard">
                 <div className="marketImage">{item.icon}</div>
@@ -2036,16 +2036,16 @@ export default function DemoVaultPage() {
         <section className="ctaCard">
           <h2 className="ctaTitle">Ready to make your real vault? 💜</h2>
           <div className="ctaText">
-            This preview is just sample data. Start free to save up to 50 Doorables, or upgrade for unlimited
-            tracking, selling tools, marketplace access, and full collector features.
+            This preview is just sample data. Your real vault is 100% free too: unlimited
+            tracking, selling tools, marketplace access, and every collector feature. No plans, no payment.
           </div>
 
           <div className="ctaButtons">
             <Link href="/collection" className="primaryButton">
               Start Free Tracking
             </Link>
-            <Link href="/pricing" className="secondaryButton">
-              View Plans + Founding Bundle
+            <Link href="/marketplace" className="secondaryButton">
+              Browse Marketplace
             </Link>
           </div>
         </section>
@@ -2055,8 +2055,8 @@ export default function DemoVaultPage() {
         <Link href="/collection" className="primaryButton">
           💜 Start Free
         </Link>
-        <Link href="/pricing" className="secondaryButton">
-          👑 Plans
+        <Link href="/marketplace" className="secondaryButton">
+          🛍️ Market
         </Link>
       </div>
     </main>

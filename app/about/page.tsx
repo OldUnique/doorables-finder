@@ -43,7 +43,7 @@ const trustItems = [
   { icon: "💜", label: "Free unlimited tracking" },
   { icon: "💜", label: "Fan-made by collectors" },
   { icon: "📱", label: "Built for mobile checking" },
-  { icon: "🏷️", label: "Seller/supporter perks" },
+  { icon: "🏷️", label: "Free seller tools" },
 ];
 
 const checklistItems = [
@@ -750,10 +750,10 @@ export default function AboutPage() {
             </div>
 
             <div className="miniStat">
-              <div className="miniLabel">Free plan</div>
+              <div className="miniLabel">100% free</div>
               <div className="miniTitle">Unlimited saves</div>
               <div className="miniText">
-                Track your collection, wishlist, extras, and public profile for free. Paid options are only for seller tools and supporter perks.
+                Track your collection, wishlist, extras, public profile, and seller tools for free. No plans, no payment ever.
               </div>
             </div>
 
@@ -773,53 +773,11 @@ export default function AboutPage() {
             <h2 className="promiseTitle">Free tracker first. The vault stays clean on purpose.</h2>
             <p className="promiseText">
               Adorable Vault is meant to feel calm and useful, not stuffed with banners, pop-ups, or clutter.
-              Optional seller tools, supporter perks, affiliate-style buying guides, and collector merch can help fund the site without charging for basic tracking.
+              Every feature is 100% free for every collector. A few carefully placed ads help cover the costs of running the site.
             </p>
           </div>
         </section>
 
-        <section className="founderSection">
-          <div className="founderLayout">
-            <div>
-              <div className="founderBadge">🔥 Limited founder bonus</div>
-              <h2 className="founderTitle">Founding Collector Package with keychain 💜</h2>
-              <div className="founderText">
-                For the earliest supporters, Adorable Vault has a special Founding Collector Package that includes supporter perks
-                plus a limited Adorable Vault keychain while supplies last. It is a fun way to support the site early, help the collector
-                community grow, and get a little physical vault keepsake without locking the basic tracker behind payment.
-              </div>
-
-              <div className="buttonRow">
-                <Link href="/pricing" className="secondaryButton">
-                  View Founder Package
-                </Link>
-                <Link href="/demo" className="primaryButton">
-                  Try the Tracker First
-                </Link>
-              </div>
-
-              <div className="founderFinePrint">
-                Keychain availability is limited. Shipping details are collected only when needed for the bundle. Adorable Vault does not need
-                your full address for normal collection tracking, browsing, or marketplace messaging.
-              </div>
-            </div>
-
-            <div className="founderCard">
-              <div className="founderPerk">
-                <span>💎</span>
-                <span>Full collector access for serious tracking, extras, marketplace tools, and public profile features.</span>
-              </div>
-              <div className="founderPerk">
-                <span>🔑</span>
-                <span>Limited Adorable Vault keychain for Founding Collector supporters while supplies last.</span>
-              </div>
-              <div className="founderPerk">
-                <span>💜</span>
-                <span>Early supporter status that helps keep new features, photos, and collector tools moving forward.</span>
-              </div>
-            </div>
-          </div>
-        </section>
 
         <section className="section">
           <div className="sectionHeader">
@@ -934,8 +892,8 @@ export default function AboutPage() {
             <Link href="/collection" className="primaryButton">
               Open Collection
             </Link>
-            <Link href="/pricing" className="secondaryButton">
-              View Plans
+            <Link href="/demo" className="secondaryButton">
+              Try the Free Demo
             </Link>
           </div>
         </section>

@@ -371,7 +371,6 @@ export default function RootLayout({
                 <a href="/marketplace">Marketplace</a>
                 <a href="/demo">Demo</a>
                 <a href="/about">About</a>
-                <a href="/pricing">Pricing</a>
                 <a href="/feedback">Feedback</a>
               </nav>
 

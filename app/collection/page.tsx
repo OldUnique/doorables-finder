@@ -45,8 +45,8 @@ type SeriesProgressItem = {
   isMissingSeries: boolean;
 };
 
-const SELLER_PLUS_PRICE_LABEL = "$3/month";
-const SUPPORTER_PRICE_LABEL = "$15/year";
+const SELLER_PLUS_PRICE_LABEL = "";
+const SUPPORTER_PRICE_LABEL = "";
 
 function cleanText(value: unknown) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -147,8 +147,8 @@ function getCommunityTier(monthlyMessages: number, monthlyListings: number, mont
 }
 
 function getVaultMilestone(ownedCount: number, isSubscribed: boolean) {
-  if (isSubscribed) return { eyebrow: "💎 Paid Perks Active", title: "Your free tracker stays unlimited — thank you for supporting the vault.", body: "Keep tracking without caps. Paid perks help fund seller tools, marketplace improvements, keychains, and new collector features." };
-  if (ownedCount >= 400) return { eyebrow: "👑 Crown Collector", title: "Your vault is huge — and still free to track.", body: "Unlimited tracking is active. Seller Plus, supporter perks, affiliate guides, and merch help keep the tracker free for everyone." };
+  if (isSubscribed) return { eyebrow: "💜 100% Free", title: ownedCount > 0 ? "Your vault is growing — and it is 100% free." : "Build your free unlimited vault before your next Doorables hunt.", body: ownedCount > 0 ? "Unlimited tracking, extras, auto-listing, and your public profile are all free for every collector." : "Tap + on the Doorables you own. Once your collection is saved, you can stop guessing and start checking." };
+  if (ownedCount >= 400) return { eyebrow: "👑 Crown Collector", title: "Your vault is huge — and still free to track.", body: "Unlimited tracking is active, and every feature is 100% free." };
   if (ownedCount >= 150) return { eyebrow: "💜 Serious Collector", title: "Your collection is growing fast.", body: "Keep adding Doorables, notes, extras, public profile updates, photo submissions, and series progress without a save limit." };
   if (ownedCount >= 25) return { eyebrow: "✨ Vault Builder", title: "You are officially building a real collector vault.", body: "Keep filling it in, check your progress by series, and use the Need/Extras filters before you buy another duplicate." };
   if (ownedCount >= 10) return { eyebrow: "💜 Vault started", title: "The useful part is kicking in now.", body: "The more you save, the better this becomes during shopping, trades, Whatnot shows, and blind-box chaos." };
@@ -210,7 +210,7 @@ function LoggedOutCollectionLanding() {
             <h1 className="guestTitle">Stop guessing what you have. Start building your vault.</h1>
             <p className="guestText">
               Save what you own, mark what you still need, organize extras, and check your collection before you buy another duplicate.
-              Collection tracking is free and unlimited. Optional seller tools and supporter perks help keep the vault running.
+              Everything is 100% free: unlimited tracking, seller tools, and every feature.
             </p>
 
             <div className="guestPills">
@@ -279,7 +279,9 @@ export default function Page() {
   const [cards, setCards] = useState<Card[]>([]);
   const [userId, setUserId] = useState("");
   const [username, setUsername] = useState("");
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  // Everything is free now: every collector gets every feature.
+  const isSubscribed = true;
+  const setIsSubscribed = (_v: boolean) => {};
   const [visibility, setVisibility] = useState<Visibility>("private");
   const [savingVisibility, setSavingVisibility] = useState(false);
   const [publicCollectors, setPublicCollectors] = useState<PublicCollector[]>([]);
@@ -1016,7 +1018,7 @@ export default function Page() {
             <div className="hookText">{vaultMilestone.body}</div>
             {!isSubscribed && (
               <div style={{ marginTop: 12, color: "#64748b", fontWeight: 900, fontSize: 13 }}>
-                Free unlimited collection tracking is active. Paid perks are optional and help fund the vault.
+                Everything is 100% free.
               </div>
             )}
           </div>
@@ -1030,23 +1032,10 @@ export default function Page() {
 
         <section id="upgrade-wall" className="upgradeWall">
           <div>
-            <div className="eyebrow">{isSubscribed ? "💎 Paid Perks Active" : "✨ Free Unlimited Collector Plan"}</div>
-            <div className="upgradeTitle">{isSubscribed ? "Thanks for helping keep Adorable Vault free" : "Track unlimited Doorables for free"}</div>
-            <div className="mutedText">
-              {isSubscribed
-                ? "Your paid perks are active. Collection tracking stays free and unlimited, and your support helps fund marketplace tools, merch, and new features."
-                : "No 50-save cap. No locked basic tracker. The site can still make money through Seller Plus, supporter perks, Founding bundles, affiliate buying guides, and merch."}
-            </div>
-
-            {!isSubscribed && (
-              <div className="planRow">
-                <div className="miniPlan"><span>Seller Plus</span><strong>{SELLER_PLUS_PRICE_LABEL}</strong></div>
-                <div className="miniPlan best"><span>Supporter</span><strong>{SUPPORTER_PRICE_LABEL}</strong></div>
-              </div>
-            )}
+            <div className="eyebrow">💜 100% Free</div>
+            <div className="upgradeTitle">Every feature is free for every collector</div>
+            <div className="mutedText">Unlimited tracking, wishlists, extras, auto-listing, Marketplace, messages, and public profiles. No plans, no caps, no payment ever.</div>
           </div>
-
-          {!isSubscribed && <Link href="/pricing" className="primaryButton">Support / Seller Plus</Link>}
         </section>
 
         <section className="tierGrid">

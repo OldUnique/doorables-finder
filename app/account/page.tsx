@@ -78,9 +78,9 @@ function getProfileUrl(username: string) {
 function getFreeVaultMessage(ownedCount: number, isSubscribed: boolean) {
   if (isSubscribed) {
     return {
-      label: "Paid Perks Active",
-      title: "Thanks for supporting the vault 👑",
-      text: "Your paid perks are active. Collection tracking stays free and unlimited for every collector.",
+      label: "100% Free",
+      title: "Your vault is 100% free 💜",
+      text: "Everything on Adorable Vault is 100% free and unlimited for every collector.",
       tone: "success",
     };
   }
@@ -97,7 +97,7 @@ function getFreeVaultMessage(ownedCount: number, isSubscribed: boolean) {
   return {
     label: "Free Unlimited Vault",
     title: "Start with your first saved Doorable",
-    text: "Track unlimited Doorables for free. Seller Plus, supporter perks, and founding bundles help keep the site running.",
+    text: "Track unlimited Doorables. Every feature is 100% free.",
     tone: "neutral",
   };
 }
@@ -113,7 +113,7 @@ export default function AccountPage() {
 
   const [visibility, setVisibility] = useState<Visibility>("private");
 
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(true);
   const [freeMonthsEarned, setFreeMonthsEarned] = useState(0);
   const [referralUsed, setReferralUsed] = useState("");
 
@@ -181,7 +181,7 @@ export default function AccountPage() {
       const resolvedUsername = cleanUsername(String(profile?.username || ""));
       setUsername(resolvedUsername);
       setOriginalUsername(resolvedUsername);
-      setIsSubscribed(!!profile?.is_subscribed);
+      setIsSubscribed(true);
       setVisibility(normalizeVisibility(profile?.collection_visibility));
       setFreeMonthsEarned(Number(profile?.free_months_earned || 0));
       setReferralUsed(String(profile?.referral_username_used || ""));
@@ -452,7 +452,7 @@ export default function AccountPage() {
               <h1 className="heroTitle">Sign in to manage your vault.</h1>
               <p className="heroText">
                 Your account page is where you manage your username, public collector profile,
-                collection visibility, free tracker status, supporter perks, referral info, and seller tools.
+                collection visibility, free tracker status, referral info, and seller tools.
               </p>
               <div className="heroActions">
                 <Link href={`/login?next=${encodeURIComponent(safeNextPath())}`} className="primaryButton">
@@ -490,7 +490,7 @@ export default function AccountPage() {
 
           <div className="heroSideCard">
             <div className="sideLabel">{vaultMessage.label}</div>
-            <div className="sideTitle">{isSubscribed ? "Paid Perks 👑" : "Free Vault 💜"}</div>
+            <div className="sideTitle">Free Vault 💜</div>
             <div className="sideText">{vaultMessage.text}</div>
           </div>
         </section>
@@ -694,7 +694,7 @@ export default function AccountPage() {
 
           <aside className="sideStack">
             <section className={`panelCard subscriptionCard ${vaultMessage.tone}`}>
-              <div className="eyebrow">Plan status</div>
+              <div className="eyebrow">Your vault</div>
               <h2 className="panelTitle">{vaultMessage.title}</h2>
               <p className="mutedText">{vaultMessage.text}</p>
 
@@ -706,7 +706,7 @@ export default function AccountPage() {
                       <span>∞</span>
                     </div>
                     <div className="helperText">
-                      Track as many Doorables as you want for free. Paid options are for seller tools, supporter perks, and launch bundles.
+                      Track as many Doorables as you want for free. Every feature is 100% free.
                     </div>
                   </div>
 
@@ -724,9 +724,6 @@ export default function AccountPage() {
               )}
 
               <div className="sideButtons">
-                <Link href="/pricing" className="primaryButton">
-                  {isSubscribed ? "View Perks" : "Support / Seller Perks"}
-                </Link>
                 <Link href="/collection" className="secondaryButton">
                   Open Collection
                 </Link>
@@ -734,10 +731,10 @@ export default function AccountPage() {
             </section>
 
             <section className="panelCard">
-              <div className="eyebrow">Referral perks</div>
+              <div className="eyebrow">Invite friends</div>
               <h2 className="panelTitle">Share the vault</h2>
               <p className="mutedText">
-                Your username can be used as a referral username when someone chooses a paid seller, supporter, or founding bundle. Copy a quick invite message and send it to collector friends.
+                Adorable Vault is 100% free. Copy a quick invite message and send it to collector friends.
               </p>
 
               <div className="referralBox">

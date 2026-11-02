@@ -441,14 +441,14 @@ export default function LoginPage() {
 
           <div className="navActions">
             <Link href="/" className="navPill homePill">Home</Link>
-            <Link href="/pricing" className="navPill">Plans</Link>
+            <Link href="/demo" className="navPill">Free Demo</Link>
             <Link href="/about" className="navPill">About</Link>
           </div>
         </nav>
 
         <div className="layout">
           <section className="heroPanel">
-            <div className="badge">✨ Free collector vault • save up to 50 Doorables ✨</div>
+            <div className="badge">✨ 100% free collector vault • unlimited saves ✨</div>
 
             <h1 className="headline">Your Doorables checklist, wishlist, and extras tracker in one place.</h1>
 
@@ -538,7 +538,7 @@ export default function LoginPage() {
             <div className="formSub">
               {mode === "signin"
                 ? "Sign in to open your collection, messages, marketplace tools, and saved progress."
-                : "Start free with up to 50 saved Doorables. Upgrade later only when you are ready."}
+                : "It is 100% free: unlimited saves and every feature, no payment ever."}
             </div>
 
             <div className="formStack">
@@ -650,7 +650,7 @@ export default function LoginPage() {
             </div>
 
             <div className="trustStrip">
-              <div className="trustItem"><span>✅</span><span>Free accounts can save up to 50 Doorables before upgrading.</span></div>
+              <div className="trustItem"><span>✅</span><span>Every account is 100% free with unlimited saves.</span></div>
               <div className="trustItem"><span>🔐</span><span>Your login is handled through secure Supabase authentication.</span></div>
               <div className="trustItem"><span>💜</span><span>Adorable Vault is fan-made and built for collector organization.</span></div>
             </div>

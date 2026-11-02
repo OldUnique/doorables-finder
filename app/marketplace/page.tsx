@@ -1311,7 +1311,7 @@ export default function MarketplacePage() {
               <div className="visitorTitle">Browsing as a guest 💜</div>
               <div className="visitorText">
                 You can look around without an account. To message sellers or post your own listing,
-                log in or start free.
+                log in or sign up. It is 100% free.
               </div>
             </div>
 
@@ -1320,9 +1320,6 @@ export default function MarketplacePage() {
                 🔐 Log In / Sign Up
               </Link>
 
-              <Link href="/pricing" className="bubbleButton bubbleLight">
-                See Plans
-              </Link>
             </div>
           </section>
         )}

@@ -19,7 +19,6 @@ const links: HeaderLink[] = [
   { href: "/sell", icon: "🏷️", label: "Sell" },
   { href: "/marketplace", icon: "🛍️", label: "Marketplace", shortLabel: "Market" },
   { href: "/messages", icon: "💬", label: "Messages" },
-  { href: "/pricing", icon: "👑", label: "Subscription", shortLabel: "Plans" },
   { href: "/feedback", icon: "💙", label: "Feedback" },
 ];
 

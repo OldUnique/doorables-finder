@@ -21,7 +21,6 @@ export type HomeShowcase = {
   collectorCount: number | null;
   trackedCount: number | null;
   collage: ShowcaseFigure[];
-  recent: ShowcaseFigure[];
   series: ShowcaseSeries[];
   spotlight: { name: string; rarity: string }[];
 };
@@ -32,7 +31,6 @@ export const EMPTY_SHOWCASE: HomeShowcase = {
   collectorCount: null,
   trackedCount: null,
   collage: [],
-  recent: [],
   series: [],
   spotlight: [],
 };
@@ -135,16 +133,6 @@ export async function getHomeShowcase(): Promise<HomeShowcase> {
     if (collage.length >= 9) break;
   }
 
-  const recent: ShowcaseFigure[] = [];
-  const seenNames = new Set<string>();
-  for (const f of figures) {
-    const k = f.name.toLowerCase();
-    if (seenNames.has(k)) continue;
-    seenNames.add(k);
-    recent.push(f);
-    if (recent.length >= 12) break;
-  }
-
   // Series grid: newest numbered series first, then a few big specials.
   const numbered = Array.from(counts.keys())
     .filter((n) => seriesNumber(n) !== null)
@@ -168,7 +156,6 @@ export async function getHomeShowcase(): Promise<HomeShowcase> {
     collectorCount,
     trackedCount,
     collage,
-    recent,
     series: picked.map((name, i) => ({ name, count: counts.get(name) || 0, image: covers[i] })),
     spotlight: spotlight.map((r) => ({ name: r.name, rarity: String(r.rarity || "") })),
   };

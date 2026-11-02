@@ -221,7 +221,7 @@ function LoggedOutCollectionLanding() {
             </div>
 
             <div className="guestActions">
-              <Link href="/demo" className="guestButton primary">👀 Preview First</Link>
+              <Link href="/demo" className="guestButton primary">👀 Try the free demo</Link>
               <Link href="/login?next=/collection" className="guestButton secondary">💜 Start Free</Link>
             </div>
           </div>
@@ -252,7 +252,7 @@ function LoggedOutCollectionLanding() {
         </section>
 
         <section className="guestGrid">
-          <Link href="/demo" className="guestFeature"><div><div className="guestIcon">👀</div><div className="guestFeatureTitle">Preview the vault</div></div><div className="guestFeatureText">See how the tracker works before making an account.</div></Link>
+          <Link href="/demo" className="guestFeature"><div><div className="guestIcon">👀</div><div className="guestFeatureTitle">Preview the vault</div></div><div className="guestFeatureText">Free demo, no sign-up needed. See how the tracker works before making an account.</div></Link>
           <Link href="/login?next=/collection" className="guestFeature"><div><div className="guestIcon">💜</div><div className="guestFeatureTitle">Start free</div></div><div className="guestFeatureText">Create a free account and track your collection without a save limit.</div></Link>
           <Link href="/marketplace" className="guestFeature"><div><div className="guestIcon">🛍️</div><div className="guestFeatureTitle">Browse marketplace</div></div><div className="guestFeatureText">Look for collector extras and see what others are listing.</div></Link>
           <Link href="/feedback" className="guestFeature"><div><div className="guestIcon">💬</div><div className="guestFeatureTitle">Send feedback</div></div><div className="guestFeatureText">Tell us what to fix, add, clarify, or improve next.</div></Link>
@@ -266,7 +266,7 @@ function LoggedOutCollectionLanding() {
               But you can preview the experience first, browse public areas, and decide if it is useful before signing up.
             </div>
           </div>
-          <Link href="/demo" className="guestButton primary">Open Demo</Link>
+          <Link href="/demo" className="guestButton primary">Open free demo</Link>
         </section>
       </div>
     </main>

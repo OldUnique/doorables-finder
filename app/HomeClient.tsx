@@ -318,12 +318,15 @@ export default function HomePage({ showcase = EMPTY_SHOWCASE }: { showcase?: Hom
 
             <div className="avCtaRow">
               <Link href="/collection" className="avBtn avBtnPrimary">
-                💜 Start your collection
+                💜 Start your collection free
               </Link>
               <Link href="/demo" className="avBtn avBtnGhost">
-                👀 Try the demo
+                👀 Try the free demo
               </Link>
             </div>
+            <p className="avLead" style={{ fontSize: 14, marginTop: 10 }}>
+              ✅ 100% free — tracking is free and the demo needs no sign-up or payment.
+            </p>
 
             {hasPersonalStats ? (
               <div className="avProgressCard">
@@ -421,31 +424,6 @@ export default function HomePage({ showcase = EMPTY_SHOWCASE }: { showcase?: Hom
         <section className="avAd">
           <AdSlot slot={process.env.NEXT_PUBLIC_ADSENSE_HOME_TOP_SLOT} />
         </section>
-
-        {/* ---------- RECENTLY ADDED ---------- */}
-        {showcase.recent.length > 0 && (
-          <section className="avSection">
-            <div className="avSectionHead">
-              <div>
-                <div className="avEyebrow">Fresh in the vault</div>
-                <h2 className="avH2">Recently added photos</h2>
-              </div>
-              <Link href="/collection" className="avTextLink">See the full checklist →</Link>
-            </div>
-
-            <div className="avRail">
-              {showcase.recent.map((f) => (
-                <Link key={f.id} href={`/collection?series=${encodeURIComponent(f.series)}`} className="avFigure">
-                  <div className="avFigureImg">
-                    <Image src={f.image} alt={`${f.name} Doorable`} fill sizes="160px" className="avTileImg" />
-                  </div>
-                  <div className="avFigureName">{f.name}</div>
-                  <div className="avFigureSeries">{f.series}</div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
 
         {/* ---------- BROWSE BY SERIES ---------- */}
         {showcase.series.length > 0 && (
@@ -587,8 +565,8 @@ export default function HomePage({ showcase = EMPTY_SHOWCASE }: { showcase?: Hom
             Save what you own, find what you need, and never double-buy a figure again.
           </p>
           <div className="avCtaRow" style={{ justifyContent: "center" }}>
-            <Link href="/collection" className="avBtn avBtnPrimary">Start your collection</Link>
-            <Link href="/demo" className="avBtn avBtnGhost">Try the demo</Link>
+            <Link href="/collection" className="avBtn avBtnPrimary">Start your collection free</Link>
+            <Link href="/demo" className="avBtn avBtnGhost">Try the free demo, no sign-up needed</Link>
           </div>
         </section>
 
@@ -600,7 +578,7 @@ export default function HomePage({ showcase = EMPTY_SHOWCASE }: { showcase?: Hom
       </div>
 
       <div className="avSticky">
-        <Link href="/demo" className="avBtn avBtnGhost">👀 Demo</Link>
+        <Link href="/demo" className="avBtn avBtnGhost">👀 Free demo</Link>
         <Link href="/collection" className="avBtn avBtnPrimary">💜 Start free</Link>
       </div>
     </main>

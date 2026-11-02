@@ -1635,7 +1635,7 @@ export default function DemoVaultPage() {
 
         <section className="hero">
           <div className="heroCard">
-            <div className="badge">✨ No signup preview ✨</div>
+            <div className="badge">✨ 100% free demo, no account or payment needed ✨</div>
             <h1 className="headline">Try the vault before you start your real collection.</h1>
             <div className="heroText">
               This sample page shows what Adorable Vault feels like: colorful rarity cards, quick filters,
@@ -1643,7 +1643,8 @@ export default function DemoVaultPage() {
             </div>
 
             <div className="trustRow">
-              <span className="trustPill gold">No ads. Ever.</span>
+              <span className="trustPill gold">100% free demo</span>
+              <span className="trustPill">No sign-up needed</span>
               <span className="trustPill">Free up to 50 saves</span>
               <span className="trustPill">A–Z browsing</span>
               <span className="trustPill">Mobile-friendly</span>
@@ -1654,7 +1655,7 @@ export default function DemoVaultPage() {
               <Link href="/collection" className="heroLink">
                 <span className="heroLinkIcon">💜</span>
                 <span>
-                  <span className="heroLinkTitle">Start your real vault</span>
+                  <span className="heroLinkTitle">Start your real vault free</span>
                   <span className="heroLinkSub">Save up to 50 Doorables free</span>
                 </span>
               </Link>

@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { SITE_URL } from "../lib/seo";
+import { GUIDES } from "../lib/guides";
+import { getCatalog, summarizeSeries } from "../lib/catalog";
 
 // Rebuild the sitemap at most once an hour so new public collector profiles show up.
 export const revalidate = 3600;
@@ -13,7 +15,12 @@ const staticRoutes: { path: string; changeFrequency: ChangeFrequency; priority: 
   { path: "/demo", changeFrequency: "monthly", priority: 0.9 },
   { path: "/marketplace", changeFrequency: "daily", priority: 0.8 },
   { path: "/about", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/guides", changeFrequency: "weekly", priority: 0.9 },
+  { path: "/series", changeFrequency: "weekly", priority: 0.9 },
   { path: "/feedback", changeFrequency: "weekly", priority: 0.6 },
+  { path: "/contact", changeFrequency: "yearly", priority: 0.4 },
+  { path: "/privacy", changeFrequency: "yearly", priority: 0.3 },
+  { path: "/terms", changeFrequency: "yearly", priority: 0.3 },
 ];
 
 function isPublicVisibility(value: unknown) {
@@ -66,5 +73,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  return [...pages, ...collectors];
+  const guides: MetadataRoute.Sitemap = GUIDES.map((g) => ({
+    url: `${SITE_URL}/guides/${g.slug}`,
+    lastModified: new Date(`${g.updated}T12:00:00Z`),
+    changeFrequency: "monthly",
+    priority: 0.8,
+  }));
+
+  let series: MetadataRoute.Sitemap = [];
+  try {
+    series = summarizeSeries(await getCatalog()).map((s) => ({
+      url: `${SITE_URL}/series/${s.slug}`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.7,
+    }));
+  } catch {
+    series = [];
+  }
+
+  return [...pages, ...guides, ...series, ...collectors];
 }

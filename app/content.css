@@ -1,0 +1,383 @@
+/* Shared styles for server-rendered content pages: guides, series, about story, legal pages.
+   Scoped under .cvPage so nothing leaks into the app pages. */
+
+.cvPage {
+  --cv-pink: #f9a8d4;
+  --cv-gold: #fde68a;
+  --cv-muted: rgba(255, 255, 255, 0.84);
+  --cv-line: rgba(255, 255, 255, 0.16);
+  --cv-glass: rgba(42, 12, 72, 0.55);
+  color: #fff;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 22px 16px 56px;
+}
+
+.cvCrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.62);
+}
+.cvCrumbs a { color: rgba(255, 255, 255, 0.85); text-decoration: none; }
+.cvCrumbs a:hover { color: var(--cv-gold); }
+
+.cvHero { margin-top: 14px; }
+.cvEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cv-pink);
+  font-size: 12px;
+  font-weight: 1000;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.cvTitle {
+  margin: 8px 0 0;
+  font-size: clamp(30px, 7.4vw, 50px);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  font-weight: 1000;
+}
+.cvLead {
+  margin: 14px 0 0;
+  max-width: 720px;
+  color: var(--cv-muted);
+  font-size: clamp(16px, 4.2vw, 19px);
+  line-height: 1.6;
+  font-weight: 650;
+}
+.cvMeta {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cvPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--cv-line);
+}
+
+/* ---------- article layout ---------- */
+.cvLayout {
+  margin-top: 26px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 26px;
+  align-items: start;
+}
+@media (max-width: 920px) {
+  .cvLayout { grid-template-columns: 1fr; }
+}
+
+.cvArticle {
+  padding: clamp(18px, 4.5vw, 40px);
+  border-radius: 28px;
+  background: var(--cv-glass);
+  border: 1px solid var(--cv-line);
+  box-shadow: 0 18px 44px rgba(26, 6, 48, 0.35);
+  backdrop-filter: blur(14px);
+}
+
+.cvProse {
+  font-size: 17px;
+  line-height: 1.75;
+  color: var(--cv-muted);
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.cvProse > div > p:first-child,
+.cvProse > p:first-child {
+  margin-top: 0;
+  font-size: 18px;
+  color: #fff;
+}
+.cvProse p { margin: 0 0 1.05em; }
+.cvProse h2 {
+  margin: 1.8em 0 0.55em;
+  color: #fff;
+  font-size: clamp(22px, 5.4vw, 29px);
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  font-weight: 1000;
+  scroll-margin-top: 90px;
+}
+.cvProse h2::before {
+  content: "";
+  display: block;
+  width: 44px;
+  height: 4px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f472b6, #a855f7);
+}
+.cvProse h3 {
+  margin: 1.4em 0 0.4em;
+  color: #fff;
+  font-size: 19px;
+  font-weight: 950;
+}
+.cvProse ul,
+.cvProse ol { margin: 0 0 1.15em; padding-left: 1.3em; }
+.cvProse li { margin: 0.4em 0; padding-left: 0.2em; }
+.cvProse li::marker { color: var(--cv-pink); font-weight: 900; }
+.cvProse strong { color: #fff; font-weight: 900; }
+.cvProse a,
+.cvLink {
+  color: var(--cv-pink);
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-color: rgba(249, 168, 212, 0.45);
+  text-underline-offset: 3px;
+}
+.cvProse a:hover,
+.cvLink:hover { color: var(--cv-gold); }
+
+.cvCallout {
+  margin: 1.4em 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(253, 230, 138, 0.08);
+  border: 1px solid rgba(253, 230, 138, 0.28);
+  border-left: 4px solid var(--cv-gold);
+}
+
+/* ---------- side panel ---------- */
+.cvSide {
+  position: sticky;
+  top: 90px;
+  display: grid;
+  gap: 14px;
+}
+@media (max-width: 920px) { .cvSide { position: static; } }
+.cvBox {
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--cv-line);
+}
+.cvBoxTitle {
+  font-size: 12px;
+  font-weight: 1000;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cv-pink);
+  margin-bottom: 8px;
+}
+.cvToc { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.cvToc a {
+  display: block;
+  padding: 6px 8px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.35;
+  text-decoration: none;
+}
+.cvToc a:hover { background: rgba(255, 255, 255, 0.08); color: var(--cv-gold); }
+@media (max-width: 920px) {
+  .cvTocBox { display: none; }
+}
+.cvBoxText { color: var(--cv-muted); font-size: 14px; line-height: 1.55; font-weight: 650; }
+
+.cvBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 12px 18px;
+  margin-top: 12px;
+  border-radius: 999px;
+  font-weight: 1000;
+  font-size: 15px;
+  color: #fff;
+  text-decoration: none;
+  background: linear-gradient(135deg, #f472b6, #a855f7 55%, #818cf8);
+  box-shadow: 0 12px 28px rgba(124, 58, 237, 0.38);
+}
+.cvBtnGhost {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: none;
+}
+.cvBtnRow { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* ---------- cards ---------- */
+.cvSectionTitle {
+  margin: 34px 0 6px;
+  font-size: clamp(22px, 5.6vw, 30px);
+  font-weight: 1000;
+  letter-spacing: -0.02em;
+}
+.cvSectionText { margin: 0 0 14px; color: var(--cv-muted); font-weight: 650; line-height: 1.55; max-width: 720px; }
+.cvGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.cvCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 22px;
+  color: #fff;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--cv-line);
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.cvCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(249, 168, 212, 0.55);
+  background: rgba(255, 255, 255, 0.1);
+}
+.cvCardEmoji {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  font-size: 24px;
+  background: linear-gradient(135deg, rgba(244, 114, 182, 0.3), rgba(168, 85, 247, 0.3));
+}
+.cvCardTitle { font-size: 18px; font-weight: 1000; line-height: 1.2; }
+.cvCardText { color: rgba(255, 255, 255, 0.76); font-size: 14px; line-height: 1.5; font-weight: 650; }
+.cvCardMeta { margin-top: auto; color: var(--cv-pink); font-size: 12px; font-weight: 900; }
+
+.cvFeatured {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  margin-top: 22px;
+  padding: 20px;
+  border-radius: 26px;
+  text-decoration: none;
+  color: #fff;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(244, 114, 182, 0.35), transparent 55%),
+    linear-gradient(135deg, rgba(91, 29, 110, 0.85), rgba(58, 21, 99, 0.85));
+  border: 1px solid rgba(249, 168, 212, 0.38);
+}
+.cvFeatured .cvCardEmoji { width: 60px; height: 60px; font-size: 32px; }
+
+/* ---------- tables & figure lists ---------- */
+.cvTableWrap {
+  margin: 1.2em 0 1.4em;
+  overflow-x: auto;
+  border-radius: 18px;
+  border: 1px solid var(--cv-line);
+  background: rgba(255, 255, 255, 0.04);
+}
+.cvTable { width: 100%; border-collapse: collapse; font-size: 15px; overflow-wrap: normal; }
+.cvTable th { white-space: nowrap; }
+.cvTable th,
+.cvTable td { padding: 10px 14px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.cvTable th { color: var(--cv-pink); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 1000; }
+.cvTable td { color: rgba(255, 255, 255, 0.9); font-weight: 650; }
+.cvTable td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 900; color: #fff; }
+.cvTable th.num { text-align: right; }
+.cvTable tr:last-child td { border-bottom: 0; }
+.cvTable a { color: #fff; font-weight: 850; text-decoration: none; }
+.cvTable a:hover { color: var(--cv-gold); }
+
+.cvGroupTitle { margin: 1.4em 0 0.2em; color: #fff; font-size: 18px; font-weight: 1000; }
+.cvGroupText { margin: 0; font-size: 14px; color: rgba(255, 255, 255, 0.7); }
+
+.cvStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+.cvStat {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--cv-line);
+}
+.cvStat strong { display: block; font-size: 26px; font-weight: 1000; color: var(--cv-gold); line-height: 1; }
+.cvStat span { display: block; margin-top: 6px; font-size: 12px; font-weight: 850; color: rgba(255, 255, 255, 0.8); }
+
+.cvFigures {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.cvFigure {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--cv-line);
+}
+.cvFigureImg {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+  font-size: 30px;
+}
+.cvFigureImg img { width: 100%; height: 100%; object-fit: contain; padding: 8%; }
+.cvFigureName { font-size: 14px; font-weight: 950; line-height: 1.25; color: #fff; }
+.cvFigureMeta { font-size: 12px; font-weight: 750; color: rgba(255, 255, 255, 0.66); line-height: 1.35; }
+.cvRarity {
+  align-self: flex-start;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 1000;
+  letter-spacing: 0.02em;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.cvRarity[data-r="Rare"] { background: rgba(129, 140, 248, 0.35); }
+.cvRarity[data-r="Ultra Rare"] { background: rgba(244, 114, 182, 0.4); }
+.cvRarity[data-r="Special Edition"] { background: #fff; color: #6d28d9; }
+.cvRarity[data-r="Limited Edition"] { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #3b0764; }
+.cvRarity[data-r="Exclusive"],
+.cvRarity[data-r="Bonus"] { background: rgba(253, 186, 116, 0.35); }
+
+.cvChips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.cvChip {
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 850;
+  color: #fff;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--cv-line);
+}
+a.cvChip:hover { border-color: rgba(253, 230, 138, 0.55); color: var(--cv-gold); }
+
+.cvFine {
+  margin-top: 26px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12.5px;
+  line-height: 1.55;
+  font-weight: 700;
+}

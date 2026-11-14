@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { getSupabase } from "../lib/supabase";
+import { GUIDES } from "../lib/guides";
 import { EMPTY_SHOWCASE, type HomeShowcase, type ShowcaseFigure } from "../lib/homeShowcase";
 import "./home.css";
 
@@ -434,7 +435,7 @@ export default function HomePage({ showcase = EMPTY_SHOWCASE }: { showcase?: Hom
                 <h2 className="avH2">Jump straight to a series</h2>
               </div>
               {showcase.seriesCount ? (
-                <Link href="/collection" className="avTextLink">All {showcase.seriesCount} series &amp; sets →</Link>
+                <Link href="/series" className="avTextLink">All {showcase.seriesCount} series &amp; sets →</Link>
               ) : null}
             </div>
 
@@ -489,6 +490,28 @@ export default function HomePage({ showcase = EMPTY_SHOWCASE }: { showcase?: Hom
             <Link href="/collection" className="avFeature"><span>💎</span>Wishlist &amp; extras</Link>
             <Link href="/marketplace" className="avFeature"><span>🛍️</span>Marketplace</Link>
             <Link href="/account" className="avFeature"><span>🌟</span>Public profile</Link>
+          </div>
+        </section>
+
+        {/* ---------- COLLECTOR GUIDES ---------- */}
+        <section className="avSection">
+          <div className="avSectionHead">
+            <div>
+              <div className="avEyebrow">Collector guides</div>
+              <h2 className="avH2">Learn the hobby, one guide at a time</h2>
+            </div>
+            <Link href="/guides" className="avTextLink">All {GUIDES.length} guides →</Link>
+          </div>
+
+          <div className="avGuideGrid">
+            {GUIDES.slice(0, 6).map((g) => (
+              <Link key={g.slug} href={`/guides/${g.slug}`} className="avGuideCard">
+                <span className="avGuideEmoji" aria-hidden="true">{g.emoji}</span>
+                <span className="avGuideTitle">{g.title}</span>
+                <span className="avGuideText">{g.description}</span>
+                <span className="avGuideMeta">{g.readMinutes} min read →</span>
+              </Link>
+            ))}
           </div>
         </section>
 

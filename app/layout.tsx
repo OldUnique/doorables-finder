@@ -328,7 +328,29 @@ export default function RootLayout({
             font-weight: 700;
           }
 
+          .footerLegal {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+          }
+
+          .footerLegal a {
+            color: rgba(255, 255, 255, 0.78);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+          }
+
+          .footerLegal a:hover {
+            color: #fde68a;
+          }
+
           @media (max-width: 920px) {
+            .footerLegal {
+              justify-content: center;
+            }
+
             .footerShell {
               padding: 22px 16px 110px;
               grid-template-columns: 1fr;
@@ -368,14 +390,27 @@ export default function RootLayout({
 
               <nav className="footerLinks" aria-label="Footer navigation">
                 <a href="/collection">Collection</a>
+                <a href="/guides">Guides</a>
+                <a href="/series">Series</a>
                 <a href="/marketplace">Marketplace</a>
                 <a href="/demo">Demo</a>
                 <a href="/about">About</a>
+                <a href="/contact">Contact</a>
                 <a href="/feedback">Feedback</a>
               </nav>
 
               <div className="footerFine">
-                © {new Date().getFullYear()} Adorable Vault · Not affiliated with Disney or Just Play.
+                <div>
+                  © {new Date().getFullYear()} Adorable Vault · A fan-made site. Not affiliated with, sponsored by, or
+                  endorsed by Disney or Just Play. Disney Doorables and character names belong to their respective owners.
+                </div>
+                <div className="footerLegal">
+                  <a href="/privacy">Privacy Policy</a>
+                  <span aria-hidden="true">·</span>
+                  <a href="/terms">Terms of Use</a>
+                  <span aria-hidden="true">·</span>
+                  <a href="/contact">Contact</a>
+                </div>
               </div>
             </div>
           </footer>

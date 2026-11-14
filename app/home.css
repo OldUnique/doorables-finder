@@ -668,3 +668,48 @@
 @media (prefers-reduced-motion: reduce) {
   .avBtn, .avFigure, .avSeriesCard { transition: none; }
 }
+
+/* ---------- collector guides ---------- */
+.avGuideGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .avGuideGrid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .avGuideGrid { grid-template-columns: 1fr; }
+}
+.avGuideCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--av-line);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.avGuideCard:hover { transform: translateY(-2px); border-color: rgba(249, 168, 212, 0.55); }
+.avGuideEmoji {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  font-size: 22px;
+  background: linear-gradient(135deg, rgba(244, 114, 182, 0.3), rgba(168, 85, 247, 0.3));
+}
+.avGuideTitle { font-size: 17px; font-weight: 1000; line-height: 1.2; }
+.avGuideText {
+  color: var(--av-muted);
+  font-size: 13.5px;
+  line-height: 1.45;
+  font-weight: 650;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.avGuideMeta { margin-top: auto; color: #f9a8d4; font-size: 12px; font-weight: 900; }

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Nav from "../components/Nav";
+import NewsletterSignup from "../components/NewsletterSignup";
 import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
 
@@ -319,6 +320,10 @@ export default function RootLayout({
             border-color: rgba(253, 230, 138, 0.5);
           }
 
+          .footerSignup {
+            grid-column: 1 / -1;
+          }
+
           .footerFine {
             grid-column: 1 / -1;
             padding-top: 14px;
@@ -381,6 +386,9 @@ export default function RootLayout({
 
           <footer className="siteFooter">
             <div className="footerShell">
+              <div className="footerSignup">
+                <NewsletterSignup source="footer" variant="footer" />
+              </div>
               <div className="footerBrand">
                 <div className="footerTitle">💜 Adorable Vault</div>
                 <div className="footerTag">

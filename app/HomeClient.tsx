@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import NewsletterSignup from "../components/NewsletterSignup";
 import { getSupabase } from "../lib/supabase";
 import { GUIDES } from "../lib/guides";
 import { EMPTY_SHOWCASE, type HomeShowcase, type ShowcaseFigure } from "../lib/homeShowcase";
@@ -580,6 +581,8 @@ export default function HomePage({ showcase = EMPTY_SHOWCASE }: { showcase?: Hom
         <section className="avAd">
           <AdSlot slot={process.env.NEXT_PUBLIC_ADSENSE_HOME_BOTTOM_SLOT} />
         </section>
+
+        <NewsletterSignup source="home" variant="home" />
 
         {/* ---------- FINAL CTA ---------- */}
         <section className="avFinal">

@@ -5,7 +5,7 @@ import { pageMetadata } from "../../lib/seo";
 export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
   description:
-    "How Adorable Vault collects, uses and protects your information, including cookies, Google AdSense advertising, and your choices.",
+    "How Adorable Vault collects, uses and protects your information, including cookies, Google AdSense advertising, release emails, and your choices.",
   path: "/privacy",
 });
 
@@ -21,6 +21,7 @@ When you create an account and use the tracker, we store:
 - **Profile settings**: your collection visibility (private, wishlist and extras, or full collection) and whether other collectors may message you about your collection.
 - **Marketplace content**: listings you create (title, description, price, photo, shipping and pickup details) and messages you send to other collectors.
 - **Feedback and submissions**: feedback you send, including an optional name and an optional reply email if you ask to be contacted, and figure photos you submit for the catalog.
+- **Release emails**: if you sign up for new Doorables release updates, the email address you enter and the page you signed up from.
 
 Anything you choose to make public, such as a public collector page, marketplace listing or approved feedback post, can be seen by other visitors.
 
@@ -48,6 +49,7 @@ We use the information above to:
 - Run the tracker, your public collector page, the marketplace and messaging.
 - Keep the catalog accurate and review submitted photos and feedback.
 - Reply to you when you ask us to.
+- Send optional new-release emails if you signed up for them.
 - Protect the site against abuse, spam and fraud.
 - Understand overall usage so we can improve the site.
 
@@ -55,7 +57,16 @@ We do not sell your personal information.
 
 ## Service providers
 
-We rely on a few trusted providers to run the site: **Supabase** (database and sign-in), **Vercel** (hosting and analytics), **Google AdSense** (advertising) and an email delivery provider for feedback notifications. They process data on our behalf to provide their services. Adorable Vault does not currently sell anything or take payments. If you made a payment in the past, it was processed by Stripe, and we never received or stored your full card number.
+We rely on a few trusted providers to run the site: **Supabase** (database, sign-in, and stored release-email addresses), **Vercel** (hosting and analytics), **Google AdSense** (advertising) and an email delivery provider for feedback notifications and, when release emails are sent, those announcements. They process data on our behalf to provide their services. Adorable Vault does not currently sell anything or take payments. If you made a payment in the past, it was processed by Stripe, and we never received or stored your full card number.
+
+## Release emails
+
+You can optionally sign up to be emailed when new Disney Doorables figures are added to the catalog. This is separate from creating an account.
+
+- We use the email address you provide only to send those release updates, and to honor unsubscribe or data requests.
+- We do not use release-email sign-ups for unrelated marketing, and we do not sell or rent this list.
+- You can unsubscribe at any time using the link in a release email, or by contacting us through the [contact page](/contact). After you unsubscribe we keep a record that the address should not be emailed again, unless you sign up once more.
+- Signing up for release emails is optional and is not required to use the tracker, the free demo, the guides or any other part of the site.
 
 ## Children
 
@@ -63,7 +74,7 @@ Adorable Vault is a general-audience site and is not directed to children under 
 
 ## Data retention and your choices
 
-We keep your account data for as long as your account is active. You can change your collection visibility at any time, edit or remove your listings, and update your collection. To request a copy of your data, a correction, or deletion of your account and its data, contact us through the [contact page](/contact). Depending on where you live, you may have additional rights under local law, and we will honor valid requests.
+We keep your account data for as long as your account is active. You can change your collection visibility at any time, edit or remove your listings, and update your collection. Release-email addresses are kept until you unsubscribe or ask us to delete them. To request a copy of your data, a correction, or deletion of your account and its data, contact us through the [contact page](/contact). Depending on where you live, you may have additional rights under local law, and we will honor valid requests.
 
 ## Security
 
@@ -83,8 +94,8 @@ export default function PrivacyPage() {
     <SimplePage
       eyebrow="🔒 Privacy"
       title="Privacy Policy"
-      lead="What Adorable Vault collects, how it is used, how advertising cookies work, and the choices you have."
-      updated="November 14, 2026"
+      lead="What Adorable Vault collects, how it is used, how advertising cookies and release emails work, and the choices you have."
+      updated="November 19, 2026"
       body={body}
     />
   );

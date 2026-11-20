@@ -1,0 +1,206 @@
+/* New-release email sign-up. Scoped under .nlSignup so it works on every page. */
+.nlSignup {
+  --nl-pink: #f472b6;
+  --nl-purple: #a855f7;
+  --nl-lilac: #c4b5fd;
+  --nl-gold: #fde68a;
+  color: #fff;
+  text-align: left;
+}
+
+.nlSignup *,
+.nlSignup *::before,
+.nlSignup *::after {
+  box-sizing: border-box;
+}
+
+.nlSignup--home {
+  margin-top: 42px;
+  padding: 32px 22px;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(244, 114, 182, 0.42), transparent 52%),
+    radial-gradient(circle at 92% 100%, rgba(196, 181, 253, 0.38), transparent 55%),
+    linear-gradient(160deg, rgba(88, 24, 130, 0.72), rgba(190, 24, 93, 0.28));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 22px 50px rgba(26, 6, 48, 0.35);
+}
+
+.nlSignup--footer {
+  padding: 22px 20px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(244, 114, 182, 0.28), transparent 55%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.nlEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #f9a8d4;
+  font-size: 12px;
+  font-weight: 1000;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.nlTitle {
+  margin: 8px 0 0;
+  font-size: clamp(24px, 5.4vw, 36px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-weight: 1000;
+}
+
+.nlSignup--footer .nlTitle {
+  font-size: clamp(20px, 4.4vw, 26px);
+}
+
+.nlLead {
+  margin: 10px 0 0;
+  max-width: 560px;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 650;
+}
+
+.nlSignup--footer .nlLead {
+  font-size: 14px;
+}
+
+.nlForm {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  max-width: 640px;
+}
+
+.nlHoney {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.nlRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.nlField {
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.96);
+  color: #1f1238;
+  font-size: 16px;
+  font-weight: 650;
+  font-family: inherit;
+}
+
+.nlField::placeholder {
+  color: #6b5a80;
+  font-weight: 600;
+}
+
+.nlField:focus {
+  outline: 3px solid var(--nl-gold);
+  outline-offset: 2px;
+}
+
+.nlButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #fff;
+  background: linear-gradient(135deg, var(--nl-pink), var(--nl-purple) 55%, #818cf8);
+  box-shadow: 0 16px 34px rgba(124, 58, 237, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  font-size: 16px;
+  font-weight: 1000;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nlButton:hover {
+  transform: translateY(-1px);
+}
+
+.nlButton:disabled {
+  opacity: 0.7;
+  cursor: default;
+  transform: none;
+}
+
+.nlNote {
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 700;
+}
+
+.nlNote a,
+.nlNote a:visited {
+  color: var(--nl-gold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.nlNote a:hover {
+  color: #fff;
+}
+
+.nlStatus {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.nlStatus--ok {
+  color: #bbf7d0;
+}
+
+.nlStatus--error {
+  color: #fecdd3;
+}
+
+@media (min-width: 700px) {
+  .nlSignup--home {
+    padding: 40px 36px;
+  }
+
+  .nlRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+  }
+
+  .nlSignup--footer .nlInner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: 18px 28px;
+    align-items: center;
+  }
+
+  .nlSignup--footer .nlForm {
+    margin-top: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nlButton {
+    transform: none;
+  }
+}
